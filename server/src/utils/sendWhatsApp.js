@@ -9,7 +9,7 @@ const client = twilio(
 export const sendWhatsApp = async (to, message) => {
   try {
     await client.messages.create({
-        from: "whatsapp:+918247502207",
+        from: "whatsapp:+14155238886",
         to: `whatsapp:${to}`,
         body: message,
       });
