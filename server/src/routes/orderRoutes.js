@@ -2,6 +2,10 @@ import express from "express";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { orderEmailTemplate } from "../utils/emailTemplates.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { invoiceTemplate } from "../utils/invoiceTemplate.js";
+import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 
 const router = express.Router();
 
@@ -16,28 +20,17 @@ router.post("/", async (req, res) => {
 
     await order.save();
 
-    try {
-
-      await sendEmail(
-        req.body.email,
-        "Order Confirmed - Tamanna's Hut",
-        `
-        <h2>Thank you for your order</h2>
-    
-        <p>Order Amount: ₹${order.totalAmount}</p>
-    
-        <p>Status: ${order.status}</p>
-        `
-      );
-
-    } catch (emailError) {
-
-      console.log(
-        "EMAIL ERROR:",
-        emailError.message
-      );
-
-    }
+    await sendEmail(
+      req.body.email,
+      "Order Confirmed - Tamanna's Hut",
+      orderEmailTemplate(order),
+      "Your Invoice - Tamanna's Hut",
+      invoiceTemplate(order)
+    );
+    await sendWhatsApp(
+      req.body.phone,
+      `🛍 Order Confirmed!\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`
+    );
     // REDUCE STOCK
 
     for (const item of req.body.products) {
@@ -95,7 +88,7 @@ router.post("/", async (req, res) => {
     console.error("ORDER ERROR:");
     console.error(error);
     console.error(error.stack);
-  
+
     res.status(500).json({
       success: false,
       message: error.message,
