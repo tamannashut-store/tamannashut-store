@@ -23,6 +23,7 @@ import MyOrders from "./pages/MyOrders";
 import Wishlist from "./pages/Wishlist";
 import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
+import AdminCoupons from "./pages/AdminCoupons";
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/admin-coupons" element={<AdminCoupons />} />
       </Routes>
       <WhatsAppButton />
       <Footer />

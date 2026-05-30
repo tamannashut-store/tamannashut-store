@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 function AdminDashboard() {
 
@@ -52,6 +53,12 @@ function AdminDashboard() {
             >
                 Logout
             </button>
+            <Link
+                to="/admin-coupons"
+                className="bg-pink-500 text-white px-4 py-2 rounded-xl"
+            >
+                Manage Coupons
+            </Link>
 
             <h1 className="text-5xl font-bold mb-12">
                 Admin Dashboard
