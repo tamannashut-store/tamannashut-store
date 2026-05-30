@@ -72,7 +72,46 @@ function ProductDetails() {
   const availableStock =
     (selectedSizeData?.stock || 0) -
     cartQty;
+  const submitReview = async () => {
 
+    try {
+
+      const user = JSON.parse(
+        localStorage.getItem("user")
+      );
+
+      if (!user) {
+
+        alert("Please login first");
+
+        return;
+      }
+
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/products/${id}/review`,
+        {
+          userId: user.user.id,
+          name: user.user.name,
+          rating: Number(rating),
+          comment,
+        }
+      );
+
+      alert("Review submitted");
+
+      setComment("");
+      setRating(5);
+
+      fetchProduct();
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert("Failed to submit review");
+
+    }
+  };
   return (
     <div className="max-w-7xl mx-auto px-6 py-20">
       <div className="grid md:grid-cols-2 gap-14 items-start">
