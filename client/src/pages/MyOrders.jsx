@@ -114,7 +114,7 @@ function MyOrders() {
                                         onError={(e) => {
 
                                             e.target.src =
-                                                "https://via.placeholder.com/80?text=No+Image";
+                                               `${import.meta.env.VITE_API_URL}${item.image}`;
                                         }}
                                     />
 
