@@ -15,28 +15,29 @@ router.post("/", async (req, res) => {
     const order = new Order(req.body);
 
     await order.save();
-    // try {
 
-    //   await sendEmail(
-    //     req.body.email,
-    //     "Order Confirmed - Tamanna's Hut",
-    //     `
-    //     <h2>Thank you for your order</h2>
+    try {
+
+      await sendEmail(
+        req.body.email,
+        "Order Confirmed - Tamanna's Hut",
+        `
+        <h2>Thank you for your order</h2>
     
-    //     <p>Order Amount: ₹${order.totalAmount}</p>
+        <p>Order Amount: ₹${order.totalAmount}</p>
     
-    //     <p>Status: ${order.status}</p>
-    //     `
-    //   );
-    
-    // } catch (emailError) {
-    
-    //   console.log(
-    //     "EMAIL ERROR:",
-    //     emailError.message
-    //   );
-    
-    // }
+        <p>Status: ${order.status}</p>
+        `
+      );
+
+    } catch (emailError) {
+
+      console.log(
+        "EMAIL ERROR:",
+        emailError.message
+      );
+
+    }
     // REDUCE STOCK
 
     for (const item of req.body.products) {
@@ -46,9 +47,24 @@ router.post("/", async (req, res) => {
 
       if (product) {
 
-        const sizeData = product.sizeStock.find(
+        const sizeData = product.sizeStock?.find(
           s => s.size === item.selectedSize
         );
+
+        if (!sizeData) {
+
+          console.log(
+            "SIZE STOCK NOT FOUND:",
+            product.name,
+            item.selectedSize
+          );
+
+          return res.status(400).json({
+            success: false,
+            message: `Stock not configured for ${product.name} (${item.selectedSize})`
+          });
+
+        }
 
         if (sizeData) {
 
@@ -76,8 +92,10 @@ router.post("/", async (req, res) => {
 
   } catch (error) {
 
-    console.log(error);
-
+    console.error("ORDER ERROR:");
+    console.error(error);
+    console.error(error.stack);
+  
     res.status(500).json({
       success: false,
       message: error.message,
