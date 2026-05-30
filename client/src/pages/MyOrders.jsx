@@ -62,6 +62,30 @@ function MyOrders() {
 
         return `${import.meta.env.VITE_API_URL}${image}`;
     };
+    const cancelOrder = async (orderId) => {
+
+        try {
+
+            await axios.put(
+                `${import.meta.env.VITE_API_URL}/api/orders/cancel/${orderId}`
+            );
+
+            alert("Order Cancelled");
+
+            window.location.reload();
+
+        } catch (error) {
+
+            console.log(error);
+
+            alert(
+                error.response?.data?.message ||
+                "Cancellation Failed"
+            );
+
+        }
+
+    };
     if (loading) {
 
         return (
@@ -144,7 +168,20 @@ ${order.status === "Pending"
                                     >
                                         {order.status}
                                     </span>
+                                    {order.status === "Pending" && (
 
+                                        <button
+                                            onClick={() =>
+                                                cancelOrder(order._id)
+                                            }
+                                            className="block mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl"
+                                        >
+
+                                            Cancel Order
+
+                                        </button>
+
+                                    )}
                                 </div>
                                 {order.trackingNumber && (
 
@@ -295,6 +332,7 @@ ${order.status === "Pending"
                     ))
 
                 )}
+
 
             </div>
 

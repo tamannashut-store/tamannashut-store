@@ -167,5 +167,75 @@ router.get("/my-orders/:userId", async (req, res) => {
     });
   }
 });
+router.put("/cancel/:id", async (req, res) => {
+
+  try {
+
+    const order = await Order.findById(
+      req.params.id
+    );
+
+    if (!order) {
+
+      return res.status(404).json({
+        message: "Order not found",
+      });
+
+    }
+
+    if (order.status !== "Pending") {
+
+      return res.status(400).json({
+        message:
+          "Order cannot be cancelled",
+      });
+
+    }
+
+    for (const item of order.products) {
+
+      const product =
+        await Product.findById(item._id);
+
+      if (product) {
+
+        const sizeData =
+          product.sizeStock.find(
+            s =>
+              s.size ===
+              item.selectedSize
+          );
+
+        if (sizeData) {
+
+          sizeData.stock += item.qty;
+
+        }
+
+        await product.save();
+
+      }
+
+    }
+
+    order.status = "Cancelled";
+
+    await order.save();
+
+    res.json({
+      success: true,
+      message:
+        "Order Cancelled",
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: error.message,
+    });
+
+  }
+
+});
 
 export default router;
