@@ -66,26 +66,40 @@ function Checkout() {
         });
 
     };
-    const applyCoupon = () => {
+    const applyCoupon =
+        async () => {
 
-        if (coupon === "SAVE10") {
+            try {
 
-            const discountAmount =
-                totalAmount * 0.1;
+                const { data } =
+                    await axios.post(
+                        `${import.meta.env.VITE_API_URL}/api/coupons/validate`,
+                        {
+                            code: coupon,
+                        }
+                    );
 
-            setDiscount(discountAmount);
+                const discountAmount =
+                    subtotal *
+                    (data.discount / 100);
 
-            toast.success("Coupon Applied");
+                setDiscount(
+                    discountAmount
+                );
 
-        } else {
+                toast.success(
+                    "Coupon Applied"
+                );
 
-            setDiscount(0);
+            } catch {
 
-            toast.error("Invalid Coupon");
+                toast.error(
+                    "Invalid Coupon"
+                );
 
-        }
+            }
 
-    };
+        };
     // SUBMIT
 
     const handleSubmit = async (e) => {
@@ -193,7 +207,7 @@ function Checkout() {
                 }
             );
 
-            
+
             // RAZORPAY OPTIONS
 
             const options = {

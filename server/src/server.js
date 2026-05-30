@@ -12,6 +12,7 @@ import path from "path";
 import orderRoutes from "./routes/orderRoutes.js";
 import User from "./models/User.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import couponRoutes from "./routes/couponRoutes.js";
 
 
 const app = express();
@@ -29,6 +30,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/coupons", couponRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI)
