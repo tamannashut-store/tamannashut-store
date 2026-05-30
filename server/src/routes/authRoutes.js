@@ -25,11 +25,13 @@ router.post("/register", async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const user = await User.create({
+        const user = new User({
             name,
             email,
             password: hashedPassword,
         });
+
+        await user.save();
 
         res.status(201).json({
             message: "User Registered",
@@ -91,7 +93,7 @@ router.post("/login", async (req, res) => {
                 name: user.name,
                 email: user.email,
                 isAdmin: user.isAdmin,
-              },
+            },
         });
 
     } catch (error) {
