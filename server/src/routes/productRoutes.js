@@ -42,7 +42,7 @@ router.post(
         ),
 
         image: req.file
-          ? `${process.env.CLIENT_URL}/uploads/${req.file.filename}`
+          ? `https://tamannashut-store.onrender.com/uploads/${req.file.filename}`
           : "",
 
       });
