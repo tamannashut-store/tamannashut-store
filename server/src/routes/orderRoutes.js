@@ -3,7 +3,6 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { orderEmailTemplate } from "../utils/emailTemplates.js";
-import { sendEmail } from "../utils/sendEmail.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 
