@@ -32,13 +32,13 @@ function MyOrders() {
     };
     const getImageUrl = (image) => {
         if (!image) return "";
-      
+
         return image.replace(
-          "http://localhost:5000",
-          import.meta.env.VITE_API_URL
+            "http://localhost:5000",
+            import.meta.env.VITE_API_URL
         );
-      };
-    
+    };
+
     return (
 
         <div className="max-w-6xl mx-auto px-6 py-20">
@@ -104,9 +104,19 @@ function MyOrders() {
                                 >
 
                                     <img
-                                        src={getImageUrl(item.image)}
+                                        src={
+                                            item.image?.startsWith("http")
+                                                ? item.image
+                                                : `${import.meta.env.VITE_API_URL}${item.image}`
+                                        }
                                         alt={item.name}
                                         className="w-20 h-20 rounded-xl object-cover"
+                                        onError={(e) => {
+                                            console.log("IMAGE FAILED:", item.image);
+
+                                            e.target.src =
+                                                "https://via.placeholder.com/80?text=No+Image";
+                                        }}
                                     />
 
                                     <div className="flex-1">
@@ -118,7 +128,9 @@ function MyOrders() {
                                         <p className="text-gray-500">
                                             Qty: {item.qty}
                                         </p>
-
+                                        <p className="text-xs text-red-500">
+                                            {item.image}
+                                        </p>
                                     </div>
 
                                     <p className="font-bold">
@@ -138,8 +150,8 @@ function MyOrders() {
             </div>
 
         </div>
-        
+
     );
-    
+
 }
 export default MyOrders;
