@@ -3,148 +3,75 @@ import axios from "axios";
 
 function AdminDashboard() {
 
-    const [products, setProducts] = useState([]);
-    const [orders, setOrders] = useState([]);
+  const [stats, setStats] = useState(null);
 
-    useEffect(() => {
+  useEffect(() => {
 
-        fetchData();
+    fetchStats();
 
-    }, []);
+  }, []);
 
-    const fetchData = async () => {
+  const fetchStats = async () => {
 
-        try {
-
-            const productsRes = await axios.get(
-                `${import.meta.env.VITE_API_URL}/api/products`
-            );
-
-            const ordersRes = await axios.get(
-                `${import.meta.env.VITE_API_URL}/api/orders`
-            );
-
-            setProducts(productsRes.data);
-
-            setOrders(ordersRes.data);
-
-        } catch (error) {
-
-            console.log(error);
-        }
-    };
-
-    const totalRevenue = orders.reduce(
-        (acc, order) => acc + order.totalAmount,
-        0
+    const { data } = await axios.get(
+      `${import.meta.env.VITE_API_URL}/api/dashboard/stats`
     );
 
-    return (
+    setStats(data);
+  };
 
-        <div className="max-w-7xl mx-auto px-6 py-20">
+  if (!stats) return <h1>Loading...</h1>;
 
-            <button
-                onClick={() => {
-                    localStorage.removeItem("admin");
-                    window.location.href = "/admin-login";
-                }}
-                className="bg-red-500 text-white px-4 py-2 rounded-xl"
-            >
-                Logout
-            </button>
+  return (
 
-            <h1 className="text-5xl font-bold mb-12">
-                Admin Dashboard
-            </h1>
+    <div className="max-w-7xl mx-auto px-6 py-20">
 
-            <div className="grid md:grid-cols-3 gap-8">
+      <h1 className="text-5xl font-bold mb-10">
+        Admin Dashboard
+      </h1>
 
-                <div className="bg-white shadow-xl rounded-3xl p-8">
+      <div className="grid md:grid-cols-5 gap-6">
 
-                    <h2 className="text-gray-500 text-lg">
-                        Total Products
-                    </h2>
-
-                    <h3 className="text-5xl font-bold mt-4">
-                        {products.length}
-                    </h3>
-
-                </div>
-
-                <div className="bg-white shadow-xl rounded-3xl p-8">
-
-                    <h2 className="text-gray-500 text-lg">
-                        Total Orders
-                    </h2>
-
-                    <h3 className="text-5xl font-bold mt-4">
-                        {orders.length}
-                    </h3>
-
-                </div>
-
-                <div className="bg-white shadow-xl rounded-3xl p-8">
-
-                    <h2 className="text-gray-500 text-lg">
-                        Total Revenue
-                    </h2>
-
-                    <h3 className="text-5xl font-bold mt-4 text-pink-500">
-                        ₹{Number(totalRevenue).toLocaleString("en-IN", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        })}
-                    </h3>
-
-                </div>
-
-            </div>
-
-            <div className="mt-16">
-
-                <h2 className="text-3xl font-bold mb-8">
-                    Latest Orders
-                </h2>
-
-                <div className="grid gap-6">
-
-                    {orders.slice(0, 5).map((order) => (
-
-                        <div
-                            key={order._id}
-                            className="bg-white shadow-lg rounded-2xl p-6 flex justify-between items-center"
-                        >
-
-                            <div>
-
-                                <h3 className="font-bold text-xl">
-                                    {order.customerName}
-                                </h3>
-
-                                <p className="text-gray-500">
-                                    {order.city}
-                                </p>
-
-                            </div>
-
-                            <div>
-
-                                <p className="font-bold text-pink-500 text-xl">
-                                    ₹{order.totalAmount}
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                    ))}
-
-                </div>
-
-            </div>
-
+        <div className="bg-white shadow-xl p-6 rounded-3xl">
+          <h2>Total Orders</h2>
+          <p className="text-4xl font-bold">
+            {stats.totalOrders}
+          </p>
         </div>
-    );
+
+        <div className="bg-white shadow-xl p-6 rounded-3xl">
+          <h2>Total Products</h2>
+          <p className="text-4xl font-bold">
+            {stats.totalProducts}
+          </p>
+        </div>
+
+        <div className="bg-white shadow-xl p-6 rounded-3xl">
+          <h2>Total Users</h2>
+          <p className="text-4xl font-bold">
+            {stats.totalUsers}
+          </p>
+        </div>
+
+        <div className="bg-white shadow-xl p-6 rounded-3xl">
+          <h2>Pending Orders</h2>
+          <p className="text-4xl font-bold">
+            {stats.pendingOrders}
+          </p>
+        </div>
+
+        <div className="bg-white shadow-xl p-6 rounded-3xl">
+          <h2>Revenue</h2>
+          <p className="text-4xl font-bold">
+            ₹{stats.totalRevenue}
+          </p>
+        </div>
+
+      </div>
+
+    </div>
+
+  );
 }
 
 export default AdminDashboard;

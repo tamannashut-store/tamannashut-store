@@ -72,9 +72,9 @@ function App() {
         />
         <Route path="/my-orders" element={<MyOrders />} />
         <Route
-  path="/wishlist"
-  element={<Wishlist />}
-/>
+          path="/wishlist"
+          element={<Wishlist />}
+        />
       </Routes>
       <WhatsAppButton />
       <Footer />

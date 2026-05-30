@@ -11,6 +11,7 @@ import authRoutes from "./routes/authRoutes.js";
 import path from "path";
 import orderRoutes from "./routes/orderRoutes.js";
 import User from "./models/User.js";
+import dashboardRoutes from "./routes/dashboardRoutes.js";
 
 
 const app = express();
@@ -27,6 +28,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI)
