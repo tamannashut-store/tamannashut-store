@@ -112,7 +112,6 @@ function MyOrders() {
                                         alt={item.name}
                                         className="w-20 h-20 rounded-xl object-cover"
                                         onError={(e) => {
-                                            console.log("IMAGE FAILED:", item.image);
 
                                             e.target.src =
                                                 "https://via.placeholder.com/80?text=No+Image";
