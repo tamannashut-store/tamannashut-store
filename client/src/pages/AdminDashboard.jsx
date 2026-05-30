@@ -90,7 +90,10 @@ function AdminDashboard() {
                     </h2>
 
                     <h3 className="text-5xl font-bold mt-4 text-pink-500">
-                        ₹{totalRevenue}
+                        ₹{Number(totalRevenue).toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        })}
                     </h3>
 
                 </div>
