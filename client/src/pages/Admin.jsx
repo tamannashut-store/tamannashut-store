@@ -16,7 +16,7 @@ function Admin() {
         { size: "3-6M", stock: 0 },
         { size: "6-9M", stock: 0 },
         { size: "9-12M", stock: 0 },
-      ]);
+    ]);
     const navigate = useNavigate();
 
     const fetchProducts = async () => {
@@ -48,7 +48,7 @@ function Admin() {
             formData.append(
                 "sizeStock",
                 JSON.stringify(sizeStock)
-              );
+            );
 
             await axios.post(
                 `${import.meta.env.VITE_API_URL}/api/products`,
@@ -72,7 +72,7 @@ function Admin() {
                 { size: "3-6M", stock: 0 },
                 { size: "6-9M", stock: 0 },
                 { size: "9-12M", stock: 0 },
-              ]);
+            ]);
 
             fetchProducts();
         } catch (error) {
@@ -145,47 +145,47 @@ function Admin() {
                 </div>
                 <div>
 
-<h3 className="font-semibold mb-4">
-Size Wise Stock
-</h3>
+                    <h3 className="font-semibold mb-4">
+                        Size Wise Stock
+                    </h3>
 
-<div className="grid gap-4">
+                    <div className="grid gap-4">
 
-{sizeStock.map((item,index)=>(
+                        {sizeStock.map((item, index) => (
 
-<div
-  key={item.size}
-  className="flex items-center gap-4"
->
+                            <div
+                                key={item.size}
+                                className="flex items-center gap-4"
+                            >
 
-<span className="w-24 font-medium">
-  {item.size}
-</span>
+                                <span className="w-24 font-medium">
+                                    {item.size}
+                                </span>
 
-<input
-  type="number"
-  min="0"
-  value={item.stock}
-  onChange={(e)=>{
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={item.stock}
+                                    onChange={(e) => {
 
-    const updated=[...sizeStock];
+                                        const updated = [...sizeStock];
 
-    updated[index].stock =
-      Number(e.target.value);
+                                        updated[index].stock =
+                                            Number(e.target.value);
 
-    setSizeStock(updated);
+                                        setSizeStock(updated);
 
-  }}
-  className="border p-3 rounded-xl w-40"
-/>
+                                    }}
+                                    className="border p-3 rounded-xl w-40"
+                                />
 
-</div>
+                            </div>
 
-))}
+                        ))}
 
-</div>
+                    </div>
 
-</div>
+                </div>
                 <div>
                     <label className="block mb-2 font-semibold">
                         Upload Product Image
@@ -244,11 +244,11 @@ Size Wise Stock
                         className="bg-white shadow-xl rounded-3xl p-5"
                     >
                         <img
-                             src={
+                            src={
                                 product.image?.startsWith("http")
-                                  ? product.image
-                                  : `${import.meta.env.VITE_API_URL}${product.image}`
-                              }
+                                    ? product.image
+                                    : `${import.meta.env.VITE_API_URL}${product.image}`
+                            }
                             alt={product.name}
                             className="w-full h-64 object-cover rounded-2xl"
                         />
@@ -265,7 +265,7 @@ Size Wise Stock
                             {product.sizeStock?.map((item) => (
 
                                 <p key={item.size}>
-                                {item.size}: {item.stock}
+                                    {item.size}: {item.stock}
                                 </p>
 
                             ))}

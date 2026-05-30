@@ -20,43 +20,52 @@ function Cart() {
     useEffect(() => {
 
         validateCart();
-    
+
     }, [cartItems]);
-    
+
     const validateCart = async () => {
         const invalid = [];
-      
+
         for (const item of cartItems) {
-          try {
-            const { data } = await axios.get(
-              `${import.meta.env.VITE_API_URL}/api/products/${item._id}`
-            );
-      
-            const sizeData = data.sizeStock?.find(
-              (s) => s.size === item.selectedSize
-            );
-      
-            if (!sizeData) {
-              invalid.push(
-                `${item._id}-${item.selectedSize}`
-              );
-              continue;
+            try {
+                const { data } = await axios.get(
+                    `${import.meta.env.VITE_API_URL}/api/products/${item._id}`
+                );
+
+                const sizeData = data.sizeStock?.find(
+                    (s) => s.size === item.selectedSize
+                );
+
+                if (!sizeData) {
+                    invalid.push(
+                        `${item._id}-${item.selectedSize}`
+                    );
+                    continue;
+                }
+
+                if (sizeData.stock < item.qty) {
+                    invalid.push(
+                        `${item._id}-${item.selectedSize}`
+                    );
+                }
+
+            } catch (error) {
+                invalid.push(
+                    `${item._id}-${item.selectedSize}`
+                );
             }
+        }
+
+        setInvalidItems(invalid);
+    };
+    const getImageUrl = (image) => {
+        if (!image) return "";
       
-            if (sizeData.stock < item.qty) {
-              invalid.push(
-                `${item._id}-${item.selectedSize}`
-              );
-            }
-      
-          } catch (error) {
-            invalid.push(
-              `${item._id}-${item.selectedSize}`
-            );
-          }
+        if (image.startsWith("http")) {
+          return image;
         }
       
-        setInvalidItems(invalid);
+        return `${import.meta.env.VITE_API_URL}${image}`;
       };
     return (
 
@@ -77,12 +86,12 @@ function Cart() {
                     {cartItems.map((item) => (
 
                         <div
-                        key={`${item._id}-${item.selectedSize}`}
+                            key={`${item._id}-${item.selectedSize}`}
                             className="flex items-center gap-6 bg-white shadow-lg rounded-2xl p-5"
                         >
 
                             <img
-                                src={item.image}
+                                src={getImageUrl(item.image)}
                                 alt={item.name}
                                 className="w-32 h-32 object-cover rounded-xl"
                             />
@@ -95,49 +104,49 @@ function Cart() {
 
                                 <div className="flex items-center gap-3 mt-3">
 
-    <button
-        onClick={() =>
-            decreaseQty(
-                item._id,
-                item.selectedSize
-            )
-        }
-        className="w-8 h-8 rounded-full bg-gray-200"
-    >
-        -
-    </button>
+                                    <button
+                                        onClick={() =>
+                                            decreaseQty(
+                                                item._id,
+                                                item.selectedSize
+                                            )
+                                        }
+                                        className="w-8 h-8 rounded-full bg-gray-200"
+                                    >
+                                        -
+                                    </button>
 
-    <span className="font-semibold">
-        {item.qty}
-    </span>
+                                    <span className="font-semibold">
+                                        {item.qty}
+                                    </span>
 
-    <button
-        onClick={() =>
-            increaseQty(
-                item._id,
-                item.selectedSize
-            )
-        }
-        className="w-8 h-8 rounded-full bg-pink-500 text-white"
-    >
-        +
-    </button>
+                                    <button
+                                        onClick={() =>
+                                            increaseQty(
+                                                item._id,
+                                                item.selectedSize
+                                            )
+                                        }
+                                        className="w-8 h-8 rounded-full bg-pink-500 text-white"
+                                    >
+                                        +
+                                    </button>
 
-</div>
-{invalidItems.includes(
-  `${item._id}-${item.selectedSize}`
-) && (
+                                </div>
+                                {invalidItems.includes(
+                                    `${item._id}-${item.selectedSize}`
+                                ) && (
 
-<p className="text-red-500 mt-2 font-semibold">
+                                        <p className="text-red-500 mt-2 font-semibold">
 
-    Size unavailable or out of stock
+                                            Size unavailable or out of stock
 
-</p>
+                                        </p>
 
-)}
-<p className="text-gray-500 mt-1">
-  Size: {item.selectedSize}
-</p>
+                                    )}
+                                <p className="text-gray-500 mt-1">
+                                    Size: {item.selectedSize}
+                                </p>
                                 <p className="text-pink-500 font-bold text-xl mt-2">
                                     ₹{item.price}
                                 </p>
@@ -147,10 +156,10 @@ function Cart() {
                             <button
                                 onClick={() =>
                                     removeFromCart(
-                                      item._id,
-                                      item.selectedSize
+                                        item._id,
+                                        item.selectedSize
                                     )
-                                  }
+                                }
                                 className="bg-red-500 text-white px-5 py-2 rounded-full"
                             >
                                 Remove Item
@@ -167,35 +176,35 @@ function Cart() {
                         </h2>
 
                         {
-invalidItems.some(id =>
-  cartItems.some(
-    item =>
-      `${item._id}-${item.selectedSize}` === id
-  )
-) ? (
+                            invalidItems.some(id =>
+                                cartItems.some(
+                                    item =>
+                                        `${item._id}-${item.selectedSize}` === id
+                                )
+                            ) ? (
 
-<button
-    disabled
-    className="mt-6 bg-gray-400 text-white px-10 py-4 rounded-full cursor-not-allowed"
->
+                                <button
+                                    disabled
+                                    className="mt-6 bg-gray-400 text-white px-10 py-4 rounded-full cursor-not-allowed"
+                                >
 
-    Fix Cart Issues
+                                    Fix Cart Issues
 
-</button>
+                                </button>
 
-) : (
+                            ) : (
 
-<Link to="/checkout">
+                                <Link to="/checkout">
 
-    <button className="mt-6 bg-black text-white px-10 py-4 rounded-full hover:bg-pink-500 transition">
+                                    <button className="mt-6 bg-black text-white px-10 py-4 rounded-full hover:bg-pink-500 transition">
 
-        Checkout
+                                        Checkout
 
-    </button>
+                                    </button>
 
-</Link>
+                                </Link>
 
-)}
+                            )}
 
                     </div>
 

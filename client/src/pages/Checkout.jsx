@@ -9,7 +9,7 @@ function Checkout() {
     const {
         cartItems,
         setCartItems,
-      } = useContext(CartContext);
+    } = useContext(CartContext);
 
     const navigate = useNavigate();
 
@@ -26,7 +26,7 @@ function Checkout() {
         pincode: "",
     });
     const [paymentMethod, setPaymentMethod] =
-    useState("online");
+        useState("online");
     // EMPTY CART
 
     if (cartItems.length === 0) {
@@ -71,7 +71,7 @@ function Checkout() {
         if (coupon === "SAVE10") {
 
             const discountAmount =
-            totalAmount * 0.1;
+                totalAmount * 0.1;
 
             setDiscount(discountAmount);
 
@@ -99,89 +99,89 @@ function Checkout() {
                 await axios.get(
                     `${import.meta.env.VITE_API_URL}/api/products/${item._id}`
                 );
-        
-                const sizeData = latestProduct.sizeStock?.find(
-                    s => s.size === item.selectedSize
-                  );
-                  
-                  if (!sizeData) {
-                  
-                    toast.error(
-                      `${item.selectedSize} size unavailable for ${item.name}`
-                    );
-                  
-                    setLoading(false);
-                  
-                    return;
-                  }
-                  
-                  if (item.qty > sizeData.stock) {
-                  
-                    toast.error(
-                      `${item.name} (${item.selectedSize}) stock changed`
-                    );
-                  
-                    setLoading(false);
-                  
-                    return;
-                  }
+
+            const sizeData = latestProduct.sizeStock?.find(
+                s => s.size === item.selectedSize
+            );
+
+            if (!sizeData) {
+
+                toast.error(
+                    `${item.selectedSize} size unavailable for ${item.name}`
+                );
+
+                setLoading(false);
+
+                return;
+            }
+
+            if (item.qty > sizeData.stock) {
+
+                toast.error(
+                    `${item.name} (${item.selectedSize}) stock changed`
+                );
+
+                setLoading(false);
+
+                return;
+            }
         }
         if (paymentMethod === "cod") {
 
             try {
-          
-              await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/orders`,
-                {
-                  userId: JSON.parse(
-                    localStorage.getItem("user")
-                  )?.user?.id,
-          
-                  customerName: formData.name,
-          
-                  email: formData.email,
-          
-                  phone: formData.phone,
-          
-                  address: formData.address,
-          
-                  city: formData.city,
-          
-                  pincode: formData.pincode,
-          
-                  products: cartItems,
-          
-                  totalAmount: totalAmount,
-          
-                  paymentMethod: "COD",
-          
-                  paymentStatus: "Pending",
-          
-                  status: "Pending",
-                }
-              );
-          
-              localStorage.removeItem("cart");
 
-setCartItems([]);
+                await axios.post(
+                    `${import.meta.env.VITE_API_URL}/api/orders`,
+                    {
+                        userId: JSON.parse(
+                            localStorage.getItem("user")
+                        )?.user?.id,
 
-toast.success("Payment Successful");
+                        customerName: formData.name,
 
-navigate("/success");
-          
-              return;
-          
+                        email: formData.email,
+
+                        phone: formData.phone,
+
+                        address: formData.address,
+
+                        city: formData.city,
+
+                        pincode: formData.pincode,
+
+                        products: cartItems,
+
+                        totalAmount: totalAmount,
+
+                        paymentMethod: "COD",
+
+                        paymentStatus: "Pending",
+
+                        status: "Pending",
+                    }
+                );
+
+                localStorage.removeItem("cart");
+
+                setCartItems([]);
+
+                toast.success("Payment Successful");
+
+                navigate("/success");
+
+                return;
+
             } catch (error) {
-          
-              console.log(error);
-          
-              toast.error("COD Order Failed");
-          
-              setLoading(false);
-          
-              return;
+
+                console.log(error);
+
+                toast.error("COD Order Failed");
+
+                setLoading(false);
+
+                return;
             }
-          }
+        }
         try {
 
             // CREATE RAZORPAY ORDER
@@ -193,6 +193,7 @@ navigate("/success");
                 }
             );
 
+            
             // RAZORPAY OPTIONS
 
             const options = {
@@ -298,11 +299,11 @@ navigate("/success");
 
                             localStorage.removeItem("cart");
 
-setCartItems([]);
+                            setCartItems([]);
 
-toast.success("Payment Successful");
+                            toast.success("Payment Successful");
 
-navigate("/success");
+                            navigate("/success");
 
                         } else {
 
@@ -338,7 +339,15 @@ navigate("/success");
         }
 
     };
+    const getImageUrl = (image) => {
+        if (!image) return "";
 
+        if (image.startsWith("http")) {
+            return image;
+        }
+
+        return `${import.meta.env.VITE_API_URL}${image}`;
+    };
     return (
 
         <div className="max-w-7xl mx-auto px-6 py-20">
@@ -422,51 +431,51 @@ navigate("/success");
                     </div>
                     <div className="mt-8">
 
-<h3 className="font-semibold mb-4">
-  Select Payment Method
-</h3>
+                        <h3 className="font-semibold mb-4">
+                            Select Payment Method
+                        </h3>
 
-<div className="grid gap-4">
+                        <div className="grid gap-4">
 
-  <label className="border p-4 rounded-2xl flex items-center gap-3 cursor-pointer">
+                            <label className="border p-4 rounded-2xl flex items-center gap-3 cursor-pointer">
 
-    <input
-      type="radio"
-      name="payment"
-      value="online"
-      checked={paymentMethod === "online"}
-      onChange={(e) =>
-        setPaymentMethod(e.target.value)
-      }
-    />
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    value="online"
+                                    checked={paymentMethod === "online"}
+                                    onChange={(e) =>
+                                        setPaymentMethod(e.target.value)
+                                    }
+                                />
 
-    <span className="font-semibold">
-      Pay Online
-    </span>
+                                <span className="font-semibold">
+                                    Pay Online
+                                </span>
 
-  </label>
+                            </label>
 
-  <label className="border p-4 rounded-2xl flex items-center gap-3 cursor-pointer">
+                            <label className="border p-4 rounded-2xl flex items-center gap-3 cursor-pointer">
 
-    <input
-      type="radio"
-      name="payment"
-      value="cod"
-      checked={paymentMethod === "cod"}
-      onChange={(e) =>
-        setPaymentMethod(e.target.value)
-      }
-    />
+                                <input
+                                    type="radio"
+                                    name="payment"
+                                    value="cod"
+                                    checked={paymentMethod === "cod"}
+                                    onChange={(e) =>
+                                        setPaymentMethod(e.target.value)
+                                    }
+                                />
 
-    <span className="font-semibold">
-      Cash On Delivery
-    </span>
+                                <span className="font-semibold">
+                                    Cash On Delivery
+                                </span>
 
-  </label>
+                            </label>
 
-</div>
+                        </div>
 
-</div>
+                    </div>
                     <button
                         type="submit"
                         disabled={loading}
@@ -496,12 +505,12 @@ navigate("/success");
                         {cartItems.map((item) => (
 
                             <div
-                            key={`${item._id}-${item.selectedSize}`}
+                                key={`${item._id}-${item.selectedSize}`}
                                 className="flex items-center gap-4 bg-white rounded-2xl p-4"
                             >
 
                                 <img
-                                    src={item.image}
+                                    src={getImageUrl(item.image)}
                                     alt={item.name}
                                     className="w-20 h-20 rounded-xl object-cover"
                                 />

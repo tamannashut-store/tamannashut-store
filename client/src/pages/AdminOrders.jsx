@@ -53,7 +53,15 @@ function AdminOrders() {
             toast.error("Update Failed");
         }
     };
+    const getImageUrl = (image) => {
+        if (!image) return "";
 
+        if (image.startsWith("http")) {
+            return image;
+        }
+
+        return `${import.meta.env.VITE_API_URL}${image}`;
+    };
     return (
 
         <div className="max-w-7xl mx-auto px-6 py-20">
@@ -140,7 +148,7 @@ function AdminOrders() {
                                 >
 
                                     <img
-                                        src={item.image}
+                                        src={getImageUrl(item.image)}
                                         alt={item.name}
                                         className="w-20 h-20 rounded-xl object-cover"
                                     />
