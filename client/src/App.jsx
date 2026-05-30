@@ -21,7 +21,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import MyOrders from "./pages/MyOrders";
 import Wishlist from "./pages/Wishlist";
-import Profile from "./pages/Profile"
+import Profile from "./pages/Profile";
+import ChangePassword from "./pages/ChangePassword";
 
 function App() {
   return (
@@ -38,48 +39,15 @@ function App() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/success" element={<Success />} />
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <Admin />
-            </AdminRoute>
-          }
-        />
-
-        <Route
-          path="/admin/orders"
-          element={
-            <AdminRoute>
-              <AdminOrders />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin-login"
-          element={<AdminLogin />}
-        />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin/edit/:id"
-          element={<EditProduct />}
-        />
+        <Route path="/admin" element={<AdminRoute> <Admin /> </AdminRoute>} />
+        <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+        <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="/admin/edit/:id" element={<EditProduct />} />
         <Route path="/my-orders" element={<MyOrders />} />
-        <Route
-          path="/wishlist"
-          element={<Wishlist />}
-        />
-        <Route
-          path="/profile"
-          element={<Profile />}
-        />
+        <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/change-password" element={<ChangePassword />} />
       </Routes>
       <WhatsAppButton />
       <Footer />
