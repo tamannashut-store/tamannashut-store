@@ -4,14 +4,32 @@ import axios from "axios";
 function MyOrders() {
 
     const [orders, setOrders] = useState([]);
-
+    const [loading, setLoading] = useState(true);
     const user = JSON.parse(
         localStorage.getItem("user")
     );
 
     useEffect(() => {
 
-        fetchOrders();
+        const loadOrders = async () => {
+
+            try {
+
+                const { data } = await axios.get(
+                    `${import.meta.env.VITE_API_URL}/api/orders/my-orders/${user.user.id}`
+                );
+
+                setOrders(data);
+
+            } catch (error) {
+
+                console.log(error);
+
+            }
+
+        };
+
+        loadOrders();
 
     }, []);
 
@@ -38,7 +56,21 @@ function MyOrders() {
             import.meta.env.VITE_API_URL
         );
     };
+    if (loading) {
 
+        return (
+
+            <div className="h-screen flex items-center justify-center">
+
+                <h1 className="text-2xl font-bold">
+                    Loading Orders...
+                </h1>
+
+            </div>
+
+        );
+
+    }
     return (
 
         <div className="max-w-6xl mx-auto px-6 py-20">
@@ -107,10 +139,10 @@ function MyOrders() {
                             {order.trackingNumber && (
 
                                 <a
-                                    href={`https://shiprocket.co/tracking/${order.trackingNumber}`}
+                                    href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.trackingNumber}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-block mt-3 bg-pink-500 text-white px-4 py-2 rounded-xl"
+                                    className="inline-block mt-4 bg-pink-500 text-white px-4 py-2 rounded-xl"
                                 >
 
                                     Track Package
@@ -130,17 +162,14 @@ function MyOrders() {
                                 >
 
                                     <img
-                                        src={
-                                            item.image?.startsWith("http")
-                                                ? item.image
-                                                : `${import.meta.env.VITE_API_URL}${item.image}`
-                                        }
+                                        src={getImageUrl(item.image)}
                                         alt={item.name}
                                         className="w-20 h-20 rounded-xl object-cover"
                                         onError={(e) => {
 
                                             e.target.src =
-                                                `${import.meta.env.VITE_API_URL}${item.image}`;
+                                                "https://dummyimage.com/80x80/e5e7eb/6b7280&text=No+Image";
+
                                         }}
                                     />
 
