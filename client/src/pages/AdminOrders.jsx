@@ -11,7 +11,7 @@ function AdminOrders() {
         try {
 
             const { data } = await axios.get(
-                "http://localhost:5000/api/orders"
+                "import.meta.env.VITE_API_URL/api/orders"
             );
 
             setOrders(data);
@@ -38,7 +38,7 @@ function AdminOrders() {
         try {
 
             await axios.put(
-                `http://localhost:5000/api/orders/${orderId}`,
+                `import.meta.env.VITE_API_URL/api/orders/${orderId}`,
                 { status }
             );
 

@@ -17,11 +17,11 @@ function AdminDashboard() {
         try {
 
             const productsRes = await axios.get(
-                "http://localhost:5000/api/products"
+                "import.meta.env.VITE_API_URL/api/products"
             );
 
             const ordersRes = await axios.get(
-                "http://localhost:5000/api/orders"
+                "import.meta.env.VITE_API_URL/api/orders"
             );
 
             setProducts(productsRes.data);

@@ -29,7 +29,7 @@ function Cart() {
         for (const item of cartItems) {
           try {
             const { data } = await axios.get(
-              `http://localhost:5000/api/products/${item._id}`
+              `import.meta.env.VITE_API_URL/api/products/${item._id}`
             );
       
             const sizeData = data.sizeStock?.find(
