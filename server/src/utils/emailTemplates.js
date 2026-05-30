@@ -1,4 +1,6 @@
-const orderEmailTemplate = (order) => `
+export const orderEmailTemplate = (order) => {
+    
+    return`
 <div style="font-family:Arial;padding:20px;background:#f6f6f6">
   <div style="max-width:600px;margin:auto;background:#fff;padding:20px;border-radius:10px">
 
@@ -32,4 +34,4 @@ const orderEmailTemplate = (order) => `
     <p>— Tamanna's Hut Team</p>
   </div>
 </div>
-`;
+`;};
