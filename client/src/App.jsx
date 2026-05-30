@@ -21,6 +21,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import MyOrders from "./pages/MyOrders";
 import Wishlist from "./pages/Wishlist";
+import Profile from "./pages/Profile"
 
 function App() {
   return (
@@ -74,6 +75,10 @@ function App() {
         <Route
           path="/wishlist"
           element={<Wishlist />}
+        />
+        <Route
+          path="/profile"
+          element={<Profile />}
         />
       </Routes>
       <WhatsAppButton />

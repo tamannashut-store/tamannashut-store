@@ -9,13 +9,13 @@ function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-const navigate = useNavigate();
-const handleSearch = (e) => {
+  const navigate = useNavigate();
+  const handleSearch = (e) => {
 
     e.preventDefault();
-  
+
     navigate(`/shop?search=${search}`);
-  
+
   };
   const userData = JSON.parse(
     localStorage.getItem("user")
@@ -25,29 +25,29 @@ const handleSearch = (e) => {
     <nav className="sticky top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
 
       <div className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-      <form
-  onSubmit={handleSearch}
-  className="hidden lg:flex items-center border rounded-full overflow-hidden"
->
+        <form
+          onSubmit={handleSearch}
+          className="hidden lg:flex items-center border rounded-full overflow-hidden"
+        >
 
-  <input
-    type="text"
-    placeholder="Search products..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    className="px-4 py-2 outline-none w-56"
-  />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="px-4 py-2 outline-none w-56"
+          />
 
-  <button
-    type="submit"
-    className="bg-pink-500 text-white px-5 py-2"
-  >
+          <button
+            type="submit"
+            className="bg-pink-500 text-white px-5 py-2"
+          >
 
-    Search
+            Search
 
-  </button>
+          </button>
 
-</form>
+        </form>
         {/* LOGO */}
 
         <Link to="/" className="flex items-center gap-3">
@@ -105,12 +105,15 @@ const handleSearch = (e) => {
           </Link>
           <Link to="/wishlist">
 
-  ❤️ Wishlist
+            ❤️ Wishlist
 
-</Link>
+          </Link>
           <Link to="/my-orders">
-  My Orders
-</Link>
+            My Orders
+          </Link>
+          <Link to="/profile">
+            My Profile
+          </Link>
           <Link
             to="/contact"
             className="hover:text-pink-500 transition"
@@ -118,12 +121,12 @@ const handleSearch = (e) => {
             Contact
           </Link>
           {
-  userData?.user?.isAdmin && (
-    <Link to="/admin/dashboard">
-      Admin
-    </Link>
-  )
-}
+            userData?.user?.isAdmin && (
+              <Link to="/admin/dashboard">
+                Admin
+              </Link>
+            )
+          }
 
         </div>
 
