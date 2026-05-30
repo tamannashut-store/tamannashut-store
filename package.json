@@ -7,8 +7,9 @@
   "scripts": {
     "server": "nodemon server/src/server.js",
     "client": "npm run dev --prefix client",
-    "dev": "concurrently \"npm run server\" \"npm run client\""
-  },
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "start": "node server/src/server.js"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
