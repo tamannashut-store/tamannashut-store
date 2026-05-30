@@ -22,7 +22,7 @@ function MyOrders() {
             const { data } = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/orders/my-orders/${user.user.id}`
             );
-
+            console.log("ORDERS:", data);
             setOrders(data);
 
         } catch (error) {
@@ -143,5 +143,4 @@ function MyOrders() {
     );
     
 }
-console.log(order.products);
 export default MyOrders;
