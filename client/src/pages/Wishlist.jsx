@@ -46,7 +46,11 @@ function Wishlist() {
           >
 
             <img
-              src={product.image}
+               src={
+                product.image?.startsWith("http")
+                  ? product.image
+                  : `${import.meta.env.VITE_API_URL}${product.image}`
+              }
               alt={product.name}
               className="w-full h-72 object-cover rounded-2xl"
             />

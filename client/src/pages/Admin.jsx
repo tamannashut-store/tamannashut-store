@@ -244,7 +244,11 @@ Size Wise Stock
                         className="bg-white shadow-xl rounded-3xl p-5"
                     >
                         <img
-                            src={product.image || "/no-image.png"}
+                             src={
+                                product.image?.startsWith("http")
+                                  ? product.image
+                                  : `${import.meta.env.VITE_API_URL}${product.image}`
+                              }
                             alt={product.name}
                             className="w-full h-64 object-cover rounded-2xl"
                         />

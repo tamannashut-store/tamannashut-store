@@ -42,7 +42,7 @@ router.post(
         ),
 
         image: req.file
-          ? `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
+          ? `/uploads/${req.file.filename}`
           : "",
 
       });
@@ -108,9 +108,8 @@ router.put(
       // IMAGE UPDATE
 
       if (req.file) {
-
         product.image =
-          `${import.meta.env.VITE_API_URL}/uploads/${req.file.filename}`;
+          `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
       }
 
       const updatedProduct =

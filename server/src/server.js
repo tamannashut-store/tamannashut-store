@@ -10,6 +10,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import path from "path";
 import orderRoutes from "./routes/orderRoutes.js";
+import User from "./models/User.js";
 
 
 const app = express();
@@ -19,7 +20,7 @@ app.use(express.json());
 app.use(
   "/uploads",
   express.static(
-    path.join(process.cwd(), "src/uploads")
+    path.join(process.cwd(), "server/src/uploads")
   )
 );
 app.use("/api/products", productRoutes);
@@ -32,118 +33,100 @@ mongoose
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.log(err));
 
-  const userSchema = new mongoose.Schema({
-    name: {
-      type: String,
-    },
-  
-    email: {
-      type: String,
-      unique: true,
-    },
-  
-    password: {
-      type: String,
-    },
-  });
-  const User = mongoose.model(
-    "User",
-    userSchema
-  );
 app.get("/api", (req, res) => {
   res.json({
     message: "API is working",
   });
 });
 
-app.post("/api/register", async (req, res) => {
-    try {
-      const { name, email, password } = req.body;
+// app.post("/api/register", async (req, res) => {
+//     try {
+//       const { name, email, password } = req.body;
   
-      const existingUser = await User.findOne({ email });
+//       const existingUser = await User.findOne({ email });
   
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: "User already exists",
-        });
-      }
+//       if (existingUser) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "User already exists",
+//         });
+//       }
   
-      const hashedPassword = await bcrypt.hash(password, 10);
+//       const hashedPassword = await bcrypt.hash(password, 10);
   
-      const user = new User({
-        name,
-        email,
-        password: hashedPassword,
-      });
+//       const user = new User({
+//         name,
+//         email,
+//         password: hashedPassword,
+//       });
   
-      await user.save();
+//       await user.save();
   
-      res.json({
-        success: true,
-        message: "User created successfully",
-      });
-    } catch (error) {
-      console.log(error);
+//       res.json({
+//         success: true,
+//         message: "User created successfully",
+//       });
+//     } catch (error) {
+//       console.log(error);
   
-      res.status(500).json({
-        success: false,
-        message: "Server error",
-      });
-    }
-  });
+//       res.status(500).json({
+//         success: false,
+//         message: "Server error",
+//       });
+//     }
+//   });
 
-  app.post("/api/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
+//   app.post("/api/login", async (req, res) => {
+//     try {
+//       const { email, password } = req.body;
   
-      const user = await User.findOne({ email });
+//       const user = await User.findOne({ email });
   
-      if (!user) {
-        return res.status(400).json({
-          success: false,
-          message: "User not found",
-        });
-      }
+//       if (!user) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "User not found",
+//         });
+//       }
   
-      const isMatch = await bcrypt.compare(password, user.password);
+//       const isMatch = await bcrypt.compare(password, user.password);
   
-      if (!isMatch) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid password",
-        });
-      }
+//       if (!isMatch) {
+//         return res.status(400).json({
+//           success: false,
+//           message: "Invalid password",
+//         });
+//       }
   
-      const token = jwt.sign(
-        {
-          id: user._id,
-        },
-        process.env.JWT_SECRET,
-        {
-          expiresIn: "7d",
-        }
-      );
+//       const token = jwt.sign(
+//         {
+//           id: user._id,
+//         },
+//         process.env.JWT_SECRET,
+//         {
+//           expiresIn: "7d",
+//         }
+//       );
   
-      res.json({
-        success: true,
-        message: "Login successful",
-        token,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-        },
-      });
-    } catch (error) {
-      console.log(error);
+//       res.json({
+//         success: true,
+//         message: "Login successful",
+//         token,
+//         user: {
+//           id: user._id,
+//           name: user.name,
+//           email: user.email,
+//         },
+//       });
+//     } catch (error) {
+//       console.log(error);
   
-      res.status(500).json({
-        success: false,
-        message: "Server error",
-      });
-    }
-  });
+//       res.status(500).json({
+//         success: false,
+//         message: "Server error",
+//       });
+//     }
+//   });
 
 const PORT = process.env.PORT || 5000;
 

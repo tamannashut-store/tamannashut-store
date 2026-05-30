@@ -129,7 +129,11 @@ function Home() {
 
             {products.map((product) => (
               <div key={product._id} className="relative bg-white rounded-2xl shadow-lg overflow-hidden">
-                <img src={ product.image || "https://via.placeholder.com/500x500?text=Tamannas+Hut"} alt={product.name} className="h-72 w-full object-cover"/>
+                <img src={
+                  product.image?.startsWith("http")
+                    ? product.image
+                    : `${import.meta.env.VITE_API_URL}${product.image}`
+                } alt={product.name} className="h-72 w-full object-cover" />
                 <div className="p-5">
                   <h3 className="font-semibold text-lg">
                     {product.name}

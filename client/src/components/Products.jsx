@@ -57,10 +57,11 @@ function Products() {
                     >
 
                         <img
-                            src={
-                                product.image ||
-                                "https://via.placeholder.com/500x500?text=Tamannas+Hut"
-                            }
+                             src={
+                                product.image?.startsWith("http")
+                                  ? product.image
+                                  : `${import.meta.env.VITE_API_URL}${product.image}`
+                              }
                             alt={product.name}
                             className="h-72 w-full object-cover"
                         />
