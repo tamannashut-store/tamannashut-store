@@ -15,26 +15,28 @@ router.post("/", async (req, res) => {
     const order = new Order(req.body);
 
     await order.save();
-    await sendEmail(
+    try {
 
-      req.body.email,
-
-      "Order Confirmed - Tamanna's Hut",
-
-      `
-      <h2>Thank you for your order</h2>
+      await sendEmail(
+        req.body.email,
+        "Order Confirmed - Tamanna's Hut",
+        `
+        <h2>Thank you for your order</h2>
     
-      <p>
-        Order Amount:
-        ₹${order.totalAmount}
-      </p>
+        <p>Order Amount: ₹${order.totalAmount}</p>
     
-      <p>
-        Status:
-        ${order.status}
-      </p>
-      `
-    );
+        <p>Status: ${order.status}</p>
+        `
+      );
+    
+    } catch (emailError) {
+    
+      console.log(
+        "EMAIL ERROR:",
+        emailError.message
+      );
+    
+    }
     // REDUCE STOCK
 
     for (const item of req.body.products) {
