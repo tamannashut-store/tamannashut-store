@@ -18,12 +18,13 @@ app.use(cors());
 app.use(express.json());
 app.use(
   "/uploads",
-  express.static(path.join("server/src/uploads"))
+  express.static(
+    path.join(process.cwd(), "src/uploads")
+  )
 );
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/uploads", express.static("server/src/uploads"));
 app.use("/api/auth", authRoutes);
 
 mongoose
@@ -45,7 +46,10 @@ mongoose
       type: String,
     },
   });
-
+  const User = mongoose.model(
+    "User",
+    userSchema
+  );
 app.get("/api", (req, res) => {
   res.json({
     message: "API is working",

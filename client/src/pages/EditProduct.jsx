@@ -13,8 +13,8 @@ function EditProduct() {
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState("");
     const [image, setImage] = useState(null);
-    const [stock, setStock] = useState("");
-    const [sizes, setSizes] = useState([]);
+    const [sizeStock,setSizeStock] =
+useState([]);
 
     useEffect(() => {
 
@@ -55,10 +55,9 @@ function EditProduct() {
             formData.append("price", price);
             formData.append("description", description);
             formData.append("category", category);
-            formData.append("stock", stock);
             formData.append(
-                "sizes",
-                JSON.stringify(sizes)
+                "sizeStock",
+                JSON.stringify(sizeStock)
               );
 
             if (image) {
