@@ -8,7 +8,7 @@ import { useContext } from "react";
 
 function Home() {
     const [products, setProducts] = useState([]);
-
+    console.log(import.meta.env.VITE_API_URL);
     useEffect(() => {
         fetchProducts();
     }, []);
