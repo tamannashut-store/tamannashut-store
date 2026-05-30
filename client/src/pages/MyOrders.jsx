@@ -25,6 +25,10 @@ function MyOrders() {
 
                 console.log(error);
 
+            } finally {
+
+                setLoading(false);
+
             }
 
         };
@@ -33,21 +37,21 @@ function MyOrders() {
 
     }, []);
 
-    const fetchOrders = async () => {
+    // const fetchOrders = async () => {
 
-        try {
+    //     try {
 
-            const { data } = await axios.get(
-                `${import.meta.env.VITE_API_URL}/api/orders/my-orders/${user.user.id}`
-            );
-            console.log("ORDERS:", data);
-            setOrders(data);
+    //         const { data } = await axios.get(
+    //             `${import.meta.env.VITE_API_URL}/api/orders/my-orders/${user.user.id}`
+    //         );
+    //         console.log("ORDERS:", data);
+    //         setOrders(data);
 
-        } catch (error) {
+    //     } catch (error) {
 
-            console.log(error);
-        }
-    };
+    //         console.log(error);
+    //     }
+    // };
     const getImageUrl = (image) => {
         if (!image) return "";
 
