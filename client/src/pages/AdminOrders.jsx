@@ -172,7 +172,17 @@ function AdminOrders() {
                                             Qty:
                                             {item.qty}
                                         </p>
+                                        <p className="text-gray-500">
+                                            Email: {order.email}
+                                        </p>
 
+                                        <p className="text-gray-500">
+                                            Payment Status: {order.paymentStatus}
+                                        </p>
+                                        <p className="text-gray-500">
+                                            Ordered:
+                                            {new Date(order.createdAt).toLocaleString()}
+                                        </p>
                                     </div>
 
                                     <p className="font-bold">

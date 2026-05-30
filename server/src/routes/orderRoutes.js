@@ -9,57 +9,58 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
 
-    try {
+  try {
 
-        const order = new Order(req.body);
+    const order = new Order(req.body);
 
-        await order.save();
+    await order.save();
 
-        // REDUCE STOCK
+    // REDUCE STOCK
 
-        for (const item of req.body.products) {
+    for (const item of req.body.products) {
 
-            const product =
-                await Product.findById(item._id);
+      const product =
+        await Product.findById(item._id);
 
-            if (product) {
+      if (product) {
 
-                const sizeData =
-  product.sizeStock.find(
-    s =>
-      s.size === item.selectedSize
-  );
-
-if (sizeData) {
-  sizeData.stock -= item.qty;
-}
-
-await product.save();
-
-                if (product.stock < 0) {
-
-                    product.stock = 0;
-                }
-
-                await product.save();
-            }
+        const sizeData = product.sizeStock.find(
+          s => s.size === item.selectedSize
+        );
+        
+        if (sizeData) {
+        
+          if (sizeData.stock < item.qty) {
+        
+            return res.status(400).json({
+              success: false,
+              message: `${product.name} (${item.selectedSize}) is out of stock`
+            });
+        
+          }
+        
+          sizeData.stock -= item.qty;
+        
+          await product.save();
         }
-
-        res.json({
-            success: true,
-            message: "Order saved",
-            order,
-        });
-
-    } catch (error) {
-
-        console.log(error);
-
-        res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+      }
     }
+
+    res.json({
+      success: true,
+      message: "Order saved",
+      order,
+    });
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 });
 
 
@@ -67,101 +68,101 @@ await product.save();
 
 router.get("/", async (req, res) => {
 
-    try {
+  try {
 
-        const orders = await Order.find().sort({
-            createdAt: -1,
-        });
+    const orders = await Order.find().sort({
+      createdAt: -1,
+    });
 
-        res.json(orders);
+    res.json(orders);
 
-    } catch (error) {
+  } catch (error) {
 
-        res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 });
 
 
 // UPDATE ORDER STATUS
 
 router.put("/:id", async (req, res) => {
-    try {
-      const order = await Order.findById(req.params.id);
-  
-      if (!order) {
-        return res.status(404).json({
-          message: "Order not found",
-        });
-      }
-  
-      // Restore stock when cancelled
-      if (
-        req.body.status === "Cancelled" &&
-        order.status !== "Cancelled"
-      ) {
-        for (const item of order.products) {
-  
-          const product =
-            await Product.findById(item._id);
-  
-          if (product) {
-  
-            const sizeIndex =
-              product.sizeStock.findIndex(
-                s =>
-                  s.size ===
-                  item.selectedSize
-              );
-  
-            if (sizeIndex !== -1) {
-              product.sizeStock[
-                sizeIndex
-              ].stock += item.qty;
-  
-              await product.save();
-            }
+  try {
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+
+    // Restore stock when cancelled
+    if (
+      req.body.status === "Cancelled" &&
+      order.status !== "Cancelled"
+    ) {
+      for (const item of order.products) {
+
+        const product =
+          await Product.findById(item._id);
+
+        if (product) {
+
+          const sizeIndex =
+            product.sizeStock.findIndex(
+              s =>
+                s.size ===
+                item.selectedSize
+            );
+
+          if (sizeIndex !== -1) {
+            product.sizeStock[
+              sizeIndex
+            ].stock += item.qty;
+
+            await product.save();
           }
         }
       }
-  
-      order.status = req.body.status;
-  
-      const updatedOrder =
-        await order.save();
-  
-      res.json(updatedOrder);
-  
-    } catch (error) {
-      res.status(500).json({
-        message: error.message,
-      });
     }
-  });
+
+    order.status = req.body.status;
+
+    const updatedOrder =
+      await order.save();
+
+    res.json(updatedOrder);
+
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+});
 
 
 // MY ORDERS
 
 router.get("/my-orders/:userId", async (req, res) => {
 
-    try {
+  try {
 
-        const orders = await Order.find({
-            userId: req.params.userId,
-        }).sort({
-            createdAt: -1,
-        });
+    const orders = await Order.find({
+      userId: req.params.userId,
+    }).sort({
+      createdAt: -1,
+    });
 
-        res.json(orders);
+    res.json(orders);
 
-    } catch (error) {
+  } catch (error) {
 
-        res.status(500).json({
-            message: error.message,
-        });
-    }
+    res.status(500).json({
+      message: error.message,
+    });
+  }
 });
 
 export default router;
