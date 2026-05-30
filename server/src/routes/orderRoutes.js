@@ -1,6 +1,7 @@
 import express from "express";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import { sendEmail } from "../utils/sendEmail.js";
 
 const router = express.Router();
 
@@ -14,7 +15,26 @@ router.post("/", async (req, res) => {
     const order = new Order(req.body);
 
     await order.save();
+    await sendEmail(
 
+      req.body.email,
+
+      "Order Confirmed - Tamanna's Hut",
+
+      `
+      <h2>Thank you for your order</h2>
+    
+      <p>
+        Order Amount:
+        ₹${order.totalAmount}
+      </p>
+    
+      <p>
+        Status:
+        ${order.status}
+      </p>
+      `
+    );
     // REDUCE STOCK
 
     for (const item of req.body.products) {
