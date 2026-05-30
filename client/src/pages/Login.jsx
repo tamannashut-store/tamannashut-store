@@ -41,8 +41,8 @@ function Login() {
             navigate("/");
 
         } catch (error) {
-            console.log(err.response?.data);
-            console.log(err.response?.status);
+            console.log("Error Data:", error.response?.data);
+    console.log("Error Status:", error.response?.status);
             toast.error(
                 error.response?.data?.message ||
                 "Login Failed"
