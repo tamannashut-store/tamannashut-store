@@ -13,8 +13,8 @@ function EditProduct() {
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState("");
     const [image, setImage] = useState(null);
-    const [sizeStock,setSizeStock] =
-useState([]);
+    const [sizeStock, setSizeStock] =
+        useState([]);
 
     useEffect(() => {
 
@@ -34,8 +34,7 @@ useState([]);
             setPrice(data.price);
             setDescription(data.description);
             setCategory(data.category);
-            setStock(data.stock);
-            setSizes(data.sizes || []);
+            setSizeStock(data.sizeStock || []);
 
         } catch (error) {
 
@@ -58,7 +57,7 @@ useState([]);
             formData.append(
                 "sizeStock",
                 JSON.stringify(sizeStock)
-              );
+            );
 
             if (image) {
                 formData.append("image", image);
@@ -130,84 +129,47 @@ useState([]);
                 </div>
                 <div>
 
-<label className="block mb-2 font-semibold">
-    Stock
-</label>
+                    <h3 className="font-semibold mb-4">
+                        Size Wise Stock
+                    </h3>
 
-<input
-    type="number"
-    value={stock}
-    onChange={(e) => setStock(e.target.value)}
-    className="w-full border p-4 rounded-2xl"
-/>
+                    <div className="grid gap-4">
 
-</div>
-<div>
+                        {sizeStock.map((item, index) => (
 
-    <label className="block mb-3 font-semibold">
-        Sizes
-    </label>
+                            <div
+                                key={item.size}
+                                className="flex items-center gap-4"
+                            >
 
-    <div className="flex gap-4 flex-wrap">
+                                <span className="w-24 font-medium">
+                                    {item.size}
+                                </span>
 
-        {[
-            "0-3M",
-            "3-6M",
-            "6-9M",
-            "9-12M",
-        ].map((size) => (
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={item.stock}
+                                    onChange={(e) => {
 
-            <label
-                key={size}
-                className="flex items-center gap-2"
-            >
+                                        const updated = [...sizeStock];
 
-                <input
-                    type="checkbox"
-                    checked={sizes.includes(size)}
-                    onChange={(e) => {
+                                        updated[index].stock =
+                                            Number(e.target.value);
 
-                        let updatedSizes;
-                    
-                        if (e.target.checked) {
-                    
-                            updatedSizes = [...sizes, size];
-                    
-                        } else {
-                    
-                            updatedSizes = sizes.filter(
-                                (s) => s !== size
-                            );
-                    
-                        }
-                    
-                        const sizeOrder = [
-                            "0-3M",
-                            "3-6M",
-                            "6-9M",
-                            "9-12M",
-                        ];
-                    
-                        updatedSizes.sort(
-                            (a, b) =>
-                                sizeOrder.indexOf(a) -
-                                sizeOrder.indexOf(b)
-                        );
-                    
-                        setSizes(updatedSizes);
-                    
-                    }}
-                />
+                                        setSizeStock(updated);
 
-                {size}
+                                    }}
+                                    className="border p-3 rounded-xl w-40"
+                                />
 
-            </label>
+                            </div>
 
-        ))}
+                        ))}
 
-    </div>
+                    </div>
 
-</div>
+                </div>
                 <div>
 
                     <label className="block mb-2 font-semibold">
