@@ -154,6 +154,9 @@ function MyOrders() {
                                 <span>
                                     Delivered
                                 </span>
+                                <span>
+                                    Cancelled
+                                </span>
 
                             </div>
 
@@ -161,29 +164,35 @@ function MyOrders() {
 
                                 <div
                                     className={`flex-1 h-2 ${["Pending", "Processing", "Shipped", "Delivered"].includes(order.status)
-                                            ? "bg-green-500"
-                                            : "bg-gray-300"
+                                        ? "bg-green-500"
+                                        : "bg-gray-300"
                                         }`}
                                 />
 
                                 <div
                                     className={`flex-1 h-2 ${["Processing", "Shipped", "Delivered"].includes(order.status)
-                                            ? "bg-green-500"
-                                            : "bg-gray-300"
+                                        ? "bg-green-500"
+                                        : "bg-gray-300"
                                         }`}
                                 />
 
                                 <div
                                     className={`flex-1 h-2 ${["Shipped", "Delivered"].includes(order.status)
-                                            ? "bg-green-500"
-                                            : "bg-gray-300"
+                                        ? "bg-green-500"
+                                        : "bg-gray-300"
                                         }`}
                                 />
 
                                 <div
                                     className={`flex-1 h-2 ${order.status === "Delivered"
-                                            ? "bg-green-500"
-                                            : "bg-gray-300"
+                                        ? "bg-green-500"
+                                        : "bg-gray-300"
+                                        }`}
+                                />
+                                <div
+                                    className={`flex-1 h-2 ${order.status === "Cancelled"
+                                        ? "bg-red-500"
+                                        : "bg-gray-300"
                                         }`}
                                 />
 
