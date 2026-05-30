@@ -39,7 +39,8 @@ function Register() {
             navigate("/login");
 
         } catch (error) {
-
+            console.log("Error Data:", error.response?.data);
+            console.log("Error Status:", error.response?.status);
             toast.error(
                 error.response?.data?.message ||
                 "Registration Failed"
