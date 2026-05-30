@@ -42,7 +42,7 @@ router.post(
         ),
 
         image: req.file
-          ? `${import.meta.env.VITE_API_URL}/uploads/${req.file.filename}`
+          ? `${process.env.CLIENT_URL}/uploads/${req.file.filename}`
           : "",
 
       });
