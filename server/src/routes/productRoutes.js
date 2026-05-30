@@ -145,4 +145,48 @@ router.delete("/:id", async (req, res) => {
     });
   }
 });
+router.post("/:id/review", async (req, res) => {
+
+  try {
+
+    const product =
+      await Product.findById(
+        req.params.id
+      );
+
+    if (!product) {
+
+      return res.status(404).json({
+        message: "Product not found",
+      });
+
+    }
+
+    product.reviews.push(
+      req.body
+    );
+
+    product.averageRating =
+      product.reviews.reduce(
+        (acc, review) =>
+          acc + review.rating,
+        0
+      ) /
+      product.reviews.length;
+
+    await product.save();
+
+    res.json({
+      success: true,
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: error.message,
+    });
+
+  }
+
+});
 export default router;

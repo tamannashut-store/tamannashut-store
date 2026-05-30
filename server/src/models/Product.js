@@ -28,7 +28,23 @@ const productSchema = new mongoose.Schema({
       stock: Number,
     },
   ],
+  reviews: [
+    {
+      userId: String,
+      name: String,
+      rating: Number,
+      comment: String,
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
 
+  averageRating: {
+    type: Number,
+    default: 0,
+  },
 }, {
   timestamps: true,
 });

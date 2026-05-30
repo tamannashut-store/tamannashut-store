@@ -12,6 +12,11 @@ function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState("");
+  const [rating, setRating] =
+    useState(5);
+
+  const [comment, setComment] =
+    useState("");
 
   useEffect(() => {
     fetchProduct();
@@ -102,8 +107,8 @@ function ProductDetails() {
                   onClick={() => setSelectedSize(item.size)}
                   disabled={item.stock <= 0}
                   className={`px-5 py-2 rounded-xl border ${selectedSize === item.size
-                      ? "bg-pink-500 text-white"
-                      : "bg-white"
+                    ? "bg-pink-500 text-white"
+                    : "bg-white"
                     } ${item.stock <= 0
                       ? "opacity-50 cursor-not-allowed"
                       : ""
@@ -124,7 +129,40 @@ function ProductDetails() {
           <p className="text-gray-600 mt-8 leading-8 text-lg">
             {product.description}
           </p>
+          <div className="mt-12">
 
+            <h2 className="text-2xl font-bold mb-4">
+              Customer Reviews
+            </h2>
+
+            {product.reviews?.map(
+              review => (
+
+                <div
+                  key={review._id}
+                  className="border-b py-4"
+                >
+
+                  <h3 className="font-semibold">
+                    {review.name}
+                  </h3>
+
+                  <p>
+                    {"⭐".repeat(
+                      review.rating
+                    )}
+                  </p>
+
+                  <p>
+                    {review.comment}
+                  </p>
+
+                </div>
+
+              )
+            )}
+
+          </div>
           <p className="mt-6 font-semibold">
             Category:
             <span className="text-pink-500 ml-2">
@@ -171,12 +209,49 @@ function ProductDetails() {
             }}
             disabled={availableStock <= 0}
             className={`mt-10 px-10 py-4 rounded-full text-lg font-semibold transition ${availableStock <= 0
-                ? "bg-gray-400 text-white cursor-not-allowed"
-                : "bg-pink-500 hover:bg-pink-600 text-white"
+              ? "bg-gray-400 text-white cursor-not-allowed"
+              : "bg-pink-500 hover:bg-pink-600 text-white"
               }`}
           >
             {availableStock <= 0 ? "Out Of Stock" : "Add To Cart"}
           </button>
+        </div>
+        <div className="mt-10">
+
+          <h2 className="text-2xl font-bold mb-4">
+            Write Review
+          </h2>
+
+          <select
+            value={rating}
+            onChange={(e) =>
+              setRating(e.target.value)
+            }
+            className="border p-3 rounded-xl"
+          >
+            <option value="5">⭐⭐⭐⭐⭐</option>
+            <option value="4">⭐⭐⭐⭐</option>
+            <option value="3">⭐⭐⭐</option>
+            <option value="2">⭐⭐</option>
+            <option value="1">⭐</option>
+          </select>
+
+          <textarea
+            value={comment}
+            onChange={(e) =>
+              setComment(e.target.value)
+            }
+            placeholder="Write review..."
+            className="w-full border p-4 mt-4 rounded-xl"
+          />
+
+          <button
+            onClick={submitReview}
+            className="bg-pink-500 text-white px-5 py-3 rounded-xl mt-4"
+          >
+            Submit Review
+          </button>
+
         </div>
       </div>
     </div>

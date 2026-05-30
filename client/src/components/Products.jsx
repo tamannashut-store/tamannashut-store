@@ -57,11 +57,11 @@ function Products() {
                     >
 
                         <img
-                             src={
+                            src={
                                 product.image?.startsWith("http")
-                                  ? product.image
-                                  : `${import.meta.env.VITE_API_URL}${product.image}`
-                              }
+                                    ? product.image
+                                    : `${import.meta.env.VITE_API_URL}${product.image}`
+                            }
                             alt={product.name}
                             className="h-72 w-full object-cover"
                         />
@@ -75,7 +75,11 @@ function Products() {
                             <p className="text-pink-500 text-xl font-semibold mt-3">
                                 {product.price}
                             </p>
+                            <div className="text-yellow-500">
 
+                                ⭐ {product.averageRating?.toFixed(1) || "0.0"}
+
+                            </div>
                             <button
                                 onClick={() => addToCart(product)}
                                 disabled={product.stock <= 0}
