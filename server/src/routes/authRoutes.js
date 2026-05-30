@@ -157,6 +157,7 @@ router.put("/profile/:id", async (req, res) => {
             await user.save();
 
         res.json(updatedUser);
+        alert("Profile Updated")
 
     } catch (error) {
 
