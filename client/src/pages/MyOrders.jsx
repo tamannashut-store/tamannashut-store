@@ -85,7 +85,39 @@ function MyOrders() {
                                 </span>
 
                             </div>
+                            {order.trackingNumber && (
 
+                                <div className="mt-4">
+
+                                    <p className="font-semibold">
+
+                                        Tracking Number:
+
+                                    </p>
+
+                                    <p className="text-pink-500">
+
+                                        {order.trackingNumber}
+
+                                    </p>
+
+                                </div>
+
+                            )}
+                            {order.trackingNumber && (
+
+                                <a
+                                    href={`https://shiprocket.co/tracking/${order.trackingNumber}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-block mt-3 bg-pink-500 text-white px-4 py-2 rounded-xl"
+                                >
+
+                                    Track Package
+
+                                </a>
+
+                            )}
                         </div>
 
                         <div className="mt-8 grid gap-5">

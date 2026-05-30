@@ -27,20 +27,20 @@ router.post("/", async (req, res) => {
         const sizeData = product.sizeStock.find(
           s => s.size === item.selectedSize
         );
-        
+
         if (sizeData) {
-        
+
           if (sizeData.stock < item.qty) {
-        
+
             return res.status(400).json({
               success: false,
               message: `${product.name} (${item.selectedSize}) is out of stock`
             });
-        
+
           }
-        
+
           sizeData.stock -= item.qty;
-        
+
           await product.save();
         }
       }
@@ -129,6 +129,9 @@ router.put("/:id", async (req, res) => {
     }
 
     order.status = req.body.status;
+    order.trackingNumber =
+      req.body.trackingNumber ||
+      order.trackingNumber;
 
     const updatedOrder =
       await order.save();

@@ -62,6 +62,27 @@ function AdminOrders() {
 
         return `${import.meta.env.VITE_API_URL}${image}`;
     };
+    const updateTracking = async (
+        orderId,
+        trackingNumber
+    ) => {
+
+        try {
+
+            await axios.put(
+                `${import.meta.env.VITE_API_URL}/api/orders/${orderId}`,
+                {
+                    trackingNumber,
+                }
+            );
+
+        } catch (error) {
+
+            console.log(error);
+
+        }
+
+    };
     return (
 
         <div className="max-w-7xl mx-auto px-6 py-20">
@@ -183,6 +204,18 @@ function AdminOrders() {
                                             Ordered:
                                             {new Date(order.createdAt).toLocaleString()}
                                         </p>
+                                        <input
+                                            type="text"
+                                            placeholder="Tracking Number"
+                                            value={order.trackingNumber || ""}
+                                            onChange={(e) =>
+                                                updateTracking(
+                                                    order._id,
+                                                    e.target.value
+                                                )
+                                            }
+                                            className="border p-2 rounded-xl"
+                                        />
                                     </div>
 
                                     <p className="font-bold">

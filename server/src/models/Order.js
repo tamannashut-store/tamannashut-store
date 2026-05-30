@@ -24,20 +24,24 @@ const orderSchema = new mongoose.Schema(
 
     paymentId: String,
 
-paymentMethod: {
-  type: String,
-  default: "Online",
-},
+    paymentMethod: {
+      type: String,
+      default: "Online",
+    },
 
-paymentStatus: {
-  type: String,
-  default: "Paid",
-},
+    paymentStatus: {
+      type: String,
+      default: "Paid",
+    },
 
-status: {
-  type: String,
-  default: "Pending",
-},
+    status: {
+      type: String,
+      default: "Pending",
+    },
+    trackingNumber: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
