@@ -78,13 +78,7 @@ function MyOrders() {
 
                                 <span
                                     className={`px-5 py-2 rounded-full text-sm font-semibold
-                                    ${order.status === "Pending"
-                                            ? "bg-yellow-100 text-yellow-700"
-                                            : order.status === "Packed"
-                                                ? "bg-blue-100 text-blue-700"
-                                                : order.status === "Shipped"
-                                                    ? "bg-purple-100 text-purple-700"
-                                                    : "bg-green-100 text-green-700"
+                                    ${order.status === "⏳ Order Pending" ? "bg-yellow-100 text-yellow-700" : order.status === "🔄 Processing" ? "bg-blue-100 text-blue-700" : order.status === "🚚 Shipped" ? "bg-purple-100 text-purple-700" : order.status === "✅ Delivered" ? "bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold" : order.status === "❌ Cancelled" ? "bg-red-100 text-red-700 px-4 py-2 rounded-full font-semibold" : "bg-green-100 text-green-700"
                                         }`}
                                 >
                                     {order.status}
@@ -114,7 +108,7 @@ function MyOrders() {
                                         onError={(e) => {
 
                                             e.target.src =
-                                               `${import.meta.env.VITE_API_URL}${item.image}`;
+                                                `${import.meta.env.VITE_API_URL}${item.image}`;
                                         }}
                                     />
 
@@ -139,6 +133,61 @@ function MyOrders() {
                                 </div>
 
                             ))}
+
+                        </div>
+                        <div className="mt-6">
+
+                            <div className="flex justify-between text-sm font-semibold">
+
+                                <span>
+                                    Order Placed
+                                </span>
+
+                                <span>
+                                    Processing
+                                </span>
+
+                                <span>
+                                    Shipped
+                                </span>
+
+                                <span>
+                                    Delivered
+                                </span>
+
+                            </div>
+
+                            <div className="flex mt-2">
+
+                                <div
+                                    className={`flex-1 h-2 ${["Pending", "Processing", "Shipped", "Delivered"].includes(order.status)
+                                            ? "bg-green-500"
+                                            : "bg-gray-300"
+                                        }`}
+                                />
+
+                                <div
+                                    className={`flex-1 h-2 ${["Processing", "Shipped", "Delivered"].includes(order.status)
+                                            ? "bg-green-500"
+                                            : "bg-gray-300"
+                                        }`}
+                                />
+
+                                <div
+                                    className={`flex-1 h-2 ${["Shipped", "Delivered"].includes(order.status)
+                                            ? "bg-green-500"
+                                            : "bg-gray-300"
+                                        }`}
+                                />
+
+                                <div
+                                    className={`flex-1 h-2 ${order.status === "Delivered"
+                                            ? "bg-green-500"
+                                            : "bg-gray-300"
+                                        }`}
+                                />
+
+                            </div>
 
                         </div>
 
