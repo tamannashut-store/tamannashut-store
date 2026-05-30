@@ -22,7 +22,7 @@ function Admin() {
     const fetchProducts = async () => {
         try {
             const { data } = await axios.get(
-                "import.meta.env.VITE_API_URL/api/products"
+                `${import.meta.env.VITE_API_URL}/api/products`
             );
             setProducts(data);
         } catch (error) {
@@ -51,7 +51,7 @@ function Admin() {
               );
 
             await axios.post(
-                "import.meta.env.VITE_API_URL/api/products",
+                `${import.meta.env.VITE_API_URL}/api/products`,
                 formData,
                 {
                     headers: {
@@ -86,7 +86,7 @@ function Admin() {
 
         try {
             await axios.delete(
-                `import.meta.env.VITE_API_URL/api/products/${productId}`
+                `${import.meta.env.VITE_API_URL}/api/products/${productId}`
             );
 
             alert("Product Deleted");

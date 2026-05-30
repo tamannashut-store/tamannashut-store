@@ -27,7 +27,7 @@ function EditProduct() {
         try {
 
             const { data } = await axios.get(
-                `import.meta.env.VITE_API_URL/api/products/${id}`
+                `${import.meta.env.VITE_API_URL}/api/products/${id}`
             );
 
             setName(data.name);
@@ -66,7 +66,7 @@ function EditProduct() {
             }
 
             await axios.put(
-                `import.meta.env.VITE_API_URL/api/products/${id}`,
+                `${import.meta.env.VITE_API_URL}/api/products/${id}`,
                 formData,
                 {
                     headers: {

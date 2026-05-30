@@ -97,7 +97,7 @@ function Checkout() {
 
             const { data: latestProduct } =
                 await axios.get(
-                    `import.meta.env.VITE_API_URL/api/products/${item._id}`
+                    `${import.meta.env.VITE_API_URL}/api/products/${item._id}`
                 );
         
                 const sizeData = latestProduct.sizeStock?.find(
@@ -131,7 +131,7 @@ function Checkout() {
             try {
           
               await axios.post(
-                "import.meta.env.VITE_API_URL/api/orders",
+                `${import.meta.env.VITE_API_URL}/api/orders`,
                 {
                   userId: JSON.parse(
                     localStorage.getItem("user")
@@ -187,7 +187,7 @@ navigate("/success");
             // CREATE RAZORPAY ORDER
 
             const { data } = await axios.post(
-                "import.meta.env.VITE_API_URL/api/payment/create-order",
+                `${import.meta.env.VITE_API_URL}/api/payment/create-order`,
                 {
                     amount: totalAmount,
                 }
@@ -244,7 +244,7 @@ navigate("/success");
                         // VERIFY PAYMENT
 
                         const verifyRes = await axios.post(
-                            "import.meta.env.VITE_API_URL/api/payment/verify-payment",
+                            `${import.meta.env.VITE_API_URL}/api/payment/verify-payment`,
                             {
                                 razorpay_order_id:
                                     response.razorpay_order_id,
@@ -264,7 +264,7 @@ navigate("/success");
                             // SAVE ORDER
 
                             await axios.post(
-                                "import.meta.env.VITE_API_URL/api/orders",
+                                `${import.meta.env.VITE_API_URL}/api/orders`,
                                 {
                                     userId: JSON.parse(
                                         localStorage.getItem("user")
