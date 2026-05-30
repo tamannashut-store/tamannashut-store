@@ -9,10 +9,10 @@ const client = twilio(
 export const sendWhatsApp = async (to, message) => {
   try {
     await client.messages.create({
-      from: "whatsapp:+918247502207", // Twilio sandbox number
-      to: `whatsapp:${to}`, // dynamic number
-      body: message,
-    });
+        from: "whatsapp:+918247502207",
+        to: `whatsapp:${to}`,
+        body: message,
+      });
   } catch (err) {
     console.log("WHATSAPP ERROR:", err.message);
   }
