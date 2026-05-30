@@ -53,12 +53,14 @@ function MyOrders() {
     //     }
     // };
     const getImageUrl = (image) => {
+
         if (!image) return "";
 
-        return image.replace(
-            "http://localhost:5000",
-            import.meta.env.VITE_API_URL
-        );
+        if (image.startsWith("http")) {
+            return image;
+        }
+
+        return `${import.meta.env.VITE_API_URL}${image}`;
     };
     if (loading) {
 
@@ -84,190 +86,215 @@ function MyOrders() {
             </h1>
 
             <div className="grid gap-8">
+                {orders.length === 0 ? (
 
-                {orders.map((order) => (
+                    <div className="text-center py-20">
 
-                    <div
-                        key={order._id}
-                        className="bg-white shadow-xl rounded-3xl p-8"
-                    >
+                        <h2 className="text-2xl font-semibold text-gray-500">
 
-                        <div className="flex justify-between flex-wrap gap-5">
+                            No Orders Found
 
-                            <div>
-
-                                <h2 className="text-2xl font-bold">
-                                    ₹{order.totalAmount}
-                                </h2>
-
-                                <p className="text-gray-500 mt-2">
-                                    Payment ID:
-                                </p>
-
-                                <p className="text-sm break-all">
-                                    {order.paymentId}
-                                </p>
-
-                            </div>
-
-                            <div>
-
-                                <span
-                                    className={`px-5 py-2 rounded-full text-sm font-semibold
-                                    ${order.status === "⏳ Order Pending" ? "bg-yellow-100 text-yellow-700" : order.status === "🔄 Processing" ? "bg-blue-100 text-blue-700" : order.status === "🚚 Shipped" ? "bg-purple-100 text-purple-700" : order.status === "✅ Delivered" ? "bg-green-100 text-green-700 px-4 py-2 rounded-full font-semibold" : order.status === "❌ Cancelled" ? "bg-red-100 text-red-700 px-4 py-2 rounded-full font-semibold" : "bg-green-100 text-green-700"
-                                        }`}
-                                >
-                                    {order.status}
-                                </span>
-
-                            </div>
-                            {order.trackingNumber && (
-
-                                <div className="mt-4">
-
-                                    <p className="font-semibold">
-
-                                        Tracking Number:
-
-                                    </p>
-
-                                    <p className="text-pink-500">
-
-                                        {order.trackingNumber}
-
-                                    </p>
-
-                                </div>
-
-                            )}
-                            {order.trackingNumber && (
-
-                                <a
-                                    href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.trackingNumber}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-block mt-4 bg-pink-500 text-white px-4 py-2 rounded-xl"
-                                >
-
-                                    Track Package
-
-                                </a>
-
-                            )}
-                        </div>
-
-                        <div className="mt-8 grid gap-5">
-
-                            {order.products.map((item, index) => (
-
-                                <div
-                                    key={index}
-                                    className="flex items-center gap-4 bg-pink-50 rounded-2xl p-4"
-                                >
-
-                                    <img
-                                        src={getImageUrl(item.image)}
-                                        alt={item.name}
-                                        className="w-20 h-20 rounded-xl object-cover"
-                                        onError={(e) => {
-
-                                            e.target.src =
-                                                "https://dummyimage.com/80x80/e5e7eb/6b7280&text=No+Image";
-
-                                        }}
-                                    />
-
-                                    <div className="flex-1">
-
-                                        <h3 className="font-semibold">
-                                            {item.name}
-                                        </h3>
-
-                                        <p className="text-gray-500">
-                                            Qty: {item.qty}
-                                        </p>
-                                        <p className="text-xs text-red-500">
-                                            {item.image}
-                                        </p>
-                                    </div>
-
-                                    <p className="font-bold">
-                                        ₹{item.price * item.qty}
-                                    </p>
-
-                                </div>
-
-                            ))}
-
-                        </div>
-                        <div className="mt-6">
-
-                            <div className="flex justify-between text-sm font-semibold">
-
-                                <span>
-                                    Order Placed
-                                </span>
-
-                                <span>
-                                    Processing
-                                </span>
-
-                                <span>
-                                    Shipped
-                                </span>
-
-                                <span>
-                                    Delivered
-                                </span>
-                                <span>
-                                    Cancelled
-                                </span>
-
-                            </div>
-
-                            <div className="flex mt-2">
-
-                                <div
-                                    className={`flex-1 h-2 ${["Pending", "Processing", "Shipped", "Delivered"].includes(order.status)
-                                        ? "bg-green-500"
-                                        : "bg-gray-300"
-                                        }`}
-                                />
-
-                                <div
-                                    className={`flex-1 h-2 ${["Processing", "Shipped", "Delivered"].includes(order.status)
-                                        ? "bg-green-500"
-                                        : "bg-gray-300"
-                                        }`}
-                                />
-
-                                <div
-                                    className={`flex-1 h-2 ${["Shipped", "Delivered"].includes(order.status)
-                                        ? "bg-green-500"
-                                        : "bg-gray-300"
-                                        }`}
-                                />
-
-                                <div
-                                    className={`flex-1 h-2 ${order.status === "Delivered"
-                                        ? "bg-green-500"
-                                        : "bg-gray-300"
-                                        }`}
-                                />
-                                <div
-                                    className={`flex-1 h-2 ${order.status === "Cancelled"
-                                        ? "bg-red-500"
-                                        : "bg-gray-300"
-                                        }`}
-                                />
-
-                            </div>
-
-                        </div>
+                        </h2>
 
                     </div>
 
-                ))}
+                ) : (
+
+                    orders.map((order) => (
+
+                        <div
+                            key={order._id}
+                            className="bg-white shadow-xl rounded-3xl p-8"
+                        >
+
+                            <div className="flex justify-between flex-wrap gap-5">
+
+                                <div>
+
+                                    <h2 className="text-2xl font-bold">
+                                        ₹{order.totalAmount}
+                                    </h2>
+
+                                    <p className="text-gray-500 mt-2">
+                                        Payment ID:
+                                    </p>
+
+                                    <p className="text-sm break-all">
+                                        {order.paymentId}
+                                    </p>
+
+                                </div>
+
+                                <div>
+
+                                    <span
+                                        className={`px-5 py-2 rounded-full text-sm font-semibold
+${order.status === "Pending"
+                                                ? "bg-yellow-100 text-yellow-700"
+                                                : order.status === "Processing"
+                                                    ? "bg-blue-100 text-blue-700"
+                                                    : order.status === "Shipped"
+                                                        ? "bg-purple-100 text-purple-700"
+                                                        : order.status === "Delivered"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : order.status === "Cancelled"
+                                                                ? "bg-red-100 text-red-700"
+                                                                : ""
+                                            }`}
+                                    >
+                                        {order.status}
+                                    </span>
+
+                                </div>
+                                {order.trackingNumber && (
+
+                                    <div className="mt-4">
+
+                                        <p className="font-semibold">
+
+                                            Tracking Number:
+
+                                        </p>
+
+                                        <p className="text-pink-500">
+
+                                            {order.trackingNumber}
+
+                                        </p>
+
+                                    </div>
+
+                                )}
+                                {order.trackingNumber && (
+
+                                    <a
+                                        href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.trackingNumber}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-block mt-4 bg-pink-500 text-white px-4 py-2 rounded-xl"
+                                    >
+
+                                        Track Package
+
+                                    </a>
+
+                                )}
+                            </div>
+
+                            <div className="mt-8 grid gap-5">
+
+                                {order.products.map((item, index) => (
+
+                                    <div
+                                        key={index}
+                                        className="flex items-center gap-4 bg-pink-50 rounded-2xl p-4"
+                                    >
+
+                                        <img
+                                            src={getImageUrl(item.image)}
+                                            alt={item.name}
+                                            className="w-20 h-20 rounded-xl object-cover"
+                                            onError={(e) => {
+
+                                                e.target.src =
+                                                    "https://dummyimage.com/80x80/e5e7eb/6b7280&text=No+Image";
+
+                                            }}
+                                        />
+
+                                        <div className="flex-1">
+
+                                            <h3 className="font-semibold">
+                                                {item.name}
+                                            </h3>
+
+                                            <p className="text-gray-500">
+                                                Qty: {item.qty}
+                                            </p>
+                                            <p className="text-xs text-red-500">
+                                                {item.image}
+                                            </p>
+                                        </div>
+
+                                        <p className="font-bold">
+                                            ₹{item.price * item.qty}
+                                        </p>
+
+                                    </div>
+
+                                ))}
+
+                            </div>
+                            <div className="mt-6">
+
+                                <div className="flex justify-between text-sm font-semibold">
+
+                                    <span>
+                                        Order Placed
+                                    </span>
+
+                                    <span>
+                                        Processing
+                                    </span>
+
+                                    <span>
+                                        Shipped
+                                    </span>
+
+                                    <span>
+                                        Delivered
+                                    </span>
+                                    <span>
+                                        Cancelled
+                                    </span>
+
+                                </div>
+
+                                <div className="flex mt-2">
+
+                                    <div
+                                        className={`flex-1 h-2 ${["Pending", "Processing", "Shipped", "Delivered"].includes(order.status)
+                                            ? "bg-green-500"
+                                            : "bg-gray-300"
+                                            }`}
+                                    />
+
+                                    <div
+                                        className={`flex-1 h-2 ${["Processing", "Shipped", "Delivered"].includes(order.status)
+                                            ? "bg-green-500"
+                                            : "bg-gray-300"
+                                            }`}
+                                    />
+
+                                    <div
+                                        className={`flex-1 h-2 ${["Shipped", "Delivered"].includes(order.status)
+                                            ? "bg-green-500"
+                                            : "bg-gray-300"
+                                            }`}
+                                    />
+
+                                    <div
+                                        className={`flex-1 h-2 ${order.status === "Delivered"
+                                            ? "bg-green-500"
+                                            : "bg-gray-300"
+                                            }`}
+                                    />
+                                    <div
+                                        className={`flex-1 h-2 ${order.status === "Cancelled"
+                                            ? "bg-red-500"
+                                            : "bg-gray-300"
+                                            }`}
+                                    />
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    ))
+
+                )}
 
             </div>
 
