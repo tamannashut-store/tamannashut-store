@@ -38,7 +38,11 @@ function ProductDetails() {
       setLoading(false);
     }
   };
-
+  useEffect(() => {
+    if (product) {
+      document.title = `${product.name} | Tamanna's Hut TEST`;
+    }
+  }, [product]);
   if (loading) {
     return (
       <div className="text-center py-20 text-2xl font-bold">
@@ -114,11 +118,7 @@ function ProductDetails() {
 
     }
   };
-  useEffect(() => {
-    if (product) {
-      document.title = `${product.name} | Tamanna's Hut TEST`;
-    }
-  }, [product]);
+  
   return (
     <>
       <Helmet>
