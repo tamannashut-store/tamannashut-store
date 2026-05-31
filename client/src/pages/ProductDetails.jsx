@@ -38,11 +38,7 @@ function ProductDetails() {
       setLoading(false);
     }
   };
-  useEffect(() => {
-    if (product) {
-      document.title = `${product.name} | Tamanna's Hut TEST`;
-    }
-  }, [product]);
+
   if (loading) {
     return (
       <div className="text-center py-20 text-2xl font-bold">
@@ -118,7 +114,7 @@ function ProductDetails() {
 
     }
   };
-  
+
   return (
     <>
       <Helmet>
@@ -126,10 +122,31 @@ function ProductDetails() {
 
         <meta
           name="description"
+          content={product.description}
+        />
+
+        <meta
+          property="og:title"
+          content={`${product.name} | Tamanna's Hut`}
+        />
+
+        <meta
+          property="og:description"
+          content={product.description}
+        />
+
+        <meta
+          property="og:image"
           content={
-            product.description ||
-            `${product.name} at Tamanna's Hut`
+            product.image?.startsWith("http")
+              ? product.image
+              : `${import.meta.env.VITE_API_URL}${product.image}`
           }
+        />
+
+        <meta
+          property="og:type"
+          content="product"
         />
       </Helmet>
       <div className="max-w-7xl mx-auto px-6 py-20">
