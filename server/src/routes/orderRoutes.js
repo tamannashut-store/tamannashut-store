@@ -27,8 +27,12 @@ router.post("/", async (req, res) => {
       invoiceTemplate(order)
     );
     console.log("PHONE FROM ORDER:", req.body.phone);
+    const phone = req.body.phone.startsWith("+")
+      ? req.body.phone
+      : `+91${req.body.phone}`;
+
     await sendWhatsApp(
-      req.body.phone,
+      phone,
       `🛍 Order Confirmed!\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`
     );
     // REDUCE STOCK

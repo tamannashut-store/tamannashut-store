@@ -11,16 +11,18 @@ console.log("AUTH:", process.env.TWILIO_AUTH);
 // send whatsapp message
 export const sendWhatsApp = async (to, message) => {
   try {
+    const formattedNumber = to.startsWith("+")
+      ? to
+      : `+91${to}`;
+
     const result = await client.messages.create({
       from: "whatsapp:+14155238886",
-      to: `whatsapp:${to}`,
+      to: `whatsapp:${formattedNumber}`,
       body: message,
     });
 
     console.log("SID:", result.sid);
     console.log("STATUS:", result.status);
-
-    return result;
   } catch (err) {
     console.log("WHATSAPP ERROR:", err);
   }
