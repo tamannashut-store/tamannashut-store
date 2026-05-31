@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { CartContext } from "../context/CartContext";
 import toast from "react-hot-toast";
+import { Helmet } from "react-helmet-async";
 
 function ProductDetails() {
+
   const { id } = useParams();
 
   const { cartItems, addToCart } = useContext(CartContext);
@@ -113,187 +115,200 @@ function ProductDetails() {
     }
   };
   return (
-    <div className="max-w-7xl mx-auto px-6 py-20">
-      <div className="grid md:grid-cols-2 gap-14 items-start">
-        <div>
-          <img
-            src={
-              product.image?.startsWith("http")
-                ? product.image
-                : `${import.meta.env.VITE_API_URL}${product.image}`
-            }
-            alt={product.name}
-            className="w-full rounded-3xl shadow-2xl"
-          />
-        </div>
+    <>
+      <Helmet>
+        <title>{product.name} | Tamanna's Hut</title>
 
-        <div>
-          <p className="uppercase tracking-[5px] text-pink-500 mb-4">
-            Tamanna's Hut
-          </p>
+        <meta
+          name="description"
+          content={
+            product.description ||
+            `${product.name} at Tamanna's Hut`
+          }
+        />
+      </Helmet>
+      <div className="max-w-7xl mx-auto px-6 py-20">
+        <div className="grid md:grid-cols-2 gap-14 items-start">
+          <div>
+            <img
+              src={
+                product.image?.startsWith("http")
+                  ? product.image
+                  : `${import.meta.env.VITE_API_URL}${product.image}`
+              }
+              alt={product.name}
+              className="w-full rounded-3xl shadow-2xl"
+            />
+          </div>
 
-          <h1 className="text-5xl font-bold">{product.name}</h1>
+          <div>
+            <p className="uppercase tracking-[5px] text-pink-500 mb-4">
+              Tamanna's Hut
+            </p>
 
-          <div className="mt-6">
-            <h3 className="font-semibold mb-3">Select Size</h3>
+            <h1 className="text-5xl font-bold">{product.name}</h1>
 
-            <div className="flex gap-3 flex-wrap">
+            <div className="mt-6">
+              <h3 className="font-semibold mb-3">Select Size</h3>
 
-              {product.sizeStock?.map((item) => (
+              <div className="flex gap-3 flex-wrap">
 
-                <button
-                  key={item.size}
-                  onClick={() => setSelectedSize(item.size)}
-                  disabled={item.stock <= 0}
-                  className={`px-5 py-2 rounded-xl border ${selectedSize === item.size
-                    ? "bg-pink-500 text-white"
-                    : "bg-white"
-                    } ${item.stock <= 0
-                      ? "opacity-50 cursor-not-allowed"
-                      : ""
-                    }`}
-                >
-                  {item.size} ({item.stock})
-                </button>
+                {product.sizeStock?.map((item) => (
 
-              ))}
+                  <button
+                    key={item.size}
+                    onClick={() => setSelectedSize(item.size)}
+                    disabled={item.stock <= 0}
+                    className={`px-5 py-2 rounded-xl border ${selectedSize === item.size
+                      ? "bg-pink-500 text-white"
+                      : "bg-white"
+                      } ${item.stock <= 0
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                      }`}
+                  >
+                    {item.size} ({item.stock})
+                  </button>
+
+                ))}
+
+              </div>
+            </div>
+
+            <p className="text-pink-500 text-4xl font-bold mt-6">
+              ₹{product.price}
+            </p>
+
+            <p className="text-gray-600 mt-8 leading-8 text-lg">
+              {product.description}
+            </p>
+            <div className="mt-12">
+
+              <h2 className="text-2xl font-bold mb-4">
+                Customer Reviews
+              </h2>
+
+              {product.reviews?.map(
+                review => (
+
+                  <div
+                    key={review._id}
+                    className="border-b py-4"
+                  >
+
+                    <h3 className="font-semibold">
+                      {review.name}
+                    </h3>
+
+                    <p>
+                      {"⭐".repeat(
+                        review.rating
+                      )}
+                    </p>
+
+                    <p>
+                      {review.comment}
+                    </p>
+
+                  </div>
+
+                )
+              )}
 
             </div>
-          </div>
+            <p className="mt-6 font-semibold">
+              Category:
+              <span className="text-pink-500 ml-2">
+                {product.category}
+              </span>
+            </p>
 
-          <p className="text-pink-500 text-4xl font-bold mt-6">
-            ₹{product.price}
-          </p>
+            <p className="mt-4 font-semibold">
+              Stock:
+              <span
+                className={`ml-2 ${availableStock > 0 ? "text-green-600" : "text-red-500"
+                  }`}
+              >
+                {availableStock > 0
+                  ? `${availableStock} Available`
+                  : "Out Of Stock"}
+              </span>
+            </p>
 
-          <p className="text-gray-600 mt-8 leading-8 text-lg">
-            {product.description}
-          </p>
-          <div className="mt-12">
+            <button
+              onClick={() => {
+                if (!selectedSize) {
+                  toast.error("Please select size");
+                  return;
+                }
 
-            <h2 className="text-2xl font-bold mb-4">
-              Customer Reviews
-            </h2>
+                if (!product.sizeStock?.find(item => item.size === selectedSize)) {
+                  alert("Selected size unavailable");
+                  return;
+                }
+                if (availableStock <= 0) {
+                  toast.error("Out Of Stock");
+                  return;
+                }
 
-            {product.reviews?.map(
-              review => (
 
-                <div
-                  key={review._id}
-                  className="border-b py-4"
-                >
 
-                  <h3 className="font-semibold">
-                    {review.name}
-                  </h3>
+                addToCart({
+                  ...product,
+                  selectedSize,
+                });
 
-                  <p>
-                    {"⭐".repeat(
-                      review.rating
-                    )}
-                  </p>
-
-                  <p>
-                    {review.comment}
-                  </p>
-
-                </div>
-
-              )
-            )}
-
-          </div>
-          <p className="mt-6 font-semibold">
-            Category:
-            <span className="text-pink-500 ml-2">
-              {product.category}
-            </span>
-          </p>
-
-          <p className="mt-4 font-semibold">
-            Stock:
-            <span
-              className={`ml-2 ${availableStock > 0 ? "text-green-600" : "text-red-500"
+                toast.success("Added To Cart");
+              }}
+              disabled={availableStock <= 0}
+              className={`mt-10 px-10 py-4 rounded-full text-lg font-semibold transition ${availableStock <= 0
+                ? "bg-gray-400 text-white cursor-not-allowed"
+                : "bg-pink-500 hover:bg-pink-600 text-white"
                 }`}
             >
-              {availableStock > 0
-                ? `${availableStock} Available`
-                : "Out Of Stock"}
-            </span>
-          </p>
+              {availableStock <= 0 ? "Out Of Stock" : "Add To Cart"}
+            </button>
+          </div>
+          <div className="mt-10">
 
-          <button
-            onClick={() => {
-              if (!selectedSize) {
-                toast.error("Please select size");
-                return;
+            <h2 className="text-2xl font-bold mb-4">
+              Write Review
+            </h2>
+
+            <select
+              value={rating}
+              onChange={(e) =>
+                setRating(e.target.value)
               }
+              className="border p-3 rounded-xl"
+            >
+              <option value="5">⭐⭐⭐⭐⭐</option>
+              <option value="4">⭐⭐⭐⭐</option>
+              <option value="3">⭐⭐⭐</option>
+              <option value="2">⭐⭐</option>
+              <option value="1">⭐</option>
+            </select>
 
-              if (!product.sizeStock?.find(item => item.size === selectedSize)) {
-                alert("Selected size unavailable");
-                return;
+            <textarea
+              value={comment}
+              onChange={(e) =>
+                setComment(e.target.value)
               }
-              if (availableStock <= 0) {
-                toast.error("Out Of Stock");
-                return;
-              }
+              placeholder="Write review..."
+              className="w-full border p-4 mt-4 rounded-xl"
+            />
 
+            <button
+              onClick={submitReview}
+              className="bg-pink-500 text-white px-5 py-3 rounded-xl mt-4"
+            >
+              Submit Review
+            </button>
 
-
-              addToCart({
-                ...product,
-                selectedSize,
-              });
-
-              toast.success("Added To Cart");
-            }}
-            disabled={availableStock <= 0}
-            className={`mt-10 px-10 py-4 rounded-full text-lg font-semibold transition ${availableStock <= 0
-              ? "bg-gray-400 text-white cursor-not-allowed"
-              : "bg-pink-500 hover:bg-pink-600 text-white"
-              }`}
-          >
-            {availableStock <= 0 ? "Out Of Stock" : "Add To Cart"}
-          </button>
-        </div>
-        <div className="mt-10">
-
-          <h2 className="text-2xl font-bold mb-4">
-            Write Review
-          </h2>
-
-          <select
-            value={rating}
-            onChange={(e) =>
-              setRating(e.target.value)
-            }
-            className="border p-3 rounded-xl"
-          >
-            <option value="5">⭐⭐⭐⭐⭐</option>
-            <option value="4">⭐⭐⭐⭐</option>
-            <option value="3">⭐⭐⭐</option>
-            <option value="2">⭐⭐</option>
-            <option value="1">⭐</option>
-          </select>
-
-          <textarea
-            value={comment}
-            onChange={(e) =>
-              setComment(e.target.value)
-            }
-            placeholder="Write review..."
-            className="w-full border p-4 mt-4 rounded-xl"
-          />
-
-          <button
-            onClick={submitReview}
-            className="bg-pink-500 text-white px-5 py-3 rounded-xl mt-4"
-          >
-            Submit Review
-          </button>
-
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
