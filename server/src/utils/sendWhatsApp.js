@@ -17,9 +17,11 @@ export const sendWhatsApp = async (to, message) => {
       body: message,
     });
 
-    console.log("Message sent:", result.sid);
+    console.log("SID:", result.sid);
+    console.log("STATUS:", result.status);
+
+    return result;
   } catch (err) {
-    console.log("WHATSAPP ERROR:");
-    console.log(err);
+    console.log("WHATSAPP ERROR:", err);
   }
 };

@@ -26,6 +26,7 @@ router.post("/", async (req, res) => {
       "Your Invoice - Tamanna's Hut",
       invoiceTemplate(order)
     );
+    console.log("PHONE FROM ORDER:", req.body.phone);
     await sendWhatsApp(
       req.body.phone,
       `🛍 Order Confirmed!\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`
