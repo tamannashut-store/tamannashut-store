@@ -18,19 +18,46 @@ router.post("/", async (req, res) => {
     const order = new Order(req.body);
 
     await order.save();
-    console.log("CUSTOMER EMAIL:", req.body.email);
     await sendEmail(
       req.body.email,
       "Order Confirmed - Tamanna's Hut",
-      orderEmailTemplate(order)
+      `
+        ${orderEmailTemplate(order)}
+        <hr />
+        ${invoiceTemplate(order)}
+      `
     );
-    
     await sendEmail(
-      req.body.email,
-      "Your Invoice - Tamanna's Hut",
-      invoiceTemplate(order)
+      process.env.ADMIN_EMAIL,
+      `🛍 New Order Received - ${order._id}`,
+      `
+      <h2>New Order Received</h2>
+    
+      <p><strong>Order ID:</strong> ${order._id}</p>
+      <p><strong>Customer:</strong> ${order.name}</p>
+      <p><strong>Email:</strong> ${order.email}</p>
+      <p><strong>Phone:</strong> ${order.phone}</p>
+      <p><strong>Total:</strong> ₹${order.totalAmount}</p>
+      <p><strong>Status:</strong> ${order.status}</p>
+    
+      <h3>Products</h3>
+    
+      <ul>
+        ${order.products
+          .map(
+            (p) => `
+              <li>
+                ${p.name}
+                | Size: ${p.selectedSize}
+                | Qty: ${p.qty}
+                | ₹${p.price}
+              </li>
+            `
+          )
+          .join("")}
+      </ul>
+      `
     );
-    console.log("PHONE FROM ORDER:", req.body.phone);
     const phone = req.body.phone.startsWith("+")
       ? req.body.phone
       : `+91${req.body.phone}`;
