@@ -114,6 +114,11 @@ function ProductDetails() {
 
     }
   };
+  useEffect(() => {
+    if (product) {
+      document.title = `${product.name} | Tamanna's Hut TEST`;
+    }
+  }, [product]);
   return (
     <>
       <Helmet>
