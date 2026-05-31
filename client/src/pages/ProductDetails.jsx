@@ -124,7 +124,32 @@ function ProductDetails() {
           name="description"
           content={product.description}
         />
-
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: product.name,
+            image: [
+              product.image?.startsWith("http")
+                ? product.image
+                : `${import.meta.env.VITE_API_URL}${product.image}`,
+            ],
+            description: product.description,
+            brand: {
+              "@type": "Brand",
+              name: "Tamanna's Hut",
+            },
+            offers: {
+              "@type": "Offer",
+              priceCurrency: "INR",
+              price: product.price,
+              availability:
+                availableStock > 0
+                  ? "https://schema.org/InStock"
+                  : "https://schema.org/OutOfStock",
+            },
+          })}
+        </script>
         <meta
           property="og:title"
           content={`${product.name} | Tamanna's Hut`}
