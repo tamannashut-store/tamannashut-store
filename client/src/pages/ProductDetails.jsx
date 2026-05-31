@@ -119,7 +119,7 @@ function ProductDetails() {
   return (
     <>
       <Helmet>
-      <title>{`${product.name} | Tamanna's Hut`}</title>
+        <title>{`${product.name} | Tamanna's Hut`}</title>
         <meta
           name="description"
           content={product.description}
@@ -147,6 +147,14 @@ function ProductDetails() {
         <meta
           property="og:type"
           content="product"
+        />
+        <meta
+          name="keywords"
+          content={`${product.name}, baby dress, kids clothes, Tamanna's Hut`}
+        />
+        <link
+          rel="canonical"
+          href={`https://tamannashut.com/product/${id}`}
         />
       </Helmet>
       <div className="max-w-7xl mx-auto px-6 py-20">
