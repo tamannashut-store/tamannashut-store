@@ -9,7 +9,7 @@ export const invoiceTemplate = (order) => {
   
         <p><b>Invoice ID:</b> ${order._id}</p>
         <p><b>Date:</b> ${new Date(order.createdAt).toDateString()}</p>
-        <p><b>Customer:</b> ${order.name || "Customer"}</p>
+        <p><b>Customer:</b> ${order.customerName || "Customer"}</p>
   
         <hr/>
   

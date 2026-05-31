@@ -6,7 +6,7 @@ export const orderEmailTemplate = (order) => {
 
     <h2 style="color:#2b2b2b">🛍 Order Confirmed!</h2>
 
-    <p>Hi <b>${order.name || "Customer"}</b>,</p>
+    <p>Hi <b>${order.customerName || "Customer"}</b>,</p>
 
     <p>Thank you for shopping with <b>Tamanna's Hut</b>.</p>
 

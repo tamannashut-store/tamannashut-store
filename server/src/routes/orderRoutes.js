@@ -34,7 +34,7 @@ router.post("/", async (req, res) => {
       <h2>New Order Received</h2>
     
       <p><strong>Order ID:</strong> ${order._id}</p>
-      <p><strong>Customer:</strong> ${order.name}</p>
+      <p><strong>Customer:</strong> ${order.customerName}</p>
       <p><strong>Email:</strong> ${order.email}</p>
       <p><strong>Phone:</strong> ${order.phone}</p>
       <p><strong>Total:</strong> ₹${order.totalAmount}</p>
