@@ -22,7 +22,11 @@ router.post("/", async (req, res) => {
     await sendEmail(
       req.body.email,
       "Order Confirmed - Tamanna's Hut",
-      orderEmailTemplate(order),
+      orderEmailTemplate(order)
+    );
+    
+    await sendEmail(
+      req.body.email,
       "Your Invoice - Tamanna's Hut",
       invoiceTemplate(order)
     );
