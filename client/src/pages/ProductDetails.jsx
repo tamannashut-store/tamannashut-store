@@ -119,7 +119,7 @@ function ProductDetails() {
   return (
     <>
       <Helmet>
-        <title>{product.name} | Tamanna's Hut</title>
+      <title>{`${product.name} | Tamanna's Hut`}</title>
         <meta
           name="description"
           content={product.description}
