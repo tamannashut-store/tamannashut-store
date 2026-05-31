@@ -44,8 +44,8 @@ router.post("/", async (req, res) => {
     
       <ul>
         ${order.products
-          .map(
-            (p) => `
+        .map(
+          (p) => `
               <li>
                 ${p.name}
                 | Size: ${p.selectedSize}
@@ -53,8 +53,8 @@ router.post("/", async (req, res) => {
                 | ₹${p.price}
               </li>
             `
-          )
-          .join("")}
+        )
+        .join("")}
       </ul>
       `
     );
@@ -270,8 +270,44 @@ router.put("/:id", async (req, res) => {
       req.body.trackingNumber ||
       order.trackingNumber;
 
-    const updatedOrder =
-      await order.save();
+    const updatedOrder = await order.save();
+    await sendEmail(
+      order.email,
+      `Order Update - Tamanna's Hut`,
+      `
+      <h2>Order Status Updated</h2>
+    
+      <p>Hello ${order.customerName || order.name || "Customer"},</p>
+    
+      <p>Your order status has been updated.</p>
+    
+      <p>
+        <strong>Order ID:</strong>
+        ${order._id}
+      </p>
+    
+      <p>
+        <strong>New Status:</strong>
+        ${order.status}
+      </p>
+    
+      ${order.trackingNumber
+        ? `
+          <p>
+            <strong>Tracking Number:</strong>
+            ${order.trackingNumber}
+          </p>
+        `
+        : ""
+      }
+    
+      <br>
+    
+      <p>
+        Thank you for shopping with Tamanna's Hut 💖
+      </p>
+      `
+    );
 
     res.json(updatedOrder);
 
