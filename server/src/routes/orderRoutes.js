@@ -18,7 +18,7 @@ router.post("/", async (req, res) => {
     const order = new Order(req.body);
 
     await order.save();
-
+    console.log("CUSTOMER EMAIL:", req.body.email);
     await sendEmail(
       req.body.email,
       "Order Confirmed - Tamanna's Hut",
