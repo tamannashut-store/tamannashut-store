@@ -118,7 +118,10 @@ function ProductDetails() {
   return (
     <>
       <Helmet>
-        <title>{product.name} | Tamanna's Hut</title>
+        <title>TEST PRODUCT TITLE 123</title>
+      </Helmet>
+      {/* <Helmet>
+        
 
         <meta
           name="description"
@@ -148,7 +151,7 @@ function ProductDetails() {
           property="og:type"
           content="product"
         />
-      </Helmet>
+      </Helmet> */}
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-2 gap-14 items-start">
           <div>
