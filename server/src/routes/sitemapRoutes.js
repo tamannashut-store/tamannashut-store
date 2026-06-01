@@ -17,6 +17,24 @@ router.get("/sitemap.xml", async (req, res) => {
 <url>
 <loc>https://tamannashut.com/shop</loc>
 </url>
+<url>
+<loc>https://tamannashut.com/login</loc>
+</url>
+<url>
+<loc>https://tamannashut.com/register</loc>
+</url>
+<url>
+<loc>https://tamannashut.com/cart</loc>
+</url>
+<url>
+<loc>https://tamannashut.com/wishlist</loc>
+</url>
+<url>
+<loc>https://tamannashut.com/about</loc>
+</url>
+<url>
+<loc>https://tamannashut.com/contact</loc>
+</url>
 `;
 
         products.forEach((product) => {
