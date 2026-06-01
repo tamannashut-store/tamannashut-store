@@ -114,8 +114,6 @@ function ProductDetails() {
 
     }
   };
-  console.log(product);
-  console.log("NAME:", product?.name);
   return (
     <>
       <Helmet>
@@ -141,12 +139,28 @@ function ProductDetails() {
             },
             offers: {
               "@type": "Offer",
+              url: `https://tamannashut.com/product/${id}`,
               priceCurrency: "INR",
               price: product.price,
               availability:
                 availableStock > 0
                   ? "https://schema.org/InStock"
                   : "https://schema.org/OutOfStock",
+              itemCondition: "https://schema.org/NewCondition"
+            },
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue:
+                product.reviews?.length
+                  ? (
+                      product.reviews.reduce(
+                        (sum, r) => sum + r.rating,
+                        0
+                      ) / product.reviews.length
+                    ).toFixed(1)
+                  : 5,
+              reviewCount:
+                product.reviews?.length || 1
             },
           })}
         </script>
@@ -191,7 +205,7 @@ function ProductDetails() {
                   ? product.image
                   : `${import.meta.env.VITE_API_URL}${product.image}`
               }
-              alt={product.name}
+              alt={`${product.name} - Tamanna's Hut Kids Fashion`}
               className="w-full rounded-3xl shadow-2xl"
             />
           </div>

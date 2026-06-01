@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useLocation } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 
 function Shop() {
 
@@ -44,99 +45,114 @@ function Shop() {
         ? true
         : p.category === selectedCategory;
 
-        const matchesSearch =
-        (p.name || "")
-          .toLowerCase()
-          .includes(searchQuery);
+    const matchesSearch =
+      (p.name || "")
+        .toLowerCase()
+        .includes(searchQuery);
     return matchesCategory && matchesSearch;
 
   });
   return (
+    <>
+      <Helmet>
+        <title>
+          Shop Kids Clothing | Tamanna's Hut
+        </title>
 
-    <div className="max-w-7xl mx-auto px-6 py-20">
+        <meta
+          name="description"
+          content="Browse our collection of baby dresses, kids wear, girls fashion and boys clothing."
+        />
 
-      <h1 className="text-5xl font-bold mb-10">
-        Shop Collection
-      </h1>
+        <link
+          rel="canonical"
+          href="https://tamannashut.com/shop"
+        />
+      </Helmet>
+      <div className="max-w-7xl mx-auto px-6 py-20">
 
-      {/* FILTERS */}
+        <h1 className="text-5xl font-bold mb-10">
+          Shop Collection
+        </h1>
 
-      <div className="flex flex-wrap gap-4 mb-12">
+        {/* FILTERS */}
 
-        {["All", "Girls", "Boys", "New Arrivals"].map((cat) => (
+        <div className="flex flex-wrap gap-4 mb-12">
 
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-6 py-3 rounded-full border transition ${
-              selectedCategory === cat
-                ? "bg-pink-500 text-white"
-                : "bg-white"
-            }`}
-          >
+          {["All", "Girls", "Boys", "New Arrivals"].map((cat) => (
 
-            {cat}
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-6 py-3 rounded-full border transition ${selectedCategory === cat
+                  ? "bg-pink-500 text-white"
+                  : "bg-white"
+                }`}
+            >
 
-          </button>
+              {cat}
 
-        ))}
+            </button>
 
-      </div>
+          ))}
 
-      {/* PRODUCTS */}
+        </div>
 
-      <div className="grid md:grid-cols-3 gap-10">
+        {/* PRODUCTS */}
 
-        {filteredProducts.map((product) => (
+        <div className="grid md:grid-cols-3 gap-10">
 
-          <div
-            key={product._id}
-            className="bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition group"
-          >
+          {filteredProducts.map((product) => (
 
-            <img
-               src={
-                product.image?.startsWith("http")
-                  ? product.image
-                  : `${import.meta.env.VITE_API_URL}${product.image}`
-              }
-              alt={product.name}
-              className="h-80 w-full object-cover group-hover:scale-105 transition duration-300"
-            />
+            <div
+              key={product._id}
+              className="bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition group"
+            >
 
-            <div className="p-6">
+              <img
+                src={
+                  product.image?.startsWith("http")
+                    ? product.image
+                    : `${import.meta.env.VITE_API_URL}${product.image}`
+                }
+                alt={`${product.name} - Tamanna's Hut Kids Fashion`}
+                className="h-80 w-full object-cover group-hover:scale-105 transition duration-300"
+              />
 
-              <p className="text-pink-500 font-medium">
-                {product.category}
-              </p>
+              <div className="p-6">
 
-              <h2 className="text-2xl font-bold mt-2">
-                {product.name}
-              </h2>
+                <p className="text-pink-500 font-medium">
+                  {product.category}
+                </p>
 
-              <p className="text-pink-500 font-bold text-xl mt-3">
-                ₹{product.price}
-              </p>
+                <h2 className="text-2xl font-bold mt-2">
+                  {product.name}
+                </h2>
 
-              <Link to={`/product/${product._id}`}>
+                <p className="text-pink-500 font-bold text-xl mt-3">
+                  ₹{product.price}
+                </p>
 
-                <button className="mt-5 w-full bg-black text-white py-3 rounded-full hover:bg-pink-500 transition">
+                <Link to={`/product/${product._id}`}>
 
-                  View Product
+                  <button className="mt-5 w-full bg-black text-white py-3 rounded-full hover:bg-pink-500 transition">
 
-                </button>
+                    View Product
 
-              </Link>
+                  </button>
+
+                </Link>
+
+              </div>
 
             </div>
 
-          </div>
+          ))}
 
-        ))}
+        </div>
 
       </div>
-
-    </div>
+    </>
   );
 }
 

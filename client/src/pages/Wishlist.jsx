@@ -51,7 +51,7 @@ function Wishlist() {
                   ? product.image
                   : `${import.meta.env.VITE_API_URL}${product.image}`
               }
-              alt={product.name}
+              alt={`${product.name} - Tamanna's Hut Kids Fashion`}
               className="w-full h-72 object-cover rounded-2xl"
             />
 

@@ -62,7 +62,7 @@ function Products() {
                                     ? product.image
                                     : `${import.meta.env.VITE_API_URL}${product.image}`
                             }
-                            alt={product.name}
+                            alt={`${product.name} - Tamanna's Hut Kids Fashion`}
                             className="h-72 w-full object-cover"
                         />
 
