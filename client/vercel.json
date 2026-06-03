@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/google-feed.xml",
+      "destination": "https://tamannashut-store.onrender.com/google-feed.xml"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "https://tamannashut-store.onrender.com/sitemap.xml"
     },
