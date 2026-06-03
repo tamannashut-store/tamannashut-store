@@ -15,7 +15,10 @@ function Contact() {
 
     try {
       setLoading(true);
-
+      if (!name || !email || !message) {
+        toast.error("Please fill all fields");
+        return;
+      }
       await axios.post(
         `${import.meta.env.VITE_API_URL}/api/contact`,
         {
