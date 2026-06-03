@@ -266,9 +266,15 @@ router.put("/:id", async (req, res) => {
     }
 
     order.status = req.body.status;
-    order.trackingNumber =
-      req.body.trackingNumber ||
-      order.trackingNumber;
+    order.trackingNumber = {
+      trackingId:
+        req.body.trackingNumber?.trackingId ||
+        order.trackingNumber?.trackingId,
+    
+      courier:
+        req.body.trackingNumber?.courier ||
+        order.trackingNumber?.courier,
+    };
 
     const updatedOrder = await order.save();
     await sendEmail(

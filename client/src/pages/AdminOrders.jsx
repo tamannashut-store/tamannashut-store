@@ -62,27 +62,16 @@ function AdminOrders() {
 
         return `${import.meta.env.VITE_API_URL}${image}`;
     };
-    const updateTracking = async (
-        orderId,
-        trackingNumber
-    ) => {
-
+    const updateTracking = async (orderId, tracking) => {
         try {
-
-            await axios.put(
-                `${import.meta.env.VITE_API_URL}/api/orders/${orderId}`,
-                {
-                    trackingNumber,
-                }
-            );
-
+          await axios.put(
+            `${import.meta.env.VITE_API_URL}/api/orders/${orderId}`,
+            { tracking }
+          );
         } catch (error) {
-
-            console.log(error);
-
+          console.log(error);
         }
-
-    };
+      };
     return (
 
         <div className="max-w-7xl mx-auto px-6 py-20">
@@ -207,13 +196,12 @@ function AdminOrders() {
                                         <input
                                             type="text"
                                             placeholder="Tracking Number"
-                                            value={order.trackingNumber || ""}
+                                            value={order.tracking?.trackingId || ""}
                                             onChange={(e) =>
-                                                updateTracking(
-                                                    order._id,
-                                                    e.target.value
-                                                )
-                                            }
+                                                updateTracking(order._id, {
+                                                  trackingId: e.target.value
+                                                })
+                                              }
                                             className="border p-2 rounded-xl"
                                         />
                                     </div>

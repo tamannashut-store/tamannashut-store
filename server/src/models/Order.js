@@ -38,9 +38,15 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: "Pending",
     },
-    trackingNumber: {
-      type: String,
-      default: "",
+    tracking: {
+      trackingId: {
+        type: String,
+        default: ""
+      },
+      courier: {
+        type: String,
+        default: ""
+      }
     },
   },
   {
