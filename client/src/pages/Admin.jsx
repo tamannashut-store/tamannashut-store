@@ -24,7 +24,7 @@ function Admin() {
             const { data } = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/products`
             );
-            setProducts(data);
+            setProducts(data.products || []);
         } catch (error) {
             console.log(error);
         }

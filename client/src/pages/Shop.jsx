@@ -29,7 +29,7 @@ function Shop() {
         `${import.meta.env.VITE_API_URL}/api/products`
       );
 
-      setProducts(data);
+      setProducts(data.products || []);
 
     } catch (error) {
 
