@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 function AdminOrders() {
 
     const [orders, setOrders] = useState([]);
+    const [trackingInputs, setTrackingInputs] = useState({});
 
     const fetchOrders = async () => {
 
@@ -62,11 +63,13 @@ function AdminOrders() {
 
         return `${import.meta.env.VITE_API_URL}${image}`;
     };
-    const updateTracking = async (orderId, tracking) => {
+    const updateTracking = async (orderId, trackingNumber) => {
         try {
           await axios.put(
             `${import.meta.env.VITE_API_URL}/api/orders/${orderId}`,
-            { tracking }
+            {
+              trackingNumber,
+            }
           );
         } catch (error) {
           console.log(error);
@@ -196,12 +199,18 @@ function AdminOrders() {
                                         <input
                                             type="text"
                                             placeholder="Tracking Number"
-                                            value={order.tracking?.trackingId || ""}
-                                            onChange={(e) =>
+                                            value={trackingInputs[order._id] || order.tracking?.trackingId || ""}
+                                            onChange={(e) => {
+                                                setTrackingInputs((prev) => ({
+                                                    ...prev,
+                                                    [order._id]: e.target.value,
+                                                }));
+                                            }}
+                                            onBlur={() =>
                                                 updateTracking(order._id, {
-                                                  trackingId: e.target.value
+                                                    trackingId: trackingInputs[order._id],
                                                 })
-                                              }
+                                            }
                                             className="border p-2 rounded-xl"
                                         />
                                     </div>
