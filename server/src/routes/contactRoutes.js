@@ -6,36 +6,34 @@ const router = express.Router();
 
 router.get("/contacts", async (req, res) => {
     try {
-      const contacts = await Contact.find()
-        .sort({ createdAt: -1 });
-  
-      res.json({
-        success: true,
-        contacts,
-      });
-  
+        const contacts = await Contact.find()
+            .sort({ createdAt: -1 });
+
+        res.json(contacts);
+
     } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        success: false,
-        message: "Failed to get contacts",
-      });
+        console.log(error);
+
+        res.status(500).json({
+            success: false,
+            message: "Failed to fetch contacts",
+        });
     }
-  });
+});
 router.post("/contact", async (req, res) => {
     try {
         const { name, email, message } = req.body;
         if (!name || !email || !message) {
             return res.status(400).json({
-              success: false,
-              message: "All fields are required",
+                success: false,
+                message: "All fields are required",
             });
-          }
+        }
         const contact = await Contact.create({
             name,
             email,
             message,
-          });
+        });
 
         console.log(contact);
 
