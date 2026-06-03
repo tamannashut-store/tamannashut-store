@@ -35,17 +35,17 @@ ${product.description || product.name || ""}
 
 <g:image_link>${imageUrl}</g:image_link>
 
-<g:availability>in stock</g:availability>
+<g:availability>in_stock</g:availability>
 
 <g:condition>new</g:condition>
 
 <g:price>${product.price} INR</g:price>
 
 <g:brand><![CDATA[Tamanna's Hut]]></g:brand>
-
-<g:google_product_category>
-Apparel &amp; Accessories > Clothing
-</g:google_product_category>
+<g:identifier_exists>false</g:identifier_exists>
+<g:google_product_category><![CDATA[
+Apparel & Accessories > Clothing
+]]></g:google_product_category>
 
 </item>`;
     });
