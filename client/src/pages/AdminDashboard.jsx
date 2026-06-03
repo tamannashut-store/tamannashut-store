@@ -59,6 +59,18 @@ function AdminDashboard() {
             >
                 Manage Coupons
             </Link>
+            <Link
+                to="/admin/contacts"
+                className="bg-blue-500 text-white px-5 py-3 rounded-xl"
+            >
+                Contact Messages
+            </Link>
+            <Link
+                to="/admin"
+                className="bg-blue-500 text-white px-5 py-3 rounded-xl"
+            >
+                Admin
+            </Link>
 
             <h1 className="text-5xl font-bold mb-12">
                 Admin Dashboard

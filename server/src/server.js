@@ -17,6 +17,7 @@ import sitemapRoutes from "./routes/sitemapRoutes.js";
 import googleFeedRoutes from "./routes/googleFeedRoutes.js";
 import robotsRoutes from "./routes/robotsRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 
 
 const app = express();
@@ -50,6 +51,7 @@ app.use("/", sitemapRoutes);
 app.use("/", googleFeedRoutes);
 app.use("/", robotsRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api", contactRoutes);
 // app.post("/api/register", async (req, res) => {
 //     try {
 //       const { name, email, password } = req.body;

@@ -30,6 +30,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
+import AdminContacts from "./pages/AdminContacts";
 
 function App() {
   return (
@@ -56,12 +57,13 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/admin-coupons" element={<AdminCoupons />} />
-        <Route path="/return-policy" element={<ReturnPolicy />}/>
-        <Route path="/shipping-policy" element={<ShippingPolicy />}/>
-        <Route path="/privacy-policy" element={<PrivacyPolicy />}/>
-        <Route path="/terms-conditions" element={<TermsConditions />}/>
+        <Route path="/return-policy" element={<ReturnPolicy />} />
+        <Route path="/shipping-policy" element={<ShippingPolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-conditions" element={<TermsConditions />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/about" element={<About />} />
+        <Route path="/admin/contacts" element={<AdminRoute> <AdminContacts /></AdminRoute>} />
       </Routes>
       <WhatsAppButton />
       <Footer />
