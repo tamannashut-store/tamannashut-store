@@ -44,7 +44,7 @@ ${product.description || product.name || ""}
 <g:brand><![CDATA[Tamanna's Hut]]></g:brand>
 
 <g:google_product_category>
-Apparel & Accessories > Clothing
+Apparel &amp; Accessories > Clothing
 </g:google_product_category>
 
 </item>`;
