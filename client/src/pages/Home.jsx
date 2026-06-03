@@ -15,7 +15,11 @@ function Home() {
     try {
       const { data } = await getProducts();
 
-      setProducts(data);
+      if (Array.isArray(data)) {
+        setProducts(data);
+      } else {
+        setProducts(data.products || []);
+      }
     } catch (error) {
       console.log(error);
     }
