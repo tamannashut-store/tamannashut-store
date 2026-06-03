@@ -25,7 +25,7 @@ function AdminDashboard() {
                 `${import.meta.env.VITE_API_URL}/api/orders`
             );
 
-            setProducts(productsRes.data);
+            setProducts(productsRes.data.products || []);
 
             setOrders(ordersRes.data);
 
