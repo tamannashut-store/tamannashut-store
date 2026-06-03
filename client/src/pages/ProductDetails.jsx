@@ -133,10 +133,12 @@ function ProductDetails() {
                 : `${import.meta.env.VITE_API_URL}${product.image}`,
             ],
             description: product.description,
+
             brand: {
               "@type": "Brand",
               name: "Tamanna's Hut",
             },
+
             offers: {
               "@type": "Offer",
               url: `https://tamannashut.com/product/${id}`,
@@ -146,22 +148,48 @@ function ProductDetails() {
                 availableStock > 0
                   ? "https://schema.org/InStock"
                   : "https://schema.org/OutOfStock",
-              itemCondition: "https://schema.org/NewCondition"
+              itemCondition: "https://schema.org/NewCondition",
             },
-            aggregateRating: {
-              "@type": "AggregateRating",
-              ratingValue:
-                product.reviews?.length
-                  ? (
-                      product.reviews.reduce(
-                        (sum, r) => sum + r.rating,
-                        0
-                      ) / product.reviews.length
-                    ).toFixed(1)
-                  : 5,
-              reviewCount:
-                product.reviews?.length || 1
-            },
+
+            ...(product.reviews?.length > 0 && {
+              aggregateRating: {
+                "@type": "AggregateRating",
+                ratingValue: (
+                  product.reviews.reduce(
+                    (sum, r) => sum + r.rating,
+                    0
+                  ) / product.reviews.length
+                ).toFixed(1),
+                reviewCount: product.reviews.length,
+              },
+            }),
+          })}
+        </script>
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: "https://tamannashut.com",
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "Shop",
+                item: "https://tamannashut.com/shop",
+              },
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: product.name,
+                item: `https://tamannashut.com/product/${id}`,
+              },
+            ],
           })}
         </script>
         <meta
