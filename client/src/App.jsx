@@ -25,6 +25,7 @@ import Profile from "./pages/Profile";
 import ChangePassword from "./pages/ChangePassword";
 import AdminCoupons from "./pages/AdminCoupons";
 import ReturnPolicy from "./pages/ReturnPolicy";
+import ShippingPolicy from "./pages/ShippingPolicy";
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/admin-coupons" element={<AdminCoupons />} />
         <Route path="/return-policy" element={<ReturnPolicy />}/>
+        <Route path="/shipping-policy" element={<ShippingPolicy />}/>
       </Routes>
       <WhatsAppButton />
       <Footer />
