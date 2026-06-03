@@ -66,12 +66,27 @@ function Home() {
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Organization",
-            name: "Tamanna's Hut",
-            url: "https://tamannashut.com",
-            logo: "https://tamannashut.com/logo.png",
-            sameAs: [
-              "https://instagram.com/tamannashut"
+            "name": "Tamanna's Hut",
+            "url": "https://tamannashut.com",
+            "logo": "https://tamannashut.com/logo.png",
+            "email": "support@tamannashut.com",
+            "sameAs": [
+              "https://www.instagram.com/tamannashut"
             ]
+          })}
+        </script>
+
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Tamanna's Hut",
+            "url": "https://tamannashut.com",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://tamannashut.com/shop?search={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
           })}
         </script>
       </Helmet>
