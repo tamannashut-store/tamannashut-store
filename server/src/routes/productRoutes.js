@@ -19,22 +19,22 @@ const uploadToCloudinary = (fileBuffer) => {
   });
 };
 
-router.get("/", async (req, res) => {
+// router.get("/", async (req, res) => {
 
-  try {
+//   try {
 
-    const products = await Product.find();
+//     const products = await Product.find();
+//     res.set("Cache-Control", "public, max-age=60");
+//     res.json(products);
 
-    res.json(products);
+//   } catch (error) {
 
-  } catch (error) {
+//     res.status(500).json({
+//       message: error.message,
+//     });
 
-    res.status(500).json({
-      message: error.message,
-    });
-
-  }
-});
+//   }
+// });
 
 router.post("/", upload.single("image"), async (req, res) => {
   try {
@@ -70,20 +70,29 @@ router.post("/", upload.single("image"), async (req, res) => {
   }
 });
 
-router.get("/:id", async (req, res) => {
-
+router.get("/", async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    const product = await Product.findById(req.params.id);
+    const skip = (page - 1) * limit;
 
-    res.json(product);
+    const products = await Product.find()
+      .skip(skip)
+      .limit(limit);
 
-  } catch (error) {
+    const total = await Product.countDocuments();
 
-    res.status(500).json({
-      message: error.message,
+    res.set("Cache-Control", "public, max-age=60");
+
+    res.json({
+      products,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
     });
 
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 });
 router.put(

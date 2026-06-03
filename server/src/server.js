@@ -1,16 +1,40 @@
+// import express from "express";
+// import mongoose from "mongoose";
+// import dotenv from "dotenv";
+// dotenv.config();
+// import cors from "cors";
+// import bcrypt from "bcryptjs";
+// import jwt from "jsonwebtoken";
+// import productRoutes from "./routes/productRoutes.js";
+// import paymentRoutes from "./routes/paymentRoutes.js";
+// import authRoutes from "./routes/authRoutes.js";
+// import path from "path";
+// import orderRoutes from "./routes/orderRoutes.js";
+// import User from "./models/User.js";
+// import dashboardRoutes from "./routes/dashboardRoutes.js";
+// import couponRoutes from "./routes/couponRoutes.js";
+// import sitemapRoutes from "./routes/sitemapRoutes.js";
+// import googleFeedRoutes from "./routes/googleFeedRoutes.js";
+// import robotsRoutes from "./routes/robotsRoutes.js";
+// import contactRoutes from "./routes/contactRoutes.js";
+// import compression from "compression";
+// import rateLimit from "express-rate-limit";
+// import helmet from "helmet";
+// import errorHandler from "./middleware/errorHandler.js";
+
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-dotenv.config();
 import cors from "cors";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import path from "path";
+import compression from "compression";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import errorHandler from "./middleware/errorHandler.js";
 import productRoutes from "./routes/productRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-import path from "path";
 import orderRoutes from "./routes/orderRoutes.js";
-import User from "./models/User.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
 import sitemapRoutes from "./routes/sitemapRoutes.js";
@@ -18,16 +42,30 @@ import googleFeedRoutes from "./routes/googleFeedRoutes.js";
 import robotsRoutes from "./routes/robotsRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 
-
+dotenv.config();
 const app = express();
+app.set("etag", true);
+app.use(
+  cors({
+    origin: [
+      "https://www.tamannashut.com",
+      "http://localhost:5173",
+    ],
+    credentials: true,
+  })
+);
 
-app.use(cors());
+app.use(helmet());
+app.use(compression());
 app.use(express.json());
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+});
+app.use(limiter);
 app.use(
   "/uploads",
-  express.static(
-    path.join(process.cwd(), "server/src/uploads")
-  )
+  express.static(path.join(process.cwd(), "server/src/uploads"))
 );
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
@@ -35,22 +73,24 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/coupons", couponRoutes);
-
+app.use("/api/contact", contactRoutes);
+app.use("/", sitemapRoutes);
+app.use("/", googleFeedRoutes);
+app.use("/", robotsRoutes);
+app.get("/api", (req, res) => {
+  res.json({ message: "API is working" });
+});
+app.use(errorHandler);
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.log(err));
 
-app.get("/api", (req, res) => {
-  res.json({
-    message: "API is working",
-  });
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-app.use("/", sitemapRoutes);
-app.use("/", googleFeedRoutes);
-app.use("/", robotsRoutes);
-app.use("/api/contact", contactRoutes);
-app.use("/api", contactRoutes);
+
 // app.post("/api/register", async (req, res) => {
 //     try {
 //       const { name, email, password } = req.body;
@@ -140,8 +180,8 @@ app.use("/api", contactRoutes);
 //     }
 //   });
 
-const PORT = process.env.PORT || 5000;
+// const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// app.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`);
+// });
