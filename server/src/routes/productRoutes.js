@@ -1,8 +1,23 @@
 import express from "express";
 import Product from "../models/Product.js";
 import upload from "../middleware/upload.js";
+import cloudinary from "../config/cloudinary.js";
+import streamifier from "streamifier";
 
 const router = express.Router();
+const uploadToCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "tamannas-hut-products" },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+
+    streamifier.createReadStream(fileBuffer).pipe(stream);
+  });
+};
 
 router.get("/", async (req, res) => {
 
@@ -21,47 +36,39 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.post(
-  "/",
-  upload.single("image"),
+router.post("/", upload.single("image"), async (req, res) => {
+  try {
+    let imageUrl = "";
 
-  async (req, res) => {
-
-    try {
-
-      const product = new Product({
-
-        name: req.body.name,
-
-        price: req.body.price,
-
-        description: req.body.description,
-        category: req.body.category,
-        sizeStock: JSON.parse(
-          req.body.sizeStock || "[]"
-        ),
-
-        image: req.file
-          ? `/uploads/${req.file.filename}`
-          : "",
-
-      });
-
-      await product.save();
-
-      res.status(201).json(product);
-
-    } catch (error) {
-
-      console.log(error);
-
-      res.status(500).json({
-        message: error.message,
-      });
-
+    if (req.file && req.file.buffer)  {
+      try {
+        const result = await uploadToCloudinary(req.file.buffer);
+        imageUrl = result.secure_url;
+      } catch (err) {
+        console.log("Cloudinary upload failed:", err.message);
+        return res.status(500).json({
+          message: "Image upload failed",
+        });
+      }
     }
+
+    const product = new Product({
+      name: req.body.name,
+      price: req.body.price,
+      description: req.body.description,
+      category: req.body.category,
+      sizeStock: JSON.parse(req.body.sizeStock || "[]"),
+      image: imageUrl,
+    });
+
+    await product.save();
+
+    res.status(201).json(product);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message });
   }
-);
+});
 
 router.get("/:id", async (req, res) => {
 
@@ -107,9 +114,9 @@ router.put(
 
       // IMAGE UPDATE
 
-      if (req.file) {
-        product.image =
-          `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+      if (req.file && req.file.buffer) {
+        const result = await uploadToCloudinary(req.file.buffer);
+        product.image = result.secure_url;
       }
 
       const updatedProduct =
