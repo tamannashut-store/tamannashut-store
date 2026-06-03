@@ -44,6 +44,7 @@ import contactRoutes from "./routes/contactRoutes.js";
 
 dotenv.config();
 const app = express();
+app.set("trust proxy", 1);
 app.set("etag", true);
 app.use(
   cors({
