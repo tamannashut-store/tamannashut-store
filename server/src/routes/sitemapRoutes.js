@@ -53,6 +53,7 @@ router.get("/sitemap.xml", async (req, res) => {
             xml += `
 <url>
 <loc>https://tamannashut.com/product/${product._id}</loc>
+<lastmod>${product.updatedAt.toISOString()}</lastmod>
 </url>
 `;
         });
