@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 function Footer() {
     return (
       <footer className="bg-black text-white py-14 px-6">
@@ -28,7 +29,12 @@ function Footer() {
   
             </div>
           </div>
-  
+          <div className="mt-6 flex flex-wrap justify-center gap-6">
+  <Link to="/return-policy">Return Policy</Link>
+  <Link to="/shipping-policy">Shipping Policy</Link>
+  <Link to="/shop">Shop</Link>
+  <Link to="/contact">Contact</Link>
+</div>
           <div>
             <h3 className="text-xl font-semibold mb-4">
               Contact
