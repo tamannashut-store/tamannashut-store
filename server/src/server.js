@@ -14,6 +14,7 @@ import User from "./models/User.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import couponRoutes from "./routes/couponRoutes.js";
 import sitemapRoutes from "./routes/sitemapRoutes.js";
+import googleFeedRoutes from "./routes/googleFeedRoutes.js";
 
 
 const app = express();
@@ -44,7 +45,7 @@ app.get("/api", (req, res) => {
   });
 });
 app.use("/", sitemapRoutes);
-
+app.use("/", googleFeedRoutes);
 // app.post("/api/register", async (req, res) => {
 //     try {
 //       const { name, email, password } = req.body;
