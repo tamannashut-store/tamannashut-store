@@ -19,6 +19,28 @@ function Contact() {
         toast.error("Please fill all fields");
         return;
       }
+      if (!name.trim()) {
+        toast.error("Please enter your name");
+        return;
+      }
+      
+      if (!email.trim()) {
+        toast.error("Please enter your email");
+        return;
+      }
+      
+      const emailRegex =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      
+      if (!emailRegex.test(email)) {
+        toast.error("Please enter a valid email");
+        return;
+      }
+      
+      if (!message.trim()) {
+        toast.error("Please enter your message");
+        return;
+      }
       await axios.post(
         `${import.meta.env.VITE_API_URL}/api/contact`,
         {

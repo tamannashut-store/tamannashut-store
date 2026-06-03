@@ -29,6 +29,15 @@ router.post("/contact", async (req, res) => {
                 message: "All fields are required",
             });
         }
+        const emailRegex =
+            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid email address",
+            });
+        }
         const contact = await Contact.create({
             name,
             email,
