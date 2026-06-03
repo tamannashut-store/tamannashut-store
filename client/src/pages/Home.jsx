@@ -67,9 +67,16 @@ function Home() {
             "@context": "https://schema.org",
             "@type": "Organization",
             "name": "Tamanna's Hut",
-            "url": "https://tamannashut.com",
-            "logo": "https://tamannashut.com/logo.png",
+            "url": "https://www.tamannashut.com",
+            "logo": "https://www.tamannashut.com/assets/logo-Bkaz0kee.png",
             "email": "support@tamannashut.com",
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "telephone": "+919874328578",
+              "contactType": "customer service",
+              "areaServed": "IN",
+              "availableLanguage": "English"
+            },
             "sameAs": [
               "https://www.instagram.com/tamannashut"
             ]
@@ -87,6 +94,38 @@ function Home() {
               "target": "https://tamannashut.com/shop?search={search_term_string}",
               "query-input": "required name=search_term_string"
             }
+          })}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "What products does Tamanna's Hut sell?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Tamanna's Hut sells premium baby clothes, girls dresses, boys clothing and kids fashion."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do you deliver across India?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, Tamanna's Hut delivers across India."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Do you accept returns?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, returns are accepted within 7 days according to our return policy."
+                }
+              }
+            ]
           })}
         </script>
       </Helmet>

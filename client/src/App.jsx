@@ -29,6 +29,7 @@ import ShippingPolicy from "./pages/ShippingPolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
 import Contact from "./pages/Contact";
+import About from "./pages/About";
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
         <Route path="/privacy-policy" element={<PrivacyPolicy />}/>
         <Route path="/terms-conditions" element={<TermsConditions />}/>
         <Route path="/contact" element={<Contact />} />
+        <Route path="/about" element={<About />} />
       </Routes>
       <WhatsAppButton />
       <Footer />
