@@ -26,6 +26,9 @@ import ChangePassword from "./pages/ChangePassword";
 import AdminCoupons from "./pages/AdminCoupons";
 import ReturnPolicy from "./pages/ReturnPolicy";
 import ShippingPolicy from "./pages/ShippingPolicy";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsConditions from "./pages/TermsConditions";
+import Contact from "./pages/Contact";
 
 function App() {
   return (
@@ -54,6 +57,9 @@ function App() {
         <Route path="/admin-coupons" element={<AdminCoupons />} />
         <Route path="/return-policy" element={<ReturnPolicy />}/>
         <Route path="/shipping-policy" element={<ShippingPolicy />}/>
+        <Route path="/privacy-policy" element={<PrivacyPolicy />}/>
+        <Route path="/terms-conditions" element={<TermsConditions />}/>
+        <Route path="/contact" element={<Contact />} />
       </Routes>
       <WhatsAppButton />
       <Footer />

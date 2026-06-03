@@ -49,8 +49,9 @@ function Footer() {
           <div className="mt-6 flex flex-wrap justify-center gap-6">
             <Link to="/return-policy" className="text-gray-400 hover:text-white">Return Policy</Link>
             <Link to="/shipping-policy" className="text-gray-400 hover:text-white">Shipping Policy</Link>
-            <Link to="/shop" className="text-gray-400 hover:text-white">Shop</Link>
-            <Link to="/contact" className="text-gray-400 hover:text-white">Contact</Link>
+            <Link to="/privacy-policy" className="text-gray-400 hover:text-white">Privacy Policy</Link>
+            <Link to="/terms-conditions" className="text-gray-400 hover:text-white">Terms Conditions</Link>
+            <Link to="/contact" className="text-gray-400 hover:text-white">Contact Us</Link>
           </div>
           </div>
         <div className="border-t border-gray-800 mt-10 pt-6 text-center text-gray-500">
