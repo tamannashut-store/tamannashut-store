@@ -187,17 +187,16 @@ ${order.status === "Pending"
 
                                     )}
                                 </div>
-                                {order.trackingNumber?.trackingId && (
+                                {order.tracking?.trackingId ? (
                                     <div className="mt-6 bg-gray-50 p-4 rounded-xl">
                                         <p className="font-semibold">Tracking Number</p>
-                                        {!order.trackingNumber?.trackingId && (
-                                            <p className="text-gray-400 mt-4">
-                                                Tracking not available yet
-                                            </p>
-                                        )}
+
+                                        <p className="text-pink-500">
+                                            {order.tracking.trackingId}
+                                        </p>
 
                                         <a
-                                            href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.trackingNumber.trackingId}`}
+                                            href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.tracking.trackingId}`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="inline-block mt-3 bg-pink-500 text-white px-4 py-2 rounded-xl"
@@ -205,6 +204,10 @@ ${order.status === "Pending"
                                             Track Package
                                         </a>
                                     </div>
+                                ) : (
+                                    <p className="text-gray-400 mt-4">
+                                        Tracking not available yet
+                                    </p>
                                 )}
                             </div>
 

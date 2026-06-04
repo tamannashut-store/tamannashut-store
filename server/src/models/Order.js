@@ -22,8 +22,6 @@ const orderSchema = new mongoose.Schema(
 
     paymentId: String,
 
-    paymentId: String,
-
     paymentMethod: {
       type: String,
       default: "Online",

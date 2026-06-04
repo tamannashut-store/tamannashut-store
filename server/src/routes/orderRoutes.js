@@ -266,14 +266,14 @@ router.put("/:id", async (req, res) => {
     }
 
     order.status = req.body.status;
-    order.trackingNumber = {
+    order.tracking = {
       trackingId:
         req.body.trackingNumber?.trackingId ||
-        order.trackingNumber?.trackingId,
+        order.tracking?.trackingId,
     
       courier:
         req.body.trackingNumber?.courier ||
-        order.trackingNumber?.courier,
+        order.tracking?.courier,
     };
 
     const updatedOrder = await order.save();
@@ -297,11 +297,11 @@ router.put("/:id", async (req, res) => {
         ${order.status}
       </p>
     
-      ${order.trackingNumber
+      ${order.tracking
         ? `
           <p>
             <strong>Tracking Number:</strong>
-            ${order.trackingNumber}
+            ${order.tracking}
           </p>
         `
         : ""
