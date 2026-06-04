@@ -194,7 +194,11 @@ ${order.status === "Pending"
                                         <p className="text-pink-500">
                                             {order.tracking.trackingId}
                                         </p>
-
+                                        {order.tracking?.courier && (
+                                            <p className="text-sm text-gray-500">
+                                                Courier: {order.tracking.courier}
+                                            </p>
+                                        )}
                                         <a
                                             href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.tracking.trackingId}`}
                                             target="_blank"
