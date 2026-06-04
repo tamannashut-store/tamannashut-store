@@ -183,38 +183,22 @@ ${order.status === "Pending"
 
                                     )}
                                 </div>
-                                {order.trackingNumber && (
-
-                                    <div className="mt-4">
-
-                                        <p className="font-semibold">
-
-                                            Tracking Number:
-
-                                        </p>
-
+                                {order.trackingNumber?.trackingId && (
+                                    <div className="mt-6 bg-gray-50 p-4 rounded-xl">
+                                        <p className="font-semibold">Tracking Number</p>
                                         <p className="text-pink-500">
-
-                                            {order.trackingNumber}
-
+                                            {order.trackingNumber.trackingId}
                                         </p>
 
+                                        <a
+                                            href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.trackingNumber.trackingId}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-block mt-3 bg-pink-500 text-white px-4 py-2 rounded-xl"
+                                        >
+                                            Track Package
+                                        </a>
                                     </div>
-
-                                )}
-                                {order.trackingNumber && (
-
-                                    <a
-                                        href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.trackingNumber}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="inline-block mt-4 bg-pink-500 text-white px-4 py-2 rounded-xl"
-                                    >
-
-                                        Track Package
-
-                                    </a>
-
                                 )}
                             </div>
 
