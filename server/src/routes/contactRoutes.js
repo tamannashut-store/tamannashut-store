@@ -4,7 +4,7 @@ import Contact from "../models/Contact.js";
 
 const router = express.Router();
 
-router.get("/contacts", async (req, res) => {
+router.get("/", async (req, res) => {
     try {
         const contacts = await Contact.find()
             .sort({ createdAt: -1 });
@@ -20,7 +20,7 @@ router.get("/contacts", async (req, res) => {
         });
     }
 });
-router.post("/contact", async (req, res) => {
+router.post("/", async (req, res) => {
     try {
         const { name, email, message } = req.body;
         if (!name || !email || !message) {
