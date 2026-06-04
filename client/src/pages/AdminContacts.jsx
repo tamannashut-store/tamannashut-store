@@ -14,7 +14,7 @@ function AdminContacts() {
     try {
 
       const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/contact`
+        `${import.meta.env.VITE_API_URL}/api/contacts`
       );
 
       setContacts(data);

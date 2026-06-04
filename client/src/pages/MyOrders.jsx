@@ -72,7 +72,11 @@ function MyOrders() {
 
             alert("Order Cancelled");
 
-            window.location.reload();
+            setOrders(prev =>
+                prev.map(o =>
+                    o._id === orderId ? { ...o, status: "Cancelled" } : o
+                )
+            );
 
         } catch (error) {
 
@@ -186,9 +190,11 @@ ${order.status === "Pending"
                                 {order.trackingNumber?.trackingId && (
                                     <div className="mt-6 bg-gray-50 p-4 rounded-xl">
                                         <p className="font-semibold">Tracking Number</p>
-                                        <p className="text-pink-500">
-                                            {order.trackingNumber.trackingId}
-                                        </p>
+                                        {!order.trackingNumber?.trackingId && (
+                                            <p className="text-gray-400 mt-4">
+                                                Tracking not available yet
+                                            </p>
+                                        )}
 
                                         <a
                                             href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.trackingNumber.trackingId}`}
