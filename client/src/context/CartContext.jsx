@@ -12,8 +12,8 @@ function CartProvider({ children }) {
       localStorage.getItem("user")
     );
   
-    return user?.user?._id
-      ? `cart_${user.user._id}`
+    return user?.user?.id
+      ? `cart_${user.user.id}`
       : "guest_cart";
   });
   
@@ -29,8 +29,8 @@ function CartProvider({ children }) {
       );
   
       const newCartKey =
-        user?.user?._id
-          ? `cart_${user.user._id}`
+        user?.user?.id
+          ? `cart_${user.user.id}`
           : "guest_cart";
   
       setCartKey(newCartKey);
@@ -81,7 +81,7 @@ function CartProvider({ children }) {
     const existingItem =
       cartItems.find(
         (item) =>
-          item._id === product._id &&
+          item.id === product.id &&
           item.selectedSize ===
           product.selectedSize
       );
@@ -106,7 +106,7 @@ function CartProvider({ children }) {
 
       updatedCart = cartItems.map(
         (item) =>
-          item._id === product._id &&
+          item.id === product.id &&
             item.selectedSize ===
             product.selectedSize
             ? {
@@ -136,7 +136,7 @@ function CartProvider({ children }) {
     const updatedCart =
       cartItems.map((item) => {
         if (
-          item._id === id &&
+          item.id === id &&
           item.selectedSize ===
           selectedSize
         ) {
@@ -177,7 +177,7 @@ function CartProvider({ children }) {
     const updatedCart = cartItems
       .map((item) => {
         if (
-          item._id === id &&
+          item.id === id &&
           item.selectedSize ===
           selectedSize
         ) {
@@ -205,7 +205,7 @@ function CartProvider({ children }) {
       cartItems.filter(
         (item) =>
           !(
-            item._id === id &&
+            item.id === id &&
             item.selectedSize ===
             selectedSize
           )
