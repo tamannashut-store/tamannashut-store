@@ -1,4 +1,4 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../context/CartContext";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -6,14 +6,34 @@ import toast from "react-hot-toast";
 
 function Checkout() {
 
-    const {cartItems, setCartItems, clearCart} = useContext(CartContext);
+    const { cartItems, setCartItems, clearCart } = useContext(CartContext);
     const navigate = useNavigate();
+    useEffect(() => {
+
+        const user = JSON.parse(
+            localStorage.getItem("user")
+        );
+
+        if (!user) {
+
+            toast.error(
+                "Please login to continue"
+            );
+
+            navigate("/login");
+        }
+
+    }, [navigate]);
     const [loading, setLoading] = useState(false);
     const [coupon, setCoupon] = useState("");
     const [discount, setDiscount] = useState(0);
+    const user = JSON.parse(
+        localStorage.getItem("user")
+    );
+
     const [formData, setFormData] = useState({
-        name: "",
-        email: "",
+        name: user?.user?.name || "",
+        email: user?.user?.email || "",
         phone: "",
         address: "",
         city: "",
@@ -385,14 +405,7 @@ function Checkout() {
                             required
                         />
 
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Email"
-                            onChange={handleChange}
-                            className="border p-4 rounded-xl outline-none"
-                            required
-                        />
+                        <input type="email" name="email" value={formData.email} disabled className="border p-4 rounded-xl bg-gray-100 text-gray-500"/>
 
                         <input
                             type="text"

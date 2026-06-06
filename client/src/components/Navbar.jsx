@@ -1,14 +1,16 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { FiShoppingBag, FiHeart, FiUser, FiSearch } from "react-icons/fi";
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
+import { CartContext } from "../context/CartContext";
 
 function Navbar() {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const { cartItems } = useContext(CartContext);
 
   const navigate = useNavigate();
   const handleLogout = () => {
@@ -112,11 +114,15 @@ function Navbar() {
               <FiHeart size={22} />
             </Link>
 
-            <Link
-              to="/cart"
-              className="text-[#355E3B] hover:text-[#A7BFA1]"
-            >
-              <FiShoppingBag size={22} />
+            <Link to="/cart" className="text-[#355E3B] hover:text-[#A7BFA1]">
+              <div className="relative">
+                <FiShoppingBag size={22} />
+                {cartItems.length > 0 && (
+                  <span className=" absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {cartItems.length}
+                  </span>
+                )}
+              </div>
             </Link>
 
             {!userData ? (
@@ -179,8 +185,8 @@ function Navbar() {
                     </Link>
 
                     <div className="border-t border-[#E8DCC6]" />
-                      <button onClick={handleLogout} className="w-full text-left px-5 py-3 text-red-500 hover:bg-red-50">Logout</button>
-                    </div>
+                    <button onClick={handleLogout} className="w-full text-left px-5 py-3 text-red-500 hover:bg-red-50">Logout</button>
+                  </div>
                 )}
 
               </div>
