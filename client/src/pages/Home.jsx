@@ -355,6 +355,7 @@ duration-300
                 border-[#efe8dd]
                 hover:shadow-xl
                 transition
+                relative
                 ">
                   <img src={
                     product.image?.startsWith("http")
