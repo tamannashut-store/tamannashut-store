@@ -15,7 +15,6 @@ function Register() {
     });
 
     const handleChange = (e) => {
-
         setFormData({
             ...formData,
             [e.target.name]: e.target.value,
@@ -23,21 +22,13 @@ function Register() {
     };
 
     const handleSubmit = async (e) => {
-
         e.preventDefault();
-
         try {
-
             const { data } = await axios.post(
                 `${API_URL}/api/auth/register`,
                 formData
             );
-
-            localStorage.setItem(
-                "user",
-                JSON.stringify(data)
-            );
-
+            localStorage.setItem("user", JSON.stringify(data));
             window.dispatchEvent(
                 new Event("cartUpdated")
             );
@@ -49,66 +40,22 @@ function Register() {
             } else {
                 navigate("/profile");
             }
-
         } catch (error) {
             console.log("Error Data:", error.response?.data);
             console.log("Error Status:", error.response?.status);
-            toast.error(
-                error.response?.data?.message ||
-                "Registration Failed"
-            );
+            toast.error(error.response?.data?.message || "Registration Failed");
         }
     };
 
     return (
-
         <div className="max-w-md mx-auto px-6 py-20">
-
-            <form
-                onSubmit={handleSubmit}
-                className="bg-white shadow-2xl rounded-3xl p-10 space-y-6"
-            >
-
-                <h1 className="text-4xl font-bold text-center">
-                    Register
-                </h1>
-
-                <input
-                    type="text"
-                    name="name"
-                    placeholder="Name"
-                    onChange={handleChange}
-                    className="w-full border p-4 rounded-2xl"
-                    required
-                />
-
-                <input
-                    type="email"
-                    name="email"
-                    placeholder="Email"
-                    onChange={handleChange}
-                    className="w-full border p-4 rounded-2xl"
-                    required
-                />
-
-                <input
-                    type="password"
-                    name="password"
-                    placeholder="Password"
-                    onChange={handleChange}
-                    className="w-full border p-4 rounded-2xl"
-                    required
-                />
-
-                <button
-                    type="submit"
-                    className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full text-lg font-semibold"
-                >
-                    Register
-                </button>
-
+            <form onSubmit={handleSubmit} className="bg-white shadow-2xl rounded-3xl p-10 space-y-6">
+                <h1 className="text-4xl font-bold text-center">Register</h1>
+                <input type="text" name="name" placeholder="Name" onChange={handleChange} className="w-full border p-4 rounded-2xl" required/>
+                <input type="email" name="email" placeholder="Email" onChange={handleChange} className="w-full border p-4 rounded-2xl" required/>
+                <input type="password" name="password" placeholder="Password" onChange={handleChange} className="w-full border p-4 rounded-2xl" required/>
+                <button type="submit" className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full text-lg font-semibold">Register</button>
             </form>
-
         </div>
     );
 }
