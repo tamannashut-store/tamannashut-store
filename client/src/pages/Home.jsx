@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { getProducts } from "../api/productApi";
 import { WishlistContext } from "../context/WishlistContext";
 import { Helmet } from "react-helmet-async";
+import { toast } from "react-hot-toast";
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -24,8 +25,20 @@ function Home() {
       console.log(error);
     }
   };
-  const { addToWishlist } =
-    useContext(WishlistContext);
+  const { addToWishlist } = useContext(WishlistContext);
+  const [email, setEmail] = useState("");
+
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+
+    if (!email.trim()) {
+      toast.error("Please enter your email");
+      return;
+    }
+
+    toast.success("Thanks for joining Tamanna's Hut!");
+    setEmail("");
+  };
 
   return (
     <>
@@ -136,46 +149,113 @@ function Home() {
       <div className="w-full overflow-hidden">
 
         {/* HERO SECTION */}
-        <section className="relative h-screen w-full">
+        <section className="bg-brand-background">
 
-          <img
-            src={banner1}
-            alt="Tamanna's Hut"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
+          <div
+            className="
+    max-w-[1400px]
+    mx-auto
+    px-8
+    py-20
+    lg:py-28
+    grid
+    lg:grid-cols-2
+    gap-16
+    items-center
+  "
+          >
 
-          <div className="absolute inset-0 bg-black/30"></div>
+            {/* LEFT */}
 
-          <div className="absolute inset-0 bg-black/25 flex items-center">
-            <div className="max-w-7xl mx-auto px-6 w-full">
+            <div>
 
-              <div className="max-w-xl bg-white/10 backdrop-blur-sm p-8 rounded-3xl">
+              <p className="uppercase tracking-[4px] text-brand-primary font-medium mb-5">
+                Tamanna's Hut Of Purity
+              </p>
 
-                <p className="uppercase tracking-[6px] text-pink-200 text-sm mb-4">
-                  Tamanna's Hut Of Purity
-                </p>
+              <h1 className="text-5xl lg:text-7xl font-serif leading-tight text-brand-dark mb-6">
 
-                <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6">
-                  Premium Kids <br /> Fashion
-                </h1>
+                Timeless Style
+                <br />
+                For Every Moment
 
-                <p className="text-lg text-gray-100 leading-relaxed mb-8">
-                  Stylish and comfortable outfits for boys and girls.
-                  Beautiful collections crafted with elegance and love.
-                </p>
+              </h1>
 
-                <div className="flex gap-4">
-                  <button className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded-full font-semibold transition">
-                    Shop Now
-                  </button>
+              <p className="text-lg lg:text-xl text-gray-600 mb-10 max-w-xl">
 
-                  <button className="border border-white text-white px-8 py-3 rounded-full hover:bg-white hover:text-black transition">
-                    Explore
-                  </button>
-                </div>
+                Beautiful kidswear crafted with premium fabrics,
+                comfort and elegance for every occasion.
+
+              </p>
+
+              <div className="flex gap-4">
+
+                <Link
+                  to="/shop"
+                  className="bg-brand-primary hover:bg-[#2d4d33] text-white px-10 py-4 rounded-xl transition inline-flex items-center justify-center"
+                >
+                  Shop Now
+                </Link>
+
+                <Link
+                  to="/new"
+                  className="border border-brand-primary text-brand-primary px-10 py-4 rounded-xl hover:bg-brand-primary hover:text-white transition inline-flex items-center justify-center"
+                >
+                  Explore
+                </Link>
 
               </div>
+
             </div>
+
+            {/* RIGHT */}
+
+            <div>
+
+              <img
+                src={banner1}
+                alt="Tamanna's Hut"
+                className="
+        w-full
+        h-[650px]
+        object-cover
+        rounded-[40px]
+        "
+              />
+
+            </div>
+
+          </div>
+
+        </section>
+
+        <section className="bg-white border-y border-[#ece7df]">
+          <div className="max-w-7xl mx-auto py-8 grid md:grid-cols-4 text-center gap-6">
+
+            <div>
+              <h3 className="font-semibold text-brand-primary">
+                Premium Fabric
+              </h3>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-brand-primary">
+                Safe For Kids
+              </h3>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-brand-primary">
+                Easy Returns
+              </h3>
+            </div>
+
+            <div>
+              <h3 className="font-semibold text-brand-primary">
+                Fast Delivery
+              </h3>
+            </div>
+
           </div>
         </section>
 
@@ -190,7 +270,16 @@ function Home() {
 
             <div className="grid md:grid-cols-3 gap-8">
 
-              <div className="rounded-3xl overflow-hidden shadow-lg group cursor-pointer">
+              <div className="
+bg-white
+rounded-[30px]
+overflow-hidden
+border
+border-[#efe8dd]
+hover:-translate-y-2
+transition
+duration-300
+">
                 <img
                   src="https://images.unsplash.com/photo-1519238359922-989348752efb"
                   alt=""
@@ -201,7 +290,16 @@ function Home() {
                 </div>
               </div>
 
-              <div className="rounded-3xl overflow-hidden shadow-lg group cursor-pointer">
+              <div className="
+bg-white
+rounded-[30px]
+overflow-hidden
+border
+border-[#efe8dd]
+hover:-translate-y-2
+transition
+duration-300
+">
                 <img
                   src="https://images.unsplash.com/photo-1519345182560-3f2917c472ef"
                   alt=""
@@ -212,7 +310,16 @@ function Home() {
                 </div>
               </div>
 
-              <div className="rounded-3xl overflow-hidden shadow-lg group cursor-pointer">
+              <div className="
+bg-white
+rounded-[30px]
+overflow-hidden
+border
+border-[#efe8dd]
+hover:-translate-y-2
+transition
+duration-300
+">
                 <img
                   src="https://images.unsplash.com/photo-1514090458221-65bb69cf63e6"
                   alt=""
@@ -229,14 +336,26 @@ function Home() {
         <section className="py-20 bg-white">
           <div className="max-w-7xl mx-auto px-6">
 
-            <h2 className="text-4xl font-bold text-center mb-12">
-              Featured Collection
+            <p className="uppercase tracking-[4px] text-brand-primary mb-3">
+              Our Collection
+            </p>
+
+            <h2 className="text-5xl font-serif">
+              Featured Products
             </h2>
 
             <div className="grid md:grid-cols-4 gap-8">
 
               {products.map((product) => (
-                <div key={product._id} className="relative bg-white rounded-2xl shadow-lg overflow-hidden">
+                <div key={product._id} className="
+                bg-white
+                rounded-[28px]
+                overflow-hidden
+                border
+                border-[#efe8dd]
+                hover:shadow-xl
+                transition
+                ">
                   <img src={
                     product.image?.startsWith("http")
                       ? product.image
@@ -247,12 +366,12 @@ function Home() {
                       {product.name}
                     </h3>
                     <button onClick={() => addToWishlist(product)} className="absolute top-4 right-4 bg-white shadow-lg p-3 rounded-full cursor-pointer">❤️</button>
-                    <p className="text-pink-500 font-bold mt-2">
+                    <p className="text-brand-primary font-bold mt-2">
                       ₹{product.price}
                     </p>
 
                     <Link to={`/product/${product._id}`}>
-                      <button className="mt-4 w-full bg-black text-white py-3 rounded-full hover:bg-pink-500 transition">
+                      <button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
                         View Product
                       </button>
                     </Link>
@@ -266,61 +385,49 @@ function Home() {
           </div>
         </section>
         {/* FEATURES */}
-        {/* <section className="py-20 bg-white">
-                <div className="max-w-7xl mx-auto px-6">
+        <section className="py-24 bg-brand-background">
 
-                    <h2 className="text-4xl font-bold text-center mb-12">
-                        Featured Collection
-                    </h2>
+          <div className="max-w-7xl mx-auto">
 
-                    <div className="grid md:grid-cols-4 gap-8">
+            <h2 className="text-center text-5xl font-serif mb-16">
+              Why Parents Love Us
+            </h2>
 
-                        {products.map((product) => (
-                            <div
-                                key={product._id}
-                                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition"
-                            >
-                                <img
-  src={
-    product.image ||
-    "https://via.placeholder.com/500x500?text=Tamannas+Hut"
-  }
-  alt={`${product.name} - Tamanna's Hut Kids Fashion`}
-  className="h-72 w-full object-cover"
-/>
+            <div className="bg-white rounded-3xl p-8 border border-[#ece7df] value-card-wrp">
 
-                                <div className="p-5">
+              <div className="value-card">
+                <h3 className="text-2xl font-semibold mb-4 text-brand-primary">
+                  Premium Quality
+                </h3>
 
-                                    <h3 className="font-semibold text-lg">
-                                        {product.name}
-                                    </h3>
+                <p className="text-gray-600">
+                  Soft fabrics and durable stitching for everyday comfort.
+                </p>
+              </div>
 
-                                    <p className="text-gray-500 mt-2 text-sm">
-                                        {product.description}
-                                    </p>
+              <div className="value-card">
+                <h3 className="text-2xl font-semibold mb-4 text-brand-primary">Comfort First</h3>
+                <p className="text-gray-600">Designed for active kids.</p>
+              </div>
 
-                                    <p className="text-pink-500 font-bold mt-3 text-xl">
-                                        ₹{product.price}
-                                    </p>
+              <div className="value-card">
+                <h3 className="text-2xl font-semibold mb-4 text-brand-primary">Elegant Designs</h3>
+                <p className="text-gray-600">Stylish outfits for every occasion.</p>
+              </div>
 
-                                    <button className="mt-4 w-full bg-black text-white py-3 rounded-full hover:bg-pink-500 transition">
-                                        View Product
-                                    </button>
+            </div>
 
-                                </div>
-                            </div>
-                        ))}
+          </div>
 
-                    </div>
-                </div>
-            </section> */}
+        </section>
+
         {/* TESTIMONIALS */}
 
         <section className="mb-28">
 
           <div className="text-center mb-16">
 
-            <p className="text-pink-500 uppercase tracking-[5px] font-semibold">
+            <p className="text-brand-primary uppercase tracking-[5px] font-semibold">
 
               Happy Customers
 
@@ -338,7 +445,7 @@ function Home() {
 
             {/* CARD 1 */}
 
-            <div className="bg-white rounded-[35px] shadow-xl p-10 hover:-translate-y-2 transition duration-300">
+            <div className="bg-white rounded-[35px] border border-[#ece7df] p-10 hover:-translate-y-2 transition duration-300">
 
               <div className="flex text-yellow-400 text-2xl mb-6">
 
@@ -380,7 +487,7 @@ function Home() {
 
             {/* CARD 2 */}
 
-            <div className="bg-white rounded-[35px] shadow-xl p-10 hover:-translate-y-2 transition duration-300">
+            <div className="bg-white rounded-[35px] border border-[#ece7df] p-10 hover:-translate-y-2 transition duration-300">
 
               <div className="flex text-yellow-400 text-2xl mb-6">
 
@@ -421,7 +528,7 @@ function Home() {
 
             {/* CARD 3 */}
 
-            <div className="bg-white rounded-[35px] shadow-xl p-10 hover:-translate-y-2 transition duration-300">
+            <div className="bg-white rounded-[35px] border border-[#ece7df] p-10 hover:-translate-y-2 transition duration-300">
 
               <div className="flex text-yellow-400 text-2xl mb-6">
 
@@ -469,7 +576,7 @@ function Home() {
 
           <div className="text-center mb-16">
 
-            <p className="text-pink-500 uppercase tracking-[5px] font-semibold">
+            <p className="text-brand-primary uppercase tracking-[5px] font-semibold">
 
               Follow Us
 
@@ -491,21 +598,21 @@ function Home() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
 
-            <a
-              href="https://instagram.com/YOURUSERNAME"
-              target="_blank"
-              rel="noreferrer"
-              className="overflow-hidden rounded-[30px] group block"
-            ></a>
 
             <div className="overflow-hidden rounded-[30px] group">
 
-              <img
-                src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop"
-                alt="gallery"
-                className="h-80 w-full object-cover group-hover:scale-110 transition duration-500"
-              />
-
+              <a
+                href="https://instagram.com/tamannashut"
+                target="_blank"
+                rel="noreferrer"
+                className="overflow-hidden rounded-[30px] group block"
+              >
+                <img
+                  src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop"
+                  alt="gallery"
+                  className="h-80 w-full object-cover group-hover:scale-110 transition duration-500"
+                />
+              </a>
             </div>
 
             <div className="overflow-hidden rounded-[30px] group">
@@ -531,19 +638,55 @@ function Home() {
           </div>
 
         </section>
-        {/* FOOTER */}
-        <footer className="bg-black text-white py-10 text-center">
-          <h2 className="text-3xl font-bold">Tamanna's Hut</h2>
+        <section className="py-24 bg-white">
+          <div className="max-w-3xl mx-auto px-6 text-center">
+            <p className="uppercase tracking-[4px] text-brand-primary font-medium mb-4">
+              Join Our Community
+            </p>
 
-          <p className="mt-4 text-white/70">
-            Premium Fashion For Kids
-          </p>
+            <h2 className="text-5xl font-serif mb-6 text-brand-dark">
+              Stay Updated With New Arrivals
+            </h2>
 
-          <p className="mt-6 text-sm text-white/50">
-            © 2026 Tamanna's Hut. All rights reserved.
-          </p>
-        </footer>
+            <p className="text-gray-600 mb-8 text-lg">
+              Get updates on new arrivals, offers, and special collections.
+            </p>
 
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="
+          flex-1
+          border
+          border-[#ece7df]
+          rounded-xl
+          px-5
+          py-4
+          outline-none
+          focus:border-brand-primary
+        "
+              />
+
+              <button
+                type="submit"
+                className="
+          bg-brand-primary
+          hover:bg-[#2d4d33]
+          text-white
+          px-8
+          py-4
+          rounded-xl
+          transition
+        "
+              >
+                Subscribe
+              </button>
+            </form>
+          </div>
+        </section>
       </div>
     </>
   );

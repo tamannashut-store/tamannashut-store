@@ -1,8 +1,17 @@
 @import "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "./theme.css";
 
 button{
     cursor: pointer;
+}
+.value-card-wrp{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+.value-card{
+    max-width: calc(100% / 3);
+    width: 100%;
+    text-align: center;
 }
