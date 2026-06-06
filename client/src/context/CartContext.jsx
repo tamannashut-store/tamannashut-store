@@ -7,29 +7,36 @@ import {
 export const CartContext = createContext();
 
 function CartProvider({ children }) {
+  const [cartKey, setCartKey] = useState(() => {
+    const user = JSON.parse(
+      localStorage.getItem("user")
+    );
+  
+    return user?.user?._id
+      ? `cart_${user.user._id}`
+      : "guest_cart";
+  });
+  
   const [cartItems, setCartItems] = useState([]);
-
-  const getCartKey = () => {
-    try {
-      const user = JSON.parse(
-        localStorage.getItem("user")
-      );
-
-      return user?.user?._id
-        ? `cart_${user.user._id}`
-        : "guest_cart";
-    } catch {
-      return "guest_cart";
-    }
-  };
 
   // LOAD CART
   useEffect(() => {
+
     const loadCart = () => {
-      const cartKey = getCartKey();
+  
+      const user = JSON.parse(
+        localStorage.getItem("user")
+      );
+  
+      const newCartKey =
+        user?.user?._id
+          ? `cart_${user.user._id}`
+          : "guest_cart";
+  
+      setCartKey(newCartKey);
   
       const savedCart =
-        localStorage.getItem(cartKey);
+        localStorage.getItem(newCartKey);
   
       setCartItems(
         savedCart
@@ -41,37 +48,28 @@ function CartProvider({ children }) {
     loadCart();
   
     window.addEventListener(
-      "storage",
-      loadCart
-    );
-  
-    window.addEventListener(
       "cartUpdated",
       loadCart
     );
   
     return () => {
       window.removeEventListener(
-        "storage",
-        loadCart
-      );
-  
-      window.removeEventListener(
         "cartUpdated",
         loadCart
       );
     };
+  
   }, []);
 
   // SAVE CART
   useEffect(() => {
-    const cartKey = getCartKey();
 
-    localStorage.setItem(
-      cartKey,
-      JSON.stringify(cartItems)
-    );
-  }, [cartItems]);
+  localStorage.setItem(
+    cartKey,
+    JSON.stringify(cartItems)
+  );
+
+}, [cartItems, cartKey]);
 
   // ADD TO CART
   const addToCart = (product) => {
@@ -218,10 +216,11 @@ function CartProvider({ children }) {
 
   // CLEAR CART
   const clearCart = () => {
+
     setCartItems([]);
   
     localStorage.removeItem(
-      getCartKey()
+      cartKey
     );
   };
 

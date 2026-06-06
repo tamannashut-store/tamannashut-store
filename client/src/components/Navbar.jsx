@@ -12,15 +12,11 @@ function Navbar() {
 
   const navigate = useNavigate();
   const handleLogout = () => {
-
     localStorage.removeItem("user");
-  
     window.dispatchEvent(
       new Event("cartUpdated")
     );
-  
     navigate("/");
-  
   };
   const handleSearch = (e) => {
 
