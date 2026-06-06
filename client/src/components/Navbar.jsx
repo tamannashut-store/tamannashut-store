@@ -13,6 +13,12 @@ function Navbar() {
   const { cartItems } = useContext(CartContext);
 
   const navigate = useNavigate();
+  const cartCount =
+  cartItems.reduce(
+    (total, item) =>
+      total + item.qty,
+    0
+  );
   const handleLogout = () => {
     localStorage.removeItem("user");
     window.dispatchEvent(
@@ -119,7 +125,7 @@ function Navbar() {
                 <FiShoppingBag size={22} />
                 {cartItems.length > 0 && (
                   <span className=" absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {cartItems.length}
+                    {cartCount}
                   </span>
                 )}
               </div>
