@@ -11,6 +11,17 @@ function Navbar() {
   const [search, setSearch] = useState("");
 
   const navigate = useNavigate();
+  const handleLogout = () => {
+
+    localStorage.removeItem("user");
+  
+    window.dispatchEvent(
+      new Event("cartUpdated")
+    );
+  
+    navigate("/");
+  
+  };
   const handleSearch = (e) => {
 
     e.preventDefault();
@@ -159,84 +170,21 @@ function Navbar() {
                 </button>
 
                 {profileOpen && (
-                  <div
-                    className="
-      absolute
-      right-0
-      mt-3
-      w-56
-      bg-white
-      rounded-2xl
-      shadow-xl
-      border
-      border-[#E8DCC6]
-      overflow-hidden
-      z-50
-      "
-                  >
+                  <div className=" absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-[#E8DCC6] overflow-hidden z-50">
 
-                    <Link
-                      to="/profile"
-                      onClick={() => setProfileOpen(false)}
-                      className="
-        block
-        px-5
-        py-3
-        text-[#355E3B]
-        hover:bg-[#FAF8F4]
-        "
-                    >
+                    <Link to="/profile" onClick={() => setProfileOpen(false)} className=" block px-5 py-3 text-[#355E3B] hover:bg-[#FAF8F4]">
                       My Profile
                     </Link>
-
-                    <Link
-                      to="/my-orders"
-                      onClick={() => setProfileOpen(false)}
-                      className="
-        block
-        px-5
-        py-3
-        text-[#355E3B]
-        hover:bg-[#FAF8F4]
-        "
-                    >
+                    <Link to="/my-orders" onClick={() => setProfileOpen(false)} className=" block px-5 py-3 text-[#355E3B] hover:bg-[#FAF8F4]">
                       My Orders
                     </Link>
-
-                    <Link
-                      to="/wishlist"
-                      onClick={() => setProfileOpen(false)}
-                      className="
-        block
-        px-5
-        py-3
-        text-[#355E3B]
-        hover:bg-[#FAF8F4]
-        "
-                    >
+                    <Link to="/wishlist" onClick={() => setProfileOpen(false)} className=" block px-5 py-3 text-[#355E3B] hover:bg-[#FAF8F4]">
                       Wishlist
                     </Link>
 
                     <div className="border-t border-[#E8DCC6]" />
-
-                    <button
-                      onClick={() => {
-                        localStorage.removeItem("user");
-                        window.location.href = "/";
-                      }}
-                      className="
-        w-full
-        text-left
-        px-5
-        py-3
-        text-red-500
-        hover:bg-red-50
-        "
-                    >
-                      Logout
-                    </button>
-
-                  </div>
+                      <button onClick={handleLogout} className="w-full text-left px-5 py-3 text-red-500 hover:bg-red-50">Logout</button>
+                    </div>
                 )}
 
               </div>

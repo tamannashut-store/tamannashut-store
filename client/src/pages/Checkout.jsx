@@ -6,16 +6,10 @@ import toast from "react-hot-toast";
 
 function Checkout() {
 
-    const {
-        cartItems,
-        setCartItems,
-    } = useContext(CartContext);
-
+    const {cartItems, setCartItems, clearCart} = useContext(CartContext);
     const navigate = useNavigate();
-
     const [loading, setLoading] = useState(false);
     const [coupon, setCoupon] = useState("");
-
     const [discount, setDiscount] = useState(0);
     const [formData, setFormData] = useState({
         name: "",
@@ -175,10 +169,7 @@ function Checkout() {
                     }
                 );
 
-                localStorage.removeItem("cart");
-
-                setCartItems([]);
-
+                clearCart();
                 toast.success("Payment Successful");
 
                 navigate("/success");
@@ -310,11 +301,7 @@ function Checkout() {
                             );
 
                             // CLEAR CART
-
-                            localStorage.removeItem("cart");
-
-                            setCartItems([]);
-
+                            clearCart();
                             toast.success("Payment Successful");
 
                             navigate("/success");

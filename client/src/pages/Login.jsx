@@ -35,14 +35,57 @@ function Login() {
                 "user",
                 JSON.stringify(data)
             );
+            const guestCart = JSON.parse(
+                localStorage.getItem("guest_cart")
+            ) || [];
 
+            const userCartKey =
+                `cart_${data.user._id}`;
+
+            const userCart = JSON.parse(
+                localStorage.getItem(userCartKey)
+            ) || [];
+
+            const mergedCart = [...userCart];
+
+            guestCart.forEach((guestItem) => {
+                const existing = mergedCart.find(item => item._id === guestItem._id && item.selectedSize === guestItem.selectedSize);
+                if (existing) {
+                    existing.qty = existing.qty + guestItem.qty;
+                    const maxStock =
+                        existing.sizeStock?.find(
+                            s => s.size === existing.selectedSize
+                        )?.stock || 999;
+
+                    if (existing.qty > maxStock) {
+                        existing.qty = maxStock;
+                    }
+                } else {
+                    mergedCart.push(guestItem);
+                }
+
+            });
+
+            localStorage.setItem(
+                userCartKey,
+                JSON.stringify(mergedCart)
+            );
+
+            localStorage.removeItem(
+                "guest_cart"
+            );
+
+            window.dispatchEvent(
+                new Event("cartUpdated")
+            );
             toast.success("Login Successful");
+            console.log(data);
 
             navigate("/");
 
         } catch (error) {
             console.log("Error Data:", error.response?.data);
-    console.log("Error Status:", error.response?.status);
+            console.log("Error Status:", error.response?.status);
             toast.error(
                 error.response?.data?.message ||
                 "Login Failed"
