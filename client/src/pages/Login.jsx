@@ -35,9 +35,16 @@ function Login() {
                 "user",
                 JSON.stringify(data)
             );
-            const guestCart = JSON.parse(
-                localStorage.getItem("guest_cart")
-            ) || [];
+            const guestCart =
+                JSON.parse(
+                    sessionStorage.getItem(
+                        "pending_guest_cart"
+                    )
+                ) ||
+                JSON.parse(
+                    localStorage.getItem("guest_cart")
+                ) ||
+                [];
 
             const userCartKey =
                 `cart_${data.user._id}`;
@@ -74,7 +81,9 @@ function Login() {
             localStorage.removeItem(
                 "guest_cart"
             );
-
+            sessionStorage.removeItem(
+                "pending_guest_cart"
+              );
             window.dispatchEvent(
                 new Event("cartUpdated")
             );

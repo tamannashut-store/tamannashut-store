@@ -28,15 +28,27 @@ function Register() {
 
         try {
 
-            await axios.post(
-               
+            const { data } = await axios.post(
                 `${API_URL}/api/auth/register`,
                 formData
             );
 
-            toast.success("Registration Successful");
+            localStorage.setItem(
+                "user",
+                JSON.stringify(data)
+            );
 
-            navigate("/login");
+            window.dispatchEvent(
+                new Event("cartUpdated")
+            );
+
+            toast.success("Account Created");
+
+            if (guestCart.length > 0) {
+                navigate("/checkout");
+            } else {
+                navigate("/profile");
+            }
 
         } catch (error) {
             console.log("Error Data:", error.response?.data);
