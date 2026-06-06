@@ -41,9 +41,24 @@ function Register() {
                 navigate("/profile");
             }
         } catch (error) {
-            console.log("Error Data:", error.response?.data);
-            console.log("Error Status:", error.response?.status);
-            toast.error(error.response?.data?.message || "Registration Failed");
+
+            console.log("FULL ERROR:", error);
+        
+            console.log(
+                "Error Data:",
+                error?.response?.data
+            );
+        
+            console.log(
+                "Error Status:",
+                error?.response?.status
+            );
+        
+            toast.error(
+                error?.response?.data?.message ||
+                error.message ||
+                "Registration Failed"
+            );
         }
     };
 
