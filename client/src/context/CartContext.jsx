@@ -81,7 +81,7 @@ function CartProvider({ children }) {
     const existingItem =
       cartItems.find(
         (item) =>
-          item.id === product.id &&
+          item._id === product._id &&
           item.selectedSize ===
           product.selectedSize
       );
@@ -106,7 +106,7 @@ function CartProvider({ children }) {
 
       updatedCart = cartItems.map(
         (item) =>
-          item.id === product.id &&
+          item._id === product._id &&
             item.selectedSize ===
             product.selectedSize
             ? {
@@ -136,7 +136,7 @@ function CartProvider({ children }) {
     const updatedCart =
       cartItems.map((item) => {
         if (
-          item.id === id &&
+          item._id === id &&
           item.selectedSize ===
           selectedSize
         ) {
@@ -177,7 +177,7 @@ function CartProvider({ children }) {
     const updatedCart = cartItems
       .map((item) => {
         if (
-          item.id === id &&
+          item._id === id &&
           item.selectedSize ===
           selectedSize
         ) {
@@ -205,7 +205,7 @@ function CartProvider({ children }) {
       cartItems.filter(
         (item) =>
           !(
-            item.id === id &&
+            item._id === id &&
             item.selectedSize ===
             selectedSize
           )
