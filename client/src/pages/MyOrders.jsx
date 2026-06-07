@@ -241,12 +241,11 @@ ${order.status === "Pending"
                                             <h3 className="font-semibold">
                                                 {item.name}
                                             </h3>
-
                                             <p className="text-gray-500">
                                                 Qty: {item.qty}
                                             </p>
-                                            <p className="text-xs text-red-500">
-                                                {item.image}
+                                            <p className="text-gray-500">
+                                                Qty: {item.selectedSize}
                                             </p>
                                         </div>
 

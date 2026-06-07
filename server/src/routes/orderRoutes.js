@@ -43,8 +43,7 @@ router.post("/", async (req, res) => {
       <h3>Products</h3>
     
       <ul>
-        ${order.products
-        .map(
+        ${order.products.map(
           (p) => `
               <li>
                 ${p.name}
