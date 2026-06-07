@@ -13,16 +13,45 @@ function Checkout() {
         const user = JSON.parse(
             localStorage.getItem("user")
         );
-
+    
         if (!user) {
-
-            toast.error(
-                "Please login to continue"
+    
+            sessionStorage.setItem(
+                "redirectAfterLogin",
+                "/checkout"
             );
-
+    
             navigate("/login");
+    
+            return;
         }
-
+    
+        const loadProfile = async () => {
+    
+            try {
+    
+                const { data } = await axios.get(
+                    `${API_URL}/api/auth/profile/${user.user.id}`
+                );
+    
+                setFormData({
+                    name: data.name || "",
+                    email: data.email || "",
+                    phone: data.phone || "",
+                    address: data.address || "",
+                    city: data.city || "",
+                    pincode: data.pincode || "",
+                });
+    
+            } catch (error) {
+    
+                console.log(error);
+    
+            }
+        };
+    
+        loadProfile();
+    
     }, [navigate]);
     const [loading, setLoading] = useState(false);
     const [coupon, setCoupon] = useState("");
@@ -154,6 +183,16 @@ function Checkout() {
                 return;
             }
         }
+        await axios.put(
+            `${API_URL}/api/auth/profile/${user.user.id}`,
+            {
+                name: formData.name,
+                phone: formData.phone,
+                address: formData.address,
+                city: formData.city,
+                pincode: formData.pincode,
+            }
+        );
         if (paymentMethod === "cod") {
 
             try {
@@ -383,15 +422,9 @@ function Checkout() {
 
                 {/* FORM */}
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="bg-white shadow-xl rounded-3xl p-8"
-                >
-
+                <form onSubmit={handleSubmit} className="bg-white shadow-xl rounded-3xl p-8">
                     <h2 className="text-2xl font-semibold mb-6">
-
                         Shipping Details
-
                     </h2>
 
                     <div className="grid gap-5">
@@ -400,17 +433,19 @@ function Checkout() {
                             type="text"
                             name="name"
                             placeholder="Full Name"
+                            value={formData.name}
                             onChange={handleChange}
                             className="border p-4 rounded-xl outline-none"
                             required
                         />
 
-                        <input type="email" name="email" value={formData.email} disabled className="border p-4 rounded-xl bg-gray-100 text-gray-500"/>
+                        <input type="email" name="email" value={formData.email} disabled className="border p-4 rounded-xl bg-gray-100 text-gray-500" />
 
                         <input
                             type="text"
                             name="phone"
                             placeholder="Phone Number"
+                            value={formData.phone}
                             onChange={handleChange}
                             className="border p-4 rounded-xl outline-none"
                             required
@@ -419,6 +454,7 @@ function Checkout() {
                         <textarea
                             name="address"
                             placeholder="Full Address"
+                            value={formData.address}
                             onChange={handleChange}
                             className="border p-4 rounded-xl outline-none h-32"
                             required
@@ -428,6 +464,7 @@ function Checkout() {
                             type="text"
                             name="city"
                             placeholder="City"
+                            value={formData.city}
                             onChange={handleChange}
                             className="border p-4 rounded-xl outline-none"
                             required
@@ -437,6 +474,7 @@ function Checkout() {
                             type="text"
                             name="pincode"
                             placeholder="Pincode"
+                            value={formData.pincode}
                             onChange={handleChange}
                             className="border p-4 rounded-xl outline-none"
                             required

@@ -31,6 +31,7 @@ import TermsConditions from "./pages/TermsConditions";
 import Contact from "./pages/Contact";
 import About from "./pages/About";
 import AdminContacts from "./pages/AdminContacts";
+import PrivateRoute from "./components/PrivateRoute";
 
 function App() {
   return (
@@ -44,7 +45,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/product/:id" element={<ProductDetails />} />
         <Route path="/cart" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout" element={<PrivateRoute> <Checkout /></PrivateRoute>} />
         <Route path="/shop" element={<Shop />} />
         <Route path="/success" element={<Success />} />
         <Route path="/admin" element={<AdminRoute> <Admin /> </AdminRoute>} />
@@ -52,9 +53,9 @@ function App() {
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="/admin/edit/:id" element={<EditProduct />} />
-        <Route path="/my-orders" element={<MyOrders />} />
+        <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
         <Route path="/wishlist" element={<Wishlist />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/change-password" element={<ChangePassword />} />
         <Route path="/admin-coupons" element={<AdminCoupons />} />
         <Route path="/return-policy" element={<ReturnPolicy />} />
