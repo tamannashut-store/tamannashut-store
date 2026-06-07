@@ -245,13 +245,23 @@ ${order.status === "Pending"
                                                 Qty: {item.qty}
                                             </p>
                                             <p className="text-gray-500">
-                                                Qty: {item.selectedSize}
+                                                Selected Size: {item.selectedSize}
                                             </p>
                                         </div>
 
                                         <p className="font-bold">
                                             ₹{item.price * item.qty}
                                         </p>
+                                        <button
+                                            onClick={() =>
+                                                window.open(
+                                                    `${import.meta.env.VITE_API_URL}/api/orders/invoice/${order._id}`
+                                                )
+                                            }
+                                            className="bg-green-500 text-white px-4 py-2 rounded-xl"
+                                        >
+                                            Download Invoice
+                                        </button>
 
                                     </div>
 

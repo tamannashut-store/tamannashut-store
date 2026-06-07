@@ -5,6 +5,7 @@ import { sendEmail } from "../utils/sendEmail.js";
 import { orderEmailTemplate } from "../utils/emailTemplates.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
+import { generateInvoice } from "../utils/generateInvoice.js";
 
 const router = express.Router();
 
@@ -130,6 +131,34 @@ router.post("/", async (req, res) => {
   }
 });
 
+router.get(
+  "/invoice/:id",
+  async (req, res) => {
+
+    try {
+
+      const order =
+        await Order.findById(
+          req.params.id
+        );
+
+      if (!order) {
+        return res.status(404).json({
+          message: "Order not found",
+        });
+      }
+
+      generateInvoice(order, res);
+
+    } catch (error) {
+
+      res.status(500).json({
+        message: error.message,
+      });
+
+    }
+  }
+);
 
 // GET ALL ORDERS
 
