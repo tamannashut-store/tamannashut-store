@@ -190,7 +190,7 @@ function Checkout() {
                 );
 
                 clearCart();
-                toast.success("Payment Successful");
+                toast.success("Order Placed");
 
                 navigate("/success");
 
