@@ -47,7 +47,7 @@ function Login() {
                 [];
 
             const userCartKey =
-                `cart_${data.user._id}`;
+                `cart_${data.user.id}`;
 
             const userCart = JSON.parse(
                 localStorage.getItem(userCartKey)
