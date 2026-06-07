@@ -216,6 +216,16 @@ ${order.status === "Pending"
                             </div>
 
                             <div className="mt-8 grid gap-5">
+                            <button
+                                            onClick={() =>
+                                                window.open(
+                                                    `${import.meta.env.VITE_API_URL}/api/orders/invoice/${order._id}`
+                                                )
+                                            }
+                                            className="bg-green-500 text-white px-4 py-2 rounded-xl"
+                                        >
+                                            Download Invoice
+                                        </button>
 
                                 {order.products.map((item, index) => (
 
@@ -252,17 +262,7 @@ ${order.status === "Pending"
                                         <p className="font-bold">
                                             ₹{item.price * item.qty}
                                         </p>
-                                        <button
-                                            onClick={() =>
-                                                window.open(
-                                                    `${import.meta.env.VITE_API_URL}/api/orders/invoice/${order._id}`
-                                                )
-                                            }
-                                            className="bg-green-500 text-white px-4 py-2 rounded-xl"
-                                        >
-                                            Download Invoice
-                                        </button>
-
+                                        
                                     </div>
 
                                 ))}
