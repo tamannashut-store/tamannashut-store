@@ -31,7 +31,7 @@ function Checkout() {
             try {
     
                 const { data } = await axios.get(
-                    `${API_URL}/api/auth/profile/${user.user.id}`
+                    `${VITE_API_URL}/api/auth/profile/${user.user.id}`
                 );
     
                 setFormData({
@@ -184,7 +184,7 @@ function Checkout() {
             }
         }
         await axios.put(
-            `${API_URL}/api/auth/profile/${user.user.id}`,
+            `${VITE_API_URL}/api/auth/profile/${user.user.id}`,
             {
                 name: formData.name,
                 phone: formData.phone,

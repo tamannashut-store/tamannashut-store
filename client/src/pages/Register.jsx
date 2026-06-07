@@ -25,7 +25,7 @@ function Register() {
         e.preventDefault();
         try {
             const { data } = await axios.post(
-                `${API_URL}/api/auth/register`,
+                `${VITE_API_URL}/api/auth/register`,
                 formData
             );
             const guestCart =
