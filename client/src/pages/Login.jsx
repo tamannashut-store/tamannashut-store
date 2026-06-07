@@ -52,8 +52,18 @@ function Login() {
             const userCart = JSON.parse(
                 localStorage.getItem(userCartKey)
             ) || [];
+            console.log("Guest Cart:", guestCart);
 
+            console.log(
+              "User Cart Key:",
+              userCartKey
+            );
             const mergedCart = [...userCart];
+            
+            console.log(
+              "Merged Cart:",
+              mergedCart
+            );
 
             guestCart.forEach((guestItem) => {
                 const existing = mergedCart.find(item => item._id === guestItem._id && item.selectedSize === guestItem.selectedSize);

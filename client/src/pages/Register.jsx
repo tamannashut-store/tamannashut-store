@@ -28,10 +28,22 @@ function Register() {
                 `${API_URL}/api/auth/register`,
                 formData
             );
-            const guestCart = JSON.parse(
-                localStorage.getItem("guest_cart")
-              ) || [];
-            localStorage.setItem("user", JSON.stringify(data));
+            const guestCart =
+                JSON.parse(
+                    localStorage.getItem("guest_cart")
+                ) || [];
+            localStorage.setItem(
+                "user",
+                JSON.stringify(data)
+            );
+            const userCartKey = `cart_${data.user.id}`;
+            localStorage.setItem(
+                userCartKey,
+                JSON.stringify(guestCart)
+            );
+            localStorage.removeItem(
+                "guest_cart"
+            );
             window.dispatchEvent(
                 new Event("cartUpdated")
             );
@@ -46,17 +58,17 @@ function Register() {
         } catch (error) {
 
             console.log("FULL ERROR:", error);
-        
+
             console.log(
                 "Error Data:",
                 error?.response?.data
             );
-        
+
             console.log(
                 "Error Status:",
                 error?.response?.status
             );
-        
+
             toast.error(
                 error?.response?.data?.message ||
                 error.message ||
@@ -69,9 +81,9 @@ function Register() {
         <div className="max-w-md mx-auto px-6 py-20">
             <form onSubmit={handleSubmit} className="bg-white shadow-2xl rounded-3xl p-10 space-y-6">
                 <h1 className="text-4xl font-bold text-center">Register</h1>
-                <input type="text" name="name" placeholder="Name" onChange={handleChange} className="w-full border p-4 rounded-2xl" required/>
-                <input type="email" name="email" placeholder="Email" onChange={handleChange} className="w-full border p-4 rounded-2xl" required/>
-                <input type="password" name="password" placeholder="Password" onChange={handleChange} className="w-full border p-4 rounded-2xl" required/>
+                <input type="text" name="name" placeholder="Name" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
+                <input type="email" name="email" placeholder="Email" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
+                <input type="password" name="password" placeholder="Password" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
                 <button type="submit" className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full text-lg font-semibold">Register</button>
             </form>
         </div>
