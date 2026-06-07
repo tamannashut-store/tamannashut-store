@@ -28,6 +28,9 @@ function Register() {
                 `${API_URL}/api/auth/register`,
                 formData
             );
+            const guestCart = JSON.parse(
+                localStorage.getItem("guest_cart")
+              ) || [];
             localStorage.setItem("user", JSON.stringify(data));
             window.dispatchEvent(
                 new Event("cartUpdated")
