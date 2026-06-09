@@ -36,7 +36,7 @@ export const invoiceTemplate = (order) => {
       <!-- HEADER -->
 
       <div style="
-        background:#ec4899;
+        background:#faf8f4;
         color:#fff;
         padding:25px 30px;
       ">
