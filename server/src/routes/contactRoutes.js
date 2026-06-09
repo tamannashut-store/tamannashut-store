@@ -3,7 +3,7 @@ import { sendEmail } from "../utils/sendEmail.js";
 import Contact from "../models/Contact.js";
 
 const router = express.Router();
-
+console.log("Contact Routes Loaded");
 router.get("/", async (req, res) => {
     try {
         const contacts = await Contact.find()
@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
 
     } catch (error) {
         console.log(error);
-        
+
         res.status(500).json({
             success: false,
             message: "Failed to fetch contacts",
