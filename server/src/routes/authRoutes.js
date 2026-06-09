@@ -33,7 +33,7 @@ router.post("/register", async (req, res) => {
             { expiresIn: "7d" }
         );
 
-        res.status(201).json({
+        return res.status(201).json({
             token,
             user: {
                 id: user._id,
@@ -43,7 +43,7 @@ router.post("/register", async (req, res) => {
             },
         });
     } catch (error) {
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message,
         });
     }
@@ -89,7 +89,7 @@ router.post("/login", async (req, res) => {
             }
         );
 
-        res.json({
+        return res.json({
             token,
             user: {
                 id: user._id,
@@ -101,7 +101,7 @@ router.post("/login", async (req, res) => {
 
     } catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message,
         });
     }
@@ -114,11 +114,11 @@ router.get("/profile/:id", async (req, res) => {
             req.params.id
         ).select("-password");
 
-        res.json(user);
+        return res.json(user);
 
     } catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message,
         });
 
@@ -190,16 +190,16 @@ router.put("/change-password/:id", async (req, res) => {
                 10
             );
 
-        await user.save();
+            await user.save();
 
-        res.json({
-            success: true,
-            message: "Password changed",
-        });
+            return res.json({
+                success: true,
+                message: "Password changed",
+            });
 
     } catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message,
         });
 
