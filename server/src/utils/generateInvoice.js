@@ -11,7 +11,7 @@ export const generateInvoice = (order, res) => {
     "Content-Disposition",
     `attachment; filename=invoice-${String(order._id)}.pdf`
   );
-
+  console.log("NEW GST INVOICE GENERATED");
   doc.pipe(res);
 
   const invoiceNo = `TH-${new Date(order.createdAt)
