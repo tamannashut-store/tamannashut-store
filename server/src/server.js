@@ -40,7 +40,7 @@ import couponRoutes from "./routes/couponRoutes.js";
 import sitemapRoutes from "./routes/sitemapRoutes.js";
 import googleFeedRoutes from "./routes/googleFeedRoutes.js";
 import robotsRoutes from "./routes/robotsRoutes.js";
-import contactRoutes from "../routes/contactRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
 
 dotenv.config();
 const app = express();
