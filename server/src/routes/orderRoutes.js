@@ -13,118 +13,115 @@ const router = express.Router();
 // CREATE ORDER
 
 router.post("/", async (req, res) => {
-
   try {
-
     const order = new Order(req.body);
 
     await order.save();
-    await sendEmail(
-      req.body.email,
-      "Order Confirmed - Tamanna's Hut",
-      `
-        ${orderEmailTemplate(order)}
-        <hr />
-        ${invoiceTemplate(order)}
-      `
-    );
-    await sendEmail(
-      process.env.ADMIN_EMAIL,
-      `🛍 New Order Received - ${order._id}`,
-      `
-      <h2>New Order Received</h2>
-    
-      <p><strong>Order ID:</strong> ${order._id}</p>
-      <p><strong>Customer:</strong> ${order.customerName}</p>
-      <p><strong>Email:</strong> ${order.email}</p>
-      <p><strong>Phone:</strong> ${order.phone}</p>
-      <p><strong>Total:</strong> ₹${order.totalAmount}</p>
-      <p><strong>Status:</strong> ${order.status}</p>
-    
-      <h3>Products</h3>
-    
-      <ul>
-        ${order.products.map(
-          (p) => `
-              <li>
-                ${p.name}
-                | Size: ${p.selectedSize}
-                | Qty: ${p.qty}
-                | ₹${p.price}
-              </li>
-            `
-        )
-        .join("")}
-      </ul>
-      `
-    );
-    const phone = req.body.phone.startsWith("+")
-      ? req.body.phone
-      : `+91${req.body.phone}`;
 
-    await sendWhatsApp(
-      phone,
-      `🛍 Order Confirmed!\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`
-    );
-    // REDUCE STOCK
-
+    // STOCK CHECK & REDUCE
     for (const item of req.body.products) {
+      const product = await Product.findById(item._id);
 
-      const product =
-        await Product.findById(item._id);
+      if (!product) continue;
 
-      if (product) {
+      const sizeData = product.sizeStock?.find(
+        (s) => s.size === item.selectedSize
+      );
 
-        const sizeData = product.sizeStock?.find(
-          s => s.size === item.selectedSize
-        );
-
-        if (!sizeData) {
-
-          console.log(
-            "SIZE STOCK NOT FOUND:",
-            product.name,
-            item.selectedSize
-          );
-
-          return res.status(400).json({
-            success: false,
-            message: `Stock not configured for ${product.name} (${item.selectedSize})`
-          });
-
-        }
-
-        if (sizeData) {
-
-          if (sizeData.stock < item.qty) {
-
-            return res.status(400).json({
-              success: false,
-              message: `${product.name} (${item.selectedSize}) is out of stock`
-            });
-
-          }
-
-          sizeData.stock -= item.qty;
-
-          await product.save();
-        }
+      if (!sizeData) {
+        return res.status(400).json({
+          success: false,
+          message: `Stock not configured for ${product.name} (${item.selectedSize})`,
+        });
       }
+
+      if (sizeData.stock < item.qty) {
+        return res.status(400).json({
+          success: false,
+          message: `${product.name} (${item.selectedSize}) is out of stock`,
+        });
+      }
+
+      sizeData.stock -= item.qty;
+
+      await product.save();
     }
 
-    res.json({
+    // CUSTOMER EMAIL
+    try {
+      await sendEmail(
+        order.email,
+        "Order Confirmed - Tamanna's Hut",
+        invoiceTemplate(order)
+      );
+    } catch (err) {
+      console.log("CUSTOMER EMAIL ERROR:", err);
+    }
+
+    // ADMIN EMAIL
+    try {
+      await sendEmail(
+        process.env.ADMIN_EMAIL,
+        `🛍 New Order Received - ${order._id}`,
+        `
+        <h2>New Order Received</h2>
+
+        <p><strong>Order ID:</strong> ${order._id}</p>
+        <p><strong>Customer:</strong> ${order.customerName}</p>
+        <p><strong>Email:</strong> ${order.email}</p>
+        <p><strong>Phone:</strong> ${order.phone}</p>
+        <p><strong>Total:</strong> ₹${order.totalAmount}</p>
+
+        <h3>Products</h3>
+
+        <ul>
+          ${order.products
+          .map(
+            (p) => `
+                <li>
+                  ${p.name}
+                  | Size: ${p.selectedSize}
+                  | Qty: ${p.qty}
+                  | ₹${p.price}
+                </li>
+              `
+          )
+          .join("")}
+        </ul>
+        `
+      );
+    } catch (err) {
+      console.log("ADMIN EMAIL ERROR:", err);
+    }
+
+    // WHATSAPP
+    try {
+      const phone = order.phone.startsWith("+")
+        ? order.phone
+        : `+91${order.phone}`;
+
+      await sendWhatsApp(
+        phone,
+        `🛍 Order Confirmed!
+
+Order ID: ${order._id}
+Amount: ₹${order.totalAmount}
+Status: ${order.status}`
+      );
+    } catch (err) {
+      console.log("WHATSAPP ERROR:", err);
+    }
+
+    return res.json({
       success: true,
-      message: "Order saved",
+      message: "Order saved successfully",
       order,
     });
 
   } catch (error) {
+    console.error("ORDER ERROR:", error);
 
-    console.error("ORDER ERROR:");
-    console.error(error);
-    console.error(error.stack);
-
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -298,7 +295,7 @@ router.put("/:id", async (req, res) => {
       trackingId:
         req.body.trackingNumber?.trackingId ||
         order.tracking?.trackingId,
-    
+
       courier:
         req.body.trackingNumber?.courier ||
         order.tracking?.courier,
@@ -325,15 +322,19 @@ router.put("/:id", async (req, res) => {
         ${order.status}
       </p>
     
-      ${order.tracking
+      ${order.tracking?.trackingId
         ? `
-          <p>
-            <strong>Tracking Number:</strong>
-            ${order.tracking}
-          </p>
-        `
-        : ""
-      }
+            <p>
+              <strong>Tracking ID:</strong>
+              ${order.tracking.trackingId}
+            </p>
+      
+            <p>
+              <strong>Courier:</strong>
+              ${order.tracking.courier}
+            </p>
+          `
+        : ""}
     
       <br>
     

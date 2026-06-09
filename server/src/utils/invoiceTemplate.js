@@ -96,9 +96,7 @@ export const invoiceTemplate = (order) => {
               <p>
                 Invoice No:
                 <strong>
-                  TH-${new Date(order.createdAt).getFullYear()}-${order.id
-      .slice(-6)
-      .toUpperCase()}
+                  TH-${new Date(order.createdAt).getFullYear()}-${String(order._id).slice(-6).toUpperCase()}
                 </strong>
               </p>
 
