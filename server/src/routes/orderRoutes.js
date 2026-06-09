@@ -148,7 +148,7 @@ router.get(
         });
       }
 
-      invoiceTemplate(order)
+      generateInvoice(order, res);
 
     } catch (error) {
 
