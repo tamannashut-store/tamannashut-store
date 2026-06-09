@@ -3,7 +3,7 @@ import { sendEmail } from "../utils/sendEmail.js";
 import Contact from "../models/Contact.js";
 
 const router = express.Router();
-console.log("Contact Routes Loaded");
+
 router.get("/", async (req, res) => {
     try {
         const contacts = await Contact.find()
