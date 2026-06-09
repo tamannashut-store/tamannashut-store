@@ -31,17 +31,17 @@ router.post("/register", async (req, res) => {
             { id: user._id },
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
-          );
-          
-          res.status(201).json({
+        );
+
+        res.status(201).json({
             token,
             user: {
-              id: user._id,
-              name: user.name,
-              email: user.email,
-              isAdmin: user.isAdmin,
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                isAdmin: user.isAdmin,
             },
-          });
+        });
     } catch (error) {
         res.status(500).json({
             message: error.message,
@@ -126,50 +126,29 @@ router.get("/profile/:id", async (req, res) => {
 
 });
 router.put("/profile/:id", async (req, res) => {
-
     try {
-
-        const user = await User.findById(
-            req.params.id
-        );
+        const user = await User.findById(req.params.id);
 
         if (!user) {
-
             return res.status(404).json({
                 message: "User not found",
             });
-
         }
 
-        user.name =
-            req.body.name || user.name;
+        user.name = req.body.name || user.name;
+        user.phone = req.body.phone || user.phone;
+        user.address = req.body.address || user.address;
+        user.city = req.body.city || user.city;
+        user.pincode = req.body.pincode || user.pincode;
 
-        user.phone =
-            req.body.phone || user.phone;
+        const updatedUser = await user.save();
 
-        user.address =
-            req.body.address || user.address;
-
-        user.city =
-            req.body.city || user.city;
-
-        user.pincode =
-            req.body.pincode || user.pincode;
-
-        const updatedUser =
-            await user.save();
-
-        res.json(updatedUser);
-        alert("Profile Updated")
-
+        return res.json(updatedUser);
     } catch (error) {
-
-        res.status(500).json({
+        return res.status(500).json({
             message: error.message,
         });
-
     }
-
 });
 
 router.put("/change-password/:id", async (req, res) => {
