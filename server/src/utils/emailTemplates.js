@@ -33,5 +33,5 @@ export const orderEmailTemplate = (order) => {
 
     <p>— Tamanna's Hut Team</p>
   </div>
-</div>
+</div>z
 `;};

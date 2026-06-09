@@ -44,15 +44,6 @@ import contactRoutes from "./routes/contactRoutes.js";
 
 dotenv.config();
 const app = express();
-process.on("uncaughtException", (err) => {
-  console.error("UNCAUGHT EXCEPTION");
-  console.error(err.stack);
-});
-
-process.on("unhandledRejection", (err) => {
-  console.error("UNHANDLED REJECTION");
-  console.error(err);
-});
 app.set("trust proxy", 1);
 app.set("etag", true);
 app.use(
