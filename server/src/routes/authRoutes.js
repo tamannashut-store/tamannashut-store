@@ -33,7 +33,7 @@ router.post("/register", async (req, res) => {
             { expiresIn: "7d" }
           );
           
-          res.status(201).json({
+          return res.status(201).json({
             token,
             user: {
               id: user._id,
@@ -89,7 +89,7 @@ router.post("/login", async (req, res) => {
             }
         );
 
-        res.json({
+        return res.json({
             token,
             user: {
                 id: user._id,
@@ -114,7 +114,7 @@ router.get("/profile/:id", async (req, res) => {
             req.params.id
         ).select("-password");
 
-        res.json(user);
+        return res.json(user);
 
     } catch (error) {
 
@@ -156,11 +156,8 @@ router.put("/profile/:id", async (req, res) => {
         user.pincode =
             req.body.pincode || user.pincode;
 
-        const updatedUser =
-            await user.save();
-
-        res.json(updatedUser);
-        alert("Profile Updated")
+        const updatedUser = await user.save();
+        return res.json(updatedUser);
 
     } catch (error) {
 
@@ -213,7 +210,7 @@ router.put("/change-password/:id", async (req, res) => {
 
         await user.save();
 
-        res.json({
+        return res.json({
             success: true,
             message: "Password changed",
         });
