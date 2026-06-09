@@ -73,7 +73,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/coupons", couponRoutes);
-app.use("/api/contact", contactRoutes);
+app.use("/api/contacts", contactRoutes);
 app.use("/", sitemapRoutes);
 app.use("/", googleFeedRoutes);
 app.use("/", robotsRoutes);
