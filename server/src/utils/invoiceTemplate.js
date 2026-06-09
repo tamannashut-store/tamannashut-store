@@ -47,7 +47,7 @@ export const invoiceTemplate = (order) => {
             <td>
 
               <img
-                src="https://www.tamannashut.com/logo.png"
+                src="https://www.tamannashut.com/assets/logo-D9W9YkMd.png"
                 width="90"
                 alt="Tamanna's Hut"
               />

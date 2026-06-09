@@ -15,13 +15,11 @@ const router = express.Router();
 router.post("/", async (req, res) => {
   try {
     const order = new Order(req.body);
-
     await order.save();
 
-    // STOCK CHECK & REDUCE
+    // reduce stock first
     for (const item of req.body.products) {
       const product = await Product.findById(item._id);
-
       if (!product) continue;
 
       const sizeData = product.sizeStock?.find(
@@ -43,11 +41,10 @@ router.post("/", async (req, res) => {
       }
 
       sizeData.stock -= item.qty;
-
       await product.save();
     }
 
-    // CUSTOMER EMAIL
+    // customer email
     try {
       await sendEmail(
         order.email,
@@ -58,55 +55,33 @@ router.post("/", async (req, res) => {
       console.log("CUSTOMER EMAIL ERROR:", err);
     }
 
-    // ADMIN EMAIL
+    // admin email
     try {
       await sendEmail(
         process.env.ADMIN_EMAIL,
         `🛍 New Order Received - ${order._id}`,
         `
-        <h2>New Order Received</h2>
-
-        <p><strong>Order ID:</strong> ${order._id}</p>
-        <p><strong>Customer:</strong> ${order.customerName}</p>
-        <p><strong>Email:</strong> ${order.email}</p>
-        <p><strong>Phone:</strong> ${order.phone}</p>
-        <p><strong>Total:</strong> ₹${order.totalAmount}</p>
-
-        <h3>Products</h3>
-
-        <ul>
-          ${order.products
-          .map(
-            (p) => `
-                <li>
-                  ${p.name}
-                  | Size: ${p.selectedSize}
-                  | Qty: ${p.qty}
-                  | ₹${p.price}
-                </li>
-              `
-          )
-          .join("")}
-        </ul>
+          <h2>New Order Received</h2>
+          <p><strong>Order ID:</strong> ${order._id}</p>
+          <p><strong>Customer:</strong> ${order.customerName}</p>
+          <p><strong>Email:</strong> ${order.email}</p>
+          <p><strong>Phone:</strong> ${order.phone}</p>
+          <p><strong>Total:</strong> ₹${order.totalAmount}</p>
         `
       );
     } catch (err) {
       console.log("ADMIN EMAIL ERROR:", err);
     }
 
-    // WHATSAPP
+    // whatsapp
     try {
-      const phone = order.phone.startsWith("+")
-        ? order.phone
-        : `+91${order.phone}`;
+      const phone = req.body.phone.startsWith("+")
+        ? req.body.phone
+        : `+91${req.body.phone}`;
 
       await sendWhatsApp(
         phone,
-        `🛍 Order Confirmed!
-
-Order ID: ${order._id}
-Amount: ₹${order.totalAmount}
-Status: ${order.status}`
+        `🛍 Order Confirmed!\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`
       );
     } catch (err) {
       console.log("WHATSAPP ERROR:", err);
@@ -114,13 +89,11 @@ Status: ${order.status}`
 
     return res.json({
       success: true,
-      message: "Order saved successfully",
+      message: "Order saved",
       order,
     });
-
   } catch (error) {
     console.error("ORDER ERROR:", error);
-
     return res.status(500).json({
       success: false,
       message: error.message,
