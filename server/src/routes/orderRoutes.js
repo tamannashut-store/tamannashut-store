@@ -112,7 +112,7 @@ router.post("/", async (req, res) => {
       }
     }
 
-    res.json({
+    return res.json({
       success: true,
       message: "Order saved",
       order,
@@ -124,7 +124,7 @@ router.post("/", async (req, res) => {
     console.error(error);
     console.error(error.stack);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -152,7 +152,7 @@ router.get(
 
     } catch (error) {
 
-      res.status(500).json({
+      return res.status(500).json({
         message: error.message,
       });
 
@@ -170,11 +170,11 @@ router.get("/", async (req, res) => {
       createdAt: -1,
     });
 
-    res.json(orders);
+    return res.json(orders);
 
   } catch (error) {
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -236,7 +236,7 @@ router.put("/cancel/:id", async (req, res) => {
 
     await order.save();
 
-    res.json({
+    return res.json({
       success: true,
       message:
         "Order Cancelled",
@@ -244,7 +244,7 @@ router.put("/cancel/:id", async (req, res) => {
 
   } catch (error) {
 
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
 
@@ -329,7 +329,7 @@ router.put("/:id", async (req, res) => {
         ? `
           <p>
             <strong>Tracking Number:</strong>
-            ${order.tracking}
+            ${order.tracking?.trackingId || ""}
           </p>
         `
         : ""
@@ -343,10 +343,10 @@ router.put("/:id", async (req, res) => {
       `
     );
 
-    res.json(updatedOrder);
+    return res.json(updatedOrder);
 
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
   }
@@ -365,11 +365,11 @@ router.get("/my-orders/:userId", async (req, res) => {
       createdAt: -1,
     });
 
-    res.json(orders);
+    return res.json(orders);
 
   } catch (error) {
 
-    res.status(500).json({
+    return res.status(500).json({
       message: error.message,
     });
   }
