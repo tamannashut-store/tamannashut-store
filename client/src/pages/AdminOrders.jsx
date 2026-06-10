@@ -6,13 +6,74 @@ function AdminOrders() {
 
     const [orders, setOrders] = useState([]);
     const [trackingInputs, setTrackingInputs] = useState({});
+    const token = JSON.parse(
+        localStorage.getItem("user")
+    )?.token;
+    const resendInvoice = async (orderId) => {
 
+        try {
+
+            await axios.post(
+                `${import.meta.env.VITE_API_URL}/api/orders/resend-invoice/${orderId}`,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            toast.success("Invoice Sent");
+
+        } catch (error) {
+
+            toast.error("Failed");
+
+        }
+
+    };
+    const viewInvoice = async (orderId) => {
+
+        try {
+
+            const response = await axios.get(
+                `${import.meta.env.VITE_API_URL}/api/orders/invoice/${orderId}`,
+                {
+                    responseType: "blob",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            const url = window.URL.createObjectURL(
+                new Blob([response.data], {
+                    type: "application/pdf",
+                })
+            );
+
+            window.open(url, "_blank");
+
+        } catch (error) {
+
+            console.log(error);
+
+            toast.error("Invoice Failed");
+
+        }
+
+    };
     const fetchOrders = async () => {
 
         try {
 
             const { data } = await axios.get(
-                `${import.meta.env.VITE_API_URL}/api/orders`
+                `${import.meta.env.VITE_API_URL}/api/orders`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
             );
 
             setOrders(data);
@@ -22,7 +83,9 @@ function AdminOrders() {
             console.log(error);
 
             toast.error("Failed To Load Orders");
+
         }
+
     };
 
     useEffect(() => {
@@ -31,16 +94,18 @@ function AdminOrders() {
 
     }, []);
 
-    const updateStatus = async (
-        orderId,
-        status
-    ) => {
+    const updateStatus = async (orderId, status) => {
 
         try {
 
             await axios.put(
                 `${import.meta.env.VITE_API_URL}/api/orders/${orderId}`,
-                { status }
+                { status },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
             );
 
             toast.success("Order Updated");
@@ -52,7 +117,9 @@ function AdminOrders() {
             console.log(error);
 
             toast.error("Update Failed");
+
         }
+
     };
     const getImageUrl = (image) => {
         if (!image) return "";
@@ -65,16 +132,21 @@ function AdminOrders() {
     };
     const updateTracking = async (orderId, trackingNumber) => {
         try {
-          await axios.put(
-            `${import.meta.env.VITE_API_URL}/api/orders/${orderId}`,
-            {
-              trackingNumber,
-            }
-          );
+            await axios.put(
+                `${import.meta.env.VITE_API_URL}/api/orders/${orderId}`,
+                {
+                    trackingNumber,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
         } catch (error) {
-          console.log(error);
+            console.log(error);
         }
-      };
+    };
     return (
 
         <div className="max-w-7xl mx-auto px-6 py-20">
@@ -235,7 +307,25 @@ function AdminOrders() {
                                 ₹{order.totalAmount}
 
                             </h2>
+                            <div className="flex gap-2">
 
+                                <button
+                                    onClick={() => viewInvoice(order._id)}
+                                    className="bg-green-500 text-white px-4 py-2 rounded-xl"
+                                >
+                                    Invoice
+                                </button>
+
+                                <button
+                                    onClick={() =>
+                                        resendInvoice(order._id)
+                                    }
+                                    className="bg-pink-500 text-white px-4 py-2 rounded-xl"
+                                >
+                                    Send Invoice
+                                </button>
+
+                            </div>
                             <select
                                 value={order.status}
                                 onChange={(e) =>
