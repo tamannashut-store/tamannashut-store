@@ -81,7 +81,7 @@ function AdminDashboard() {
             const productsRes = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/products`
             );
-    
+            console.log("ADMIN TOKEN:", token);
             const ordersRes = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/orders`,
                 {
