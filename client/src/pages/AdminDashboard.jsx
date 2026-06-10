@@ -10,7 +10,7 @@ function AdminDashboard() {
         localStorage.getItem("admin")
     )?.token;
     const adminData = JSON.parse(
-        localStorage.getItem("admin")
+        localStorage.getItem("user")
       );
       
       const token = adminData?.token;
