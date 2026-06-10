@@ -18,7 +18,7 @@ function AdminDashboard() {
 
     const downloadInvoice = async (orderId) => {
         try {
-            console.log("DOWNLOAD TOKEN:", token);
+
             const response = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/orders/invoice/${orderId}`,
                 {
@@ -29,14 +29,20 @@ function AdminDashboard() {
                 }
             );
 
-            const url = window.URL.createObjectURL(
-                new Blob([response.data])
+            const pdfBlob = new Blob(
+                [response.data],
+                { type: "application/pdf" }
             );
 
-            window.open(url);
+            const url = window.URL.createObjectURL(pdfBlob);
+
+            window.open(url, "_blank");
 
         } catch (error) {
+
             console.log(error);
+            alert("Invoice failed");
+
         }
     };
     const resendInvoice = async (orderId) => {
@@ -48,7 +54,7 @@ function AdminDashboard() {
                 {},
                 {
                     headers: {
-                        Authorization: `Bearer ${adminToken}`,
+                        Authorization: `Bearer ${token}`,
                     },
                 }
             );
