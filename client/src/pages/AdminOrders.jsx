@@ -17,13 +17,13 @@ function AdminOrders() {
             order.customerName?.toLowerCase().includes(search.toLowerCase()) ||
             order.phone?.includes(search) ||
             order._id?.includes(search);
-    
+
         const matchesStatus =
             statusFilter === "All" ||
             order.status === statusFilter;
-    
+
         return matchesSearch && matchesStatus;
-    
+
     });
     const resendInvoice = async (orderId) => {
 
@@ -180,17 +180,17 @@ function AdminOrders() {
                 className="border p-3 rounded-xl w-full mb-6"
             />
             <select
-    value={statusFilter}
-    onChange={(e) => setStatusFilter(e.target.value)}
-    className="border p-3 rounded-xl"
->
-    <option>All</option>
-    <option>Pending</option>
-    <option>Processing</option>
-    <option>Shipped</option>
-    <option>Delivered</option>
-    <option>Cancelled</option>
-</select>
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border p-3 rounded-xl"
+            >
+                <option>All</option>
+                <option>Pending</option>
+                <option>Processing</option>
+                <option>Shipped</option>
+                <option>Delivered</option>
+                <option>Cancelled</option>
+            </select>
 
             <div className="grid gap-8">
 
@@ -228,7 +228,14 @@ function AdminOrders() {
                                     {order.city} - {order.pincode}
 
                                 </p>
-
+                                <a
+                                    href={`https://wa.me/91${order.phone}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="bg-green-600 text-white px-4 py-2 rounded-xl"
+                                >
+                                    WhatsApp
+                                </a>
                             </div>
 
                             <div>
