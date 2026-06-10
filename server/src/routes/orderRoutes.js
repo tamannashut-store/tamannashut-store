@@ -6,6 +6,7 @@ import { orderEmailTemplate } from "../utils/emailTemplates.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 import { generateInvoice } from "../utils/generateInvoice.js";
+import { protect,admin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -131,20 +132,25 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get(
-  "/invoice/:id",
-  async (req, res) => {
+router.get("/invoice/:id",protect,async (req, res) => {
 
     try {
-
       const order =
-        await Order.findById(
-          req.params.id
-        );
-
+      await Order.findById(
+        req.params.id
+      );
+      
       if (!order) {
         return res.status(404).json({
           message: "Order not found",
+        });
+      }
+      if (
+        !req.user.isAdmin &&
+        order.userId.toString() !== req.user._id.toString()
+      ) {
+        return res.status(403).json({
+          message: "Access denied",
         });
       }
 
@@ -162,7 +168,7 @@ router.get(
 
 // GET ALL ORDERS
 
-router.get("/", async (req, res) => {
+router.get("/", protect, admin, async (req, res) => {
 
   try {
 
@@ -181,14 +187,13 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.put("/cancel/:id", async (req, res) => {
+router.put("/cancel/:id",protect, async (req, res) => {
 
   try {
 
     const order = await Order.findById(
       req.params.id
     );
-
     if (!order) {
 
       return res.status(404).json({
@@ -196,6 +201,15 @@ router.put("/cancel/:id", async (req, res) => {
       });
 
     }
+    if (
+      !req.user.isAdmin &&
+      order.userId.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+    
 
     if (order.status !== "Pending") {
 
@@ -253,7 +267,7 @@ router.put("/cancel/:id", async (req, res) => {
 });
 // UPDATE ORDER STATUS
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", protect, admin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
 
@@ -355,12 +369,12 @@ router.put("/:id", async (req, res) => {
 
 // MY ORDERS
 
-router.get("/my-orders/:userId", async (req, res) => {
+router.get("/my-orders", protect, async (req, res) => {
 
   try {
 
     const orders = await Order.find({
-      userId: req.params.userId,
+      userId: req.user._id,
     }).sort({
       createdAt: -1,
     });
@@ -372,7 +386,9 @@ router.get("/my-orders/:userId", async (req, res) => {
     return res.status(500).json({
       message: error.message,
     });
+
   }
+
 });
 
 

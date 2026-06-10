@@ -5,9 +5,38 @@ function MyOrders() {
 
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
-    const user = JSON.parse(
+    const userData = JSON.parse(
         localStorage.getItem("user")
     );
+
+    const token = userData?.token;
+    const downloadInvoice = async (orderId) => {
+        try {
+
+            const response = await axios.get(
+                `${import.meta.env.VITE_API_URL}/api/orders/invoice/${orderId}`,
+                {
+                    responseType: "blob",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            const url = window.URL.createObjectURL(
+                new Blob([response.data])
+            );
+
+            window.open(url);
+
+        } catch (error) {
+
+            console.log(error);
+
+            alert("Invoice download failed");
+
+        }
+    };
 
     useEffect(() => {
 
@@ -15,8 +44,14 @@ function MyOrders() {
 
             try {
 
+
                 const { data } = await axios.get(
-                    `${import.meta.env.VITE_API_URL}/api/orders/my-orders/${user.user.id}`
+                    `${import.meta.env.VITE_API_URL}/api/orders/my-orders`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
                 );
 
                 setOrders(data);
@@ -35,7 +70,7 @@ function MyOrders() {
 
         loadOrders();
 
-    }, []);
+    }, [token]);
 
     // const fetchOrders = async () => {
 
@@ -67,7 +102,13 @@ function MyOrders() {
         try {
 
             await axios.put(
-                `${import.meta.env.VITE_API_URL}/api/orders/cancel/${orderId}`
+                `${import.meta.env.VITE_API_URL}/api/orders/cancel/${orderId}`,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
             );
 
             alert("Order Cancelled");
@@ -213,11 +254,8 @@ ${order.status === "Pending"
                                         Tracking not available yet
                                     </p>
                                 )}
-                                <button onClick={() =>
-                                        window.open(
-                                            `${import.meta.env.VITE_API_URL}/api/orders/invoice/${order._id}`
-                                        )
-                                    }
+                                <button
+                                    onClick={() => downloadInvoice(order._id)}
                                     className="bg-green-500 text-white px-4 py-2 rounded-xl"
                                 >
                                     Download Invoice
