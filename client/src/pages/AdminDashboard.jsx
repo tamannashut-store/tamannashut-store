@@ -6,26 +6,25 @@ function AdminDashboard() {
 
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
-    const adminToken = JSON.parse(
-        localStorage.getItem("admin")
-    )?.token;
+    // const adminToken = JSON.parse(
+    //     localStorage.getItem("admin")
+    // )?.token;
     const adminData = JSON.parse(
         localStorage.getItem("user")
-      );
-      
-      const token = adminData?.token;
-    
+    );
+
+    const token = adminData?.token;
+
 
     const downloadInvoice = async (orderId) => {
-
         try {
-
+            console.log("DOWNLOAD TOKEN:", token);
             const response = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/orders/invoice/${orderId}`,
                 {
                     responseType: "blob",
                     headers: {
-                        Authorization: `Bearer ${adminToken}`,
+                        Authorization: `Bearer ${token}`,
                     },
                 }
             );
@@ -37,11 +36,7 @@ function AdminDashboard() {
             window.open(url);
 
         } catch (error) {
-
             console.log(error);
-
-            alert("Invoice download failed");
-
         }
     };
     const resendInvoice = async (orderId) => {
@@ -77,7 +72,7 @@ function AdminDashboard() {
     const fetchData = async () => {
 
         try {
-    
+
             const productsRes = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/products`
             );
@@ -90,16 +85,16 @@ function AdminDashboard() {
                     },
                 }
             );
-    
+
             setProducts(productsRes.data.products || []);
             setOrders(ordersRes.data);
-    
+
         } catch (error) {
-    
+
             console.log(error);
-    
+
         }
-    
+
     };
 
     const totalRevenue = orders.reduce(
@@ -113,7 +108,7 @@ function AdminDashboard() {
 
             <button
                 onClick={() => {
-                    localStorage.removeItem("admin");
+                    localStorage.removeItem("user");
                     window.location.href = "/admin-login";
                 }}
                 className="bg-red-500 text-white px-4 py-2 rounded-xl"
