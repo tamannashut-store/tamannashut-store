@@ -11,11 +11,6 @@ function AdminOrders() {
     )?.token;
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
-    const filteredOrders = orders.filter((order) =>
-        order.customerName?.toLowerCase().includes(search.toLowerCase()) ||
-        order.phone?.includes(search) ||
-        order._id?.includes(search)
-    );
     const filteredOrders = orders.filter((order) => {
 
         const matchesSearch =
