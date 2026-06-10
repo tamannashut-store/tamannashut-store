@@ -6,7 +6,7 @@ import { orderEmailTemplate } from "../utils/emailTemplates.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 import { generateInvoice } from "../utils/generateInvoice.js";
-import { protect,admin } from "../middleware/authMiddleware.js";
+import { protect, admin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -46,7 +46,7 @@ router.post("/", async (req, res) => {
     
       <ul>
         ${order.products.map(
-          (p) => `
+        (p) => `
               <li>
                 ${p.name}
                 | Size: ${p.selectedSize}
@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
                 | ₹${p.price}
               </li>
             `
-        )
+      )
         .join("")}
       </ul>
       `
@@ -132,40 +132,81 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get("/invoice/:id",protect,async (req, res) => {
+router.get("/invoice/:id", protect, async (req, res) => {
 
-    try {
-      const order =
+  try {
+    const order =
       await Order.findById(
         req.params.id
       );
-      
+
+    if (!order) {
+      return res.status(404).json({
+        message: "Order not found",
+      });
+    }
+    if (
+      !req.user.isAdmin &&
+      order.userId.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    generateInvoice(order, res);
+
+  } catch (error) {
+
+    return res.status(500).json({
+      message: error.message,
+    });
+
+  }
+}
+);
+
+router.post(
+  "/resend-invoice/:id",
+  protect,
+  admin,
+  async (req, res) => {
+
+    try {
+
+      const order =
+        await Order.findById(req.params.id);
+
       if (!order) {
         return res.status(404).json({
           message: "Order not found",
         });
       }
-      if (
-        !req.user.isAdmin &&
-        order.userId.toString() !== req.user._id.toString()
-      ) {
-        return res.status(403).json({
-          message: "Access denied",
-        });
-      }
 
-      generateInvoice(order, res);
+      await sendEmail(
+        order.email,
+        "Invoice - Tamanna's Hut",
+        `
+          ${orderEmailTemplate(order)}
+          <hr/>
+          ${invoiceTemplate(order)}
+        `
+      );
+
+      res.json({
+        success: true,
+        message: "Invoice sent",
+      });
 
     } catch (error) {
 
-      return res.status(500).json({
+      res.status(500).json({
         message: error.message,
       });
 
     }
   }
 );
-
 // GET ALL ORDERS
 
 router.get("/", protect, admin, async (req, res) => {
@@ -187,7 +228,7 @@ router.get("/", protect, admin, async (req, res) => {
   }
 });
 
-router.put("/cancel/:id",protect, async (req, res) => {
+router.put("/cancel/:id", protect, async (req, res) => {
 
   try {
 
@@ -209,7 +250,7 @@ router.put("/cancel/:id",protect, async (req, res) => {
         message: "Access denied",
       });
     }
-    
+
 
     if (order.status !== "Pending") {
 
@@ -312,7 +353,7 @@ router.put("/:id", protect, admin, async (req, res) => {
       trackingId:
         req.body.trackingNumber?.trackingId ||
         order.tracking?.trackingId,
-    
+
       courier:
         req.body.trackingNumber?.courier ||
         order.tracking?.courier,

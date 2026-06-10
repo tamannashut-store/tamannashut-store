@@ -6,7 +6,62 @@ function AdminDashboard() {
 
     const [products, setProducts] = useState([]);
     const [orders, setOrders] = useState([]);
+    const adminToken = JSON.parse(
+        localStorage.getItem("admin")
+    )?.token;
 
+    const downloadInvoice = async (orderId) => {
+
+        try {
+
+            const response = await axios.get(
+                `${import.meta.env.VITE_API_URL}/api/orders/invoice/${orderId}`,
+                {
+                    responseType: "blob",
+                    headers: {
+                        Authorization: `Bearer ${adminToken}`,
+                    },
+                }
+            );
+
+            const url = window.URL.createObjectURL(
+                new Blob([response.data])
+            );
+
+            window.open(url);
+
+        } catch (error) {
+
+            console.log(error);
+
+            alert("Invoice download failed");
+
+        }
+    };
+    const resendInvoice = async (orderId) => {
+
+        try {
+
+            await axios.post(
+                `${import.meta.env.VITE_API_URL}/api/orders/resend-invoice/${orderId}`,
+                {},
+                {
+                    headers: {
+                        Authorization: `Bearer ${adminToken}`,
+                    },
+                }
+            );
+
+            alert("Invoice sent successfully");
+
+        } catch (error) {
+
+            console.log(error);
+
+            alert("Failed to send invoice");
+
+        }
+    };
     useEffect(() => {
 
         fetchData();
@@ -146,11 +201,32 @@ function AdminDashboard() {
 
                             </div>
 
-                            <div>
+                            <div className="flex gap-2">
 
-                                <p className="font-bold text-pink-500 text-xl">
-                                    ₹{order.totalAmount}
-                                </p>
+                                <button
+                                    onClick={() =>
+                                        window.open(
+                                            `${import.meta.env.VITE_API_URL}/api/orders/invoice/${order._id}`
+                                        )
+                                    }
+                                    className="bg-green-500 text-white px-3 py-2 rounded-lg"
+                                >
+                                    View Invoice
+                                </button>
+
+                                <button
+                                    onClick={() => downloadInvoice(order._id)}
+                                    className="bg-blue-500 text-white px-3 py-2 rounded-lg"
+                                >
+                                    Download
+                                </button>
+
+                                <button
+                                    onClick={() => resendInvoice(order._id)}
+                                    className="bg-pink-500 text-white px-3 py-2 rounded-lg"
+                                >
+                                    Send Again
+                                </button>
 
                             </div>
 
