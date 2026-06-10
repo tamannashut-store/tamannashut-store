@@ -9,6 +9,27 @@ function AdminOrders() {
     const token = JSON.parse(
         localStorage.getItem("user")
     )?.token;
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All");
+    const filteredOrders = orders.filter((order) =>
+        order.customerName?.toLowerCase().includes(search.toLowerCase()) ||
+        order.phone?.includes(search) ||
+        order._id?.includes(search)
+    );
+    const filteredOrders = orders.filter((order) => {
+
+        const matchesSearch =
+            order.customerName?.toLowerCase().includes(search.toLowerCase()) ||
+            order.phone?.includes(search) ||
+            order._id?.includes(search);
+    
+        const matchesStatus =
+            statusFilter === "All" ||
+            order.status === statusFilter;
+    
+        return matchesSearch && matchesStatus;
+    
+    });
     const resendInvoice = async (orderId) => {
 
         try {
@@ -156,10 +177,29 @@ function AdminOrders() {
                 Orders Management
 
             </h1>
+            <input
+                type="text"
+                placeholder="Search Order ID, Name, Phone"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="border p-3 rounded-xl w-full mb-6"
+            />
+            <select
+    value={statusFilter}
+    onChange={(e) => setStatusFilter(e.target.value)}
+    className="border p-3 rounded-xl"
+>
+    <option>All</option>
+    <option>Pending</option>
+    <option>Processing</option>
+    <option>Shipped</option>
+    <option>Delivered</option>
+    <option>Cancelled</option>
+</select>
 
             <div className="grid gap-8">
 
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
 
                     <div
                         key={order._id}
