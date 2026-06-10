@@ -9,6 +9,12 @@ function AdminDashboard() {
     const adminToken = JSON.parse(
         localStorage.getItem("admin")
     )?.token;
+    const adminData = JSON.parse(
+        localStorage.getItem("admin")
+      );
+      
+      const token = adminData?.token;
+    
 
     const downloadInvoice = async (orderId) => {
 
@@ -71,23 +77,29 @@ function AdminDashboard() {
     const fetchData = async () => {
 
         try {
-
+    
             const productsRes = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/products`
             );
-
+    
             const ordersRes = await axios.get(
-                `${import.meta.env.VITE_API_URL}/api/orders`
+                `${import.meta.env.VITE_API_URL}/api/orders`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
             );
-
+    
             setProducts(productsRes.data.products || []);
-
             setOrders(ordersRes.data);
-
+    
         } catch (error) {
-
+    
             console.log(error);
+    
         }
+    
     };
 
     const totalRevenue = orders.reduce(
@@ -204,11 +216,7 @@ function AdminDashboard() {
                             <div className="flex gap-2">
 
                                 <button
-                                    onClick={() =>
-                                        window.open(
-                                            `${import.meta.env.VITE_API_URL}/api/orders/invoice/${order._id}`
-                                        )
-                                    }
+                                    onClick={() => downloadInvoice(order._id)}
                                     className="bg-green-500 text-white px-3 py-2 rounded-lg"
                                 >
                                     View Invoice
