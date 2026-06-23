@@ -82,7 +82,16 @@ function AdminOrders() {
     const fetchOrders = async () => {
 
         try {
+            console.log("Token:", token);
 
+            const config = {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            };
+            
+            console.log("Headers:", config.headers);
+            
             const { data } = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/orders`,
                 {
