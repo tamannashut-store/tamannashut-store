@@ -106,7 +106,7 @@ router.post("/login", async (req, res) => {
         });
     }
 });
-router.get("/profile/:id", async (req, res) => {
+router.get("/profile/:id", protect, async (req, res) => {
 
     try {
 
@@ -125,7 +125,7 @@ router.get("/profile/:id", async (req, res) => {
     }
 
 });
-router.put("/profile/:id", async (req, res) => {
+router.put("/profile/:id", protect, async (req, res) => {
 
     try {
 
@@ -169,7 +169,7 @@ router.put("/profile/:id", async (req, res) => {
 
 });
 
-router.put("/change-password/:id", async (req, res) => {
+router.put("/change-password/:id", protect, async (req, res) => {
 
     try {
 
