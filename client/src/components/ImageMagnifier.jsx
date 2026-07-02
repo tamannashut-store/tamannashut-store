@@ -22,16 +22,17 @@ function ImageMagnifier({
 
     const rect = img.getBoundingClientRect();
 
-    let x = e.clientX - rect.left;
-    let y = e.clientY - rect.top;
-
-    x = Math.max(0, Math.min(x, rect.width));
-    y = Math.max(0, Math.min(y, rect.height));
-
-    setPosition({
-      x,
-      y,
-    });
+    const x = Math.max(
+        lensSize / 2,
+        Math.min(e.clientX - rect.left, rect.width - lensSize / 2)
+      );
+      
+      const y = Math.max(
+        lensSize / 2,
+        Math.min(e.clientY - rect.top, rect.height - lensSize / 2)
+      );
+      
+      setPosition({ x, y });
   };
 
   return (
@@ -50,7 +51,7 @@ function ImageMagnifier({
           src={src}
           alt={alt}
           draggable={false}
-          className="w-full max-w-[600px] rounded-3xl select-none"
+          className="block w-full rounded-3xl select-none"
         />
 
         {showZoom && (
@@ -84,12 +85,17 @@ function ImageMagnifier({
               backgroundImage: `url(${src})`,
               backgroundRepeat: "no-repeat",
 
-              backgroundSize: `${imgRef.current.width * zoom}px ${imgRef.current.height * zoom}px`,
+              backgroundSize: `${
+                imgRef.current.naturalWidth * zoom
+              }px ${
+                imgRef.current.naturalHeight * zoom
+              }px`,
 
-              backgroundPosition: `
-                -${position.x * zoom - 275}px
-                -${position.y * zoom - 275}px
-              `,
+              backgroundPosition: `${
+                -(position.x * zoom - 550 / 2)
+              }px ${
+                -(position.y * zoom - 550 / 2)
+              }px`,
             }}
           />
         </div>

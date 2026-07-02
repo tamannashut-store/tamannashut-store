@@ -235,7 +235,7 @@ function ProductDetails() {
       </Helmet>
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-2 gap-14 items-start">
-          <div>
+          <div className="relative inline-block">
             <ImageMagnifier
               src={
                 product.image?.startsWith("http")
