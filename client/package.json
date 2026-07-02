@@ -10,6 +10,7 @@
     "start": "node server/src/server.js"
   },
   "dependencies": {
+    "@fontsource/roboto": "^5.2.10",
     "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.16.1",
     "react": "^19.2.6",
