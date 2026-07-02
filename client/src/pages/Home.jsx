@@ -152,7 +152,8 @@ function Home() {
         <section className="bg-brand-background">
 
           <div
-            className="
+            className=" Working 
+    max-w-[1400px]
     mx-auto
     px-8
     py-20
