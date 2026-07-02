@@ -3,27 +3,31 @@ import { useRef } from "react";
 export default function ImageMagnifier({
   src,
   alt,
-  zoom = 3,
-  lensSize = 160,
+  zoom = 2.8,
+  lensSize = 180,
 }) {
   const imageRef = useRef(null);
   const lensRef = useRef(null);
   const zoomRef = useRef(null);
+  const zoomImageRef = useRef(null);
 
-  const handleEnter = () => {
-    lensRef.current.style.display = "block";
-    zoomRef.current.style.display = "block";
+  const show = () => {
+    lensRef.current.style.opacity = "1";
+    zoomRef.current.style.opacity = "1";
+    zoomRef.current.style.visibility = "visible";
   };
 
-  const handleLeave = () => {
-    lensRef.current.style.display = "none";
-    zoomRef.current.style.display = "none";
+  const hide = () => {
+    lensRef.current.style.opacity = "0";
+    zoomRef.current.style.opacity = "0";
+    zoomRef.current.style.visibility = "hidden";
   };
 
-  const handleMove = (e) => {
+  const move = (e) => {
     const img = imageRef.current;
     const lens = lensRef.current;
     const zoomBox = zoomRef.current;
+    const zoomImg = zoomImageRef.current;
 
     if (!img) return;
 
@@ -34,43 +38,40 @@ export default function ImageMagnifier({
 
     const half = lensSize / 2;
 
-    x = Math.max(half, Math.min(x, rect.width - half));
-    y = Math.max(half, Math.min(y, rect.height - half));
+    x = Math.max(half, Math.min(rect.width - half, x));
+    y = Math.max(half, Math.min(rect.height - half, y));
 
     lens.style.transform = `translate(${x - half}px, ${y - half}px)`;
 
-    zoomBox.style.backgroundImage = `url(${src})`;
-    zoomBox.style.backgroundRepeat = "no-repeat";
+    const zoomWidth = zoomBox.clientWidth;
+    const zoomHeight = zoomBox.clientHeight;
 
-    zoomBox.style.backgroundSize = `${rect.width * zoom}px ${
-      rect.height * zoom
-    }px`;
+    const bigWidth = rect.width * zoom;
+    const bigHeight = rect.height * zoom;
 
-    const bgX = x * zoom;
-    const bgY = y * zoom;
+    zoomImg.style.width = `${bigWidth}px`;
+    zoomImg.style.height = `${bigHeight}px`;
 
-    const zoomWidth = zoomBox.offsetWidth;
-    const zoomHeight = zoomBox.offsetHeight;
+    const tx = -(x * zoom - zoomWidth / 2);
+    const ty = -(y * zoom - zoomHeight / 2);
 
-    zoomBox.style.backgroundPosition = `${
-      -(bgX - zoomWidth / 2)
-    }px ${-(bgY - zoomHeight / 2)}px`;
+    zoomImg.style.transform = `translate(${tx}px, ${ty}px)`;
   };
 
   return (
-    <div className="flex gap-8 items-start">
+    <div className="flex gap-10 items-start">
       <div
-        className="relative"
-        onMouseEnter={handleEnter}
-        onMouseLeave={handleLeave}
-        onMouseMove={handleMove}
+        className="relative select-none"
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onMouseMove={move}
       >
         <img
           ref={imageRef}
           src={src}
           alt={alt}
           draggable={false}
-          className="w-[450px] rounded-xl select-none block"
+          className="w-full max-w-[520px] rounded-xl block"
         />
 
         <div
@@ -78,39 +79,60 @@ export default function ImageMagnifier({
           style={{
             width: lensSize,
             height: lensSize,
-            display: "none",
+            opacity: 0,
           }}
           className="
-            absolute
-            top-0
-            left-0
-            pointer-events-none
-            border
-            border-gray-400
-            bg-black/10
-            backdrop-blur-[1px]
-            shadow-lg
-          "
+          absolute
+          left-0
+          top-0
+          pointer-events-none
+          border
+          border-gray-400
+          bg-white/20
+          backdrop-blur-[1px]
+          shadow-lg
+          transition-opacity
+          duration-150
+        "
         />
       </div>
 
       <div
         ref={zoomRef}
         style={{
-          width: 550,
-          height: 550,
-          display: "none",
+          width: 560,
+          height: 560,
+          opacity: 0,
+          visibility: "hidden",
         }}
         className="
           hidden
-          lg:block
+          lg:flex
           overflow-hidden
           rounded-xl
           border
-          shadow-2xl
           bg-white
+          shadow-2xl
+          relative
+          transition-opacity
+          duration-150
         "
-      />
+      >
+        <img
+          ref={zoomImageRef}
+          src={src}
+          alt=""
+          draggable={false}
+          className="
+            absolute
+            left-0
+            top-0
+            max-w-none
+            select-none
+            will-change-transform
+          "
+        />
+      </div>
     </div>
   );
 }
