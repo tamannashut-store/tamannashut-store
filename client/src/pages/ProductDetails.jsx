@@ -23,7 +23,8 @@ function ProductDetails() {
 
   const [comment, setComment] =
     useState("");
-
+  const [backgroundPosition, setBackgroundPosition] = useState("0% 0%");
+  const [showZoom, setShowZoom] = useState(false);
   useEffect(() => {
     fetchProduct();
   }, [id]);
@@ -56,7 +57,7 @@ function ProductDetails() {
       </div>
     );
   }
-  
+
   if (!product) {
     return (
       <div className="text-center py-20 text-xl font-semibold text-red-500">
@@ -236,18 +237,53 @@ function ProductDetails() {
       </Helmet>
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-2 gap-14 items-start">
-          <div>
-            <img
-              src={
-                product.image?.startsWith("http")
-                  ? product.image
-                  : `${import.meta.env.VITE_API_URL}${product.image}`
-              }
-              alt={`${product.name} - Tamanna's Hut Kids Fashion`}
-              className="w-full rounded-3xl shadow-2xl"
-            />
-          </div>
+          <div className="relative flex gap-6">
 
+            <div
+              className="relative overflow-hidden rounded-3xl"
+              onMouseEnter={() => setShowZoom(true)}
+              onMouseLeave={() => setShowZoom(false)}
+              onMouseMove={(e) => {
+
+                const { left, top, width, height } =
+                  e.currentTarget.getBoundingClientRect();
+
+                const x = ((e.clientX - left) / width) * 100;
+                const y = ((e.clientY - top) / height) * 100;
+
+                setBackgroundPosition(`${x}% ${y}%`);
+              }}
+            >
+
+              <img
+                src={
+                  product.image?.startsWith("http")
+                    ? product.image
+                    : `${import.meta.env.VITE_API_URL}${product.image}`
+                }
+                alt={`${product.name} - Tamanna's Hut Kids Fashion`}
+                className="w-full rounded-3xl shadow-2xl"
+              />
+
+            </div>
+
+            {showZoom && (
+
+              <div
+                className="hidden lg:block w-[450px] h-[550px] border rounded-3xl bg-no-repeat bg-white shadow-2xl"
+                style={{
+                  backgroundImage: `url(${product.image.startsWith("http")
+                    ? product.image
+                    : `${import.meta.env.VITE_API_URL}${product.image}`
+                    })`,
+                  backgroundPosition,
+                  backgroundSize: "220%",
+                }}
+              />
+
+            )}
+
+          </div>
           <div>
             <p className="uppercase tracking-[5px] text-pink-500 mb-4">
               Tamanna's Hut
