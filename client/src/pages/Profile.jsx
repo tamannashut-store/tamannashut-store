@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-
+import Container from "../components/Container";
 function Profile() {
 
   const userData = JSON.parse(
@@ -120,7 +120,7 @@ function Profile() {
 
   return (
 
-    <div className="max-w-3xl mx-auto px-6 py-20">
+    <Container className="py-20">
 
       <h1 className="text-5xl font-bold mb-10">
         My Profile
@@ -250,7 +250,7 @@ function Profile() {
 
       </form>
 
-    </div>
+    </Container>
 
   );
 

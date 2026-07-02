@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-
+import Container from "../components/Container";
 function AdminCoupons() {
 
   const [coupons, setCoupons] = useState([]);
@@ -40,7 +40,7 @@ function AdminCoupons() {
 
   return (
 
-    <div className="max-w-5xl mx-auto p-10">
+    <Container className="py-10">
 
       <h1 className="text-4xl font-bold mb-8">
         Coupon Management
@@ -96,7 +96,7 @@ function AdminCoupons() {
 
       ))}
 
-    </div>
+    </Container>
 
   );
 

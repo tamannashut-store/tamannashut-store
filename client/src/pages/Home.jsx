@@ -5,7 +5,7 @@ import { getProducts } from "../api/productApi";
 import { WishlistContext } from "../context/WishlistContext";
 import { Helmet } from "react-helmet-async";
 import { toast } from "react-hot-toast";
-
+import Container from "../components/Container";
 function Home() {
   const [products, setProducts] = useState([]);
   useEffect(() => {
@@ -146,7 +146,7 @@ function Home() {
           })}
         </script>
       </Helmet>
-      <div className="w-full overflow-hidden">
+      <Container className="w-full overflow-hidden">
 
         {/* HERO SECTION */}
         <section className="bg-brand-background">
@@ -372,9 +372,9 @@ duration-300
                     </p>
 
                     <Link to={`/product/${product._id}`}>
-                      <button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
+                      <Button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
                         View Product
-                      </button>
+                      </Button>
                     </Link>
 
                   </div>
@@ -671,24 +671,16 @@ duration-300
         "
               />
 
-              <button
+              <Button
                 type="submit"
-                className="
-          bg-brand-primary
-          hover:bg-[#2d4d33]
-          text-white
-          px-8
-          py-4
-          rounded-xl
-          transition
-        "
+                
               >
                 Subscribe
-              </button>
+              </Button>
             </form>
           </div>
         </section>
-      </div>
+      </Container>
     </>
   );
 }

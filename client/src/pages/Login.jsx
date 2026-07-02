@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-
+import Container from "../components/Container";
 function Login() {
 
     const navigate = useNavigate();
@@ -114,7 +114,7 @@ function Login() {
 
     return (
 
-        <div className="max-w-md mx-auto px-6 py-20">
+        <Container className="py-20">
 
             <form
                 onSubmit={handleSubmit}
@@ -152,7 +152,7 @@ function Login() {
 
             </form>
 
-        </div>
+        </Container>
     );
 }
 

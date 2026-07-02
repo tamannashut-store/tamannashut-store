@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { WishlistContext } from "../context/WishlistContext";
 import { Link } from "react-router-dom";
+import Container from "../components/Container";
 
 function Wishlist() {
 
@@ -13,7 +14,7 @@ function Wishlist() {
 
     return (
 
-      <div className="h-screen flex items-center justify-center">
+      <Container className="py-20">
 
         <h1 className="text-4xl font-bold text-gray-400">
 
@@ -21,14 +22,14 @@ function Wishlist() {
 
         </h1>
 
-      </div>
+      </Container>
 
     );
   }
 
   return (
 
-    <div className="max-w-7xl mx-auto px-6 py-20">
+    <Container className="py-20">
 
       <h1 className="text-5xl font-bold mb-12">
 
@@ -89,7 +90,7 @@ function Wishlist() {
 
       </div>
 
-    </div>
+    </Container>
   );
 }
 

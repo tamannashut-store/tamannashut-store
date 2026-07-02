@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-
+import Container from "../components/Container";
 function AdminContacts() {
 
   const [contacts, setContacts] = useState([]);
@@ -25,7 +25,7 @@ function AdminContacts() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
+    <Container className="py-10">
 
       <h1 className="text-4xl font-bold mb-8">
         Contact Messages
@@ -82,7 +82,7 @@ function AdminContacts() {
 
       </div>
 
-    </div>
+    </Container>
   );
 }
 

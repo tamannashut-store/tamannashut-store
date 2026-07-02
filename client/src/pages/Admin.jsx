@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-
+import Container from "../components/Container";
 function Admin() {
 
     const [name, setName] = useState("");
@@ -98,7 +98,7 @@ function Admin() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-6 py-20">
+        <Container className="py-20">
             <button
                 onClick={() => {
                     localStorage.removeItem("admin");
@@ -291,7 +291,7 @@ function Admin() {
                     </div>
                 ))}
             </div>
-        </div>
+        </Container>
     );
 }
 

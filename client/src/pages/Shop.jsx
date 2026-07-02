@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import Container from "../components/Container";
 
 function Shop() {
 
@@ -69,7 +70,7 @@ function Shop() {
           href="https://tamannashut.com/shop"
         />
       </Helmet>
-      <div className="max-w-7xl mx-auto px-6 py-20">
+      <Container className="py-20">
 
         <h1 className="text-5xl font-bold mb-10">
           Shop Collection
@@ -151,7 +152,7 @@ function Shop() {
 
         </div>
 
-      </div>
+      </Container>
     </>
   );
 }

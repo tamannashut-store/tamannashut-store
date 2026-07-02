@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-
+import Container from "../components/Container";
 function Hero() {
 
   return (
 
     <section className="relative overflow-hidden bg-gradient-to-r from-pink-50 to-white">
 
-      <div className="max-w-7xl mx-auto px-6 py-20 md:py-28 grid md:grid-cols-2 gap-14 items-center">
+      <Container className="py-20 md:py-28 grid md:grid-cols-2 gap-14 items-center">
 
         {/* LEFT CONTENT */}
 
@@ -36,21 +36,21 @@ function Hero() {
 
             <Link to="/shop">
 
-              <button className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg transition">
+              <Button>
 
                 Shop Now
 
-              </button>
+              </Button>
 
             </Link>
 
             <Link to="/new">
 
-              <button className="border border-black px-8 py-4 rounded-full text-lg font-semibold hover:bg-black hover:text-white transition">
+              <Button className="border border-black px-8 py-4 rounded-full text-lg font-semibold hover:bg-black hover:text-white transition">
 
                 New Arrivals
 
-              </button>
+              </Button>
 
             </Link>
 
@@ -116,7 +116,7 @@ function Hero() {
 
         </div>
 
-      </div>
+      </Container>
 
     </section>
   );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
+import Container from "../components/Container";
 
 function EditProduct() {
 
@@ -87,7 +88,7 @@ function EditProduct() {
 
     return (
 
-        <div className="max-w-3xl mx-auto px-6 py-20">
+        <Container className="py-20">
 
             <h1 className="text-5xl font-bold mb-10">
                 Edit Product
@@ -238,7 +239,7 @@ function EditProduct() {
 
             </form>
 
-        </div>
+        </Container>
     );
 }
 

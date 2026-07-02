@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Container from "../components/Container";
 const products = [
     {
         id: 1,
@@ -35,7 +36,7 @@ const products = [
 
 function Products() {
     return (
-        <section className="py-24 px-10 bg-gray-50">
+        <Container className="py-24 px-10 bg-gray-50">
 
             <div className="text-center mb-16">
                 <h2 className="text-5xl font-bold">
@@ -99,7 +100,7 @@ function Products() {
                 ))}
 
             </div>
-        </section>
+        </Container>
     );
 }
 

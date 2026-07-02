@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-
+import Container from "../components/Container";
 function Register() {
 
     const navigate = useNavigate();
@@ -77,7 +77,7 @@ function Register() {
     };
 
     return (
-        <div className="max-w-md mx-auto px-6 py-20">
+        <Container className="py-20">
             <form onSubmit={handleSubmit} className="bg-white shadow-2xl rounded-3xl p-10 space-y-6">
                 <h1 className="text-4xl font-bold text-center">Register</h1>
                 <input type="text" name="name" placeholder="Name" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
@@ -85,7 +85,7 @@ function Register() {
                 <input type="password" name="password" placeholder="Password" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
                 <button type="submit" className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full text-lg font-semibold">Register</button>
             </form>
-        </div>
+        </Container>
     );
 }
 

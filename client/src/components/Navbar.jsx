@@ -5,7 +5,7 @@ import { FiShoppingBag, FiHeart, FiUser, FiSearch } from "react-icons/fi";
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
-
+import Container from "../components/Container";
 function Navbar() {
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -39,7 +39,7 @@ function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   return (
-    <div>
+    <Container className="py-20">
       <div className="bg-[#355E3B] border-b border-pink-100">
         <div className="max-w-[1400px] mx-auto px-6 h-10 flex items-center justify-center gap-8 text-sm text-white">
 
@@ -375,7 +375,7 @@ function Navbar() {
         )}
 
       </nav>
-    </div>
+    </Container>
   );
 }
 

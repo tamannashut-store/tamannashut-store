@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-
+import Container from "../components/Container";
 function ChangePassword() {
 
   const user =
@@ -68,7 +68,7 @@ function ChangePassword() {
 
   return (
 
-    <div className="max-w-xl mx-auto py-20 px-6">
+    <Container className="py-20">
 
       <h1 className="text-4xl font-bold mb-8">
         Change Password
@@ -123,7 +123,7 @@ function ChangePassword() {
 
       </form>
 
-    </div>
+    </Container>
 
   );
 

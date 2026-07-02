@@ -2,7 +2,7 @@ function Dashboard() {
     const user = JSON.parse(localStorage.getItem("user"));
   
     return (
-      <div
+      <Container className="py-20"
         style={{
           padding: "40px",
         }}
@@ -12,7 +12,7 @@ function Dashboard() {
         <h2>Welcome {user?.name}</h2>
   
         <p>Email: {user?.email}</p>
-      </div>
+      </Container>
     );
   }
   
