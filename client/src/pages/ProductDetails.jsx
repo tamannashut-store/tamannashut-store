@@ -5,6 +5,7 @@ import { CartContext } from "../context/CartContext";
 import toast from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
 import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
 function ProductDetails() {
 
@@ -42,16 +43,22 @@ function ProductDetails() {
 
   if (loading) {
     return (
-      <div className="text-center py-20 text-2xl font-bold">
-        <Skeleton height={400}/>
+      <div className="max-w-7xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-14">
+        <Skeleton height={500} className="rounded-3xl" />
+        <div>
+          <Skeleton width={150} height={20} className="mb-4" />
+          <Skeleton height={50} className="mb-6" />
+          <Skeleton width={100} height={40} className="mb-6" />
+          <Skeleton count={4} className="mb-2" />
+        </div>
       </div>
     );
   }
-
+  
   if (!product) {
     return (
-      <div className="text-center py-20 text-2xl font-bold">
-        Product Not Found
+      <div className="text-center py-20 text-xl font-semibold text-red-500">
+        Product not found or failed to load.
       </div>
     );
   }
