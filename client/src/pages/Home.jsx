@@ -372,7 +372,7 @@ duration-300
                     </p>
 
                     <Link to={`/product/${product._id}`}>
-                      <Button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
+                      <Button>
                         View Product
                       </Button>
                     </Link>
