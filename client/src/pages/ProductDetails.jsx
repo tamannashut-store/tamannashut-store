@@ -4,7 +4,7 @@ import axios from "axios";
 import { CartContext } from "../context/CartContext";
 import toast from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
-import { Skeleton } from "react-loading-skeleton";
+import Skeleton from "react-loading-skeleton";
 
 function ProductDetails() {
 
