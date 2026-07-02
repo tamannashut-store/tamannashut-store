@@ -1,6 +1,6 @@
 import { createContext, useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import Container from "../components/Container";
+
 export const WishlistContext = createContext();
 
 function WishlistProvider({ children }) {
@@ -57,7 +57,7 @@ function WishlistProvider({ children }) {
   };
 
   return (
-    <Container className="py-20">
+
     <WishlistContext.Provider
       value={{
         wishlistItems,
@@ -69,7 +69,7 @@ function WishlistProvider({ children }) {
       {children}
 
     </WishlistContext.Provider>
-    </Container>
+
   );
 }
 

@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import Container from "../components/Container";
+
 function AdminRoute({ children }) {
 
     const userData = JSON.parse(
@@ -8,10 +8,10 @@ function AdminRoute({ children }) {
 
     if (!userData?.user?.isAdmin) {
 
-        return <Container className="py-20"><Navigate to="/admin-login" /></Container>;
+        return <Navigate to="/admin-login" />;
     }
 
-    return <Container className="py-20">{children}</Container>;
+    return children;
 }
 
 export default AdminRoute;
