@@ -6,6 +6,7 @@ import { WishlistContext } from "../context/WishlistContext";
 import { Helmet } from "react-helmet-async";
 import { toast } from "react-hot-toast";
 import SkeletonProduct from "../components/SkeletonProduct";
+import { LazyLoadImage } from "react-lazy-load-image-component";
 
 function Home() {
   const [products, setProducts] = useState([]);
