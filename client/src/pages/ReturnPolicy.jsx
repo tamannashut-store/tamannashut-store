@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import Container from "../components/Container";
+
 function ReturnPolicy() {
   return (
     <>
@@ -15,7 +15,7 @@ function ReturnPolicy() {
         />
       </Helmet>
 
-      <Container className="py-20">
+      <div className="max-w-4xl mx-auto px-6 py-20">
         <h1 className="text-4xl font-bold mb-8">
           Return & Exchange Policy
         </h1>
@@ -76,7 +76,7 @@ function ReturnPolicy() {
             Website: https://tamannashut.com
           </p>
         </div>
-      </Container>
+      </div>
     </>
   );
 }

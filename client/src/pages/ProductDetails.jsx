@@ -4,7 +4,7 @@ import axios from "axios";
 import { CartContext } from "../context/CartContext";
 import toast from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
-import Container from "../components/Container";
+
 function ProductDetails() {
 
   const { id } = useParams();
@@ -224,7 +224,7 @@ function ProductDetails() {
           href={`https://tamannashut.com/product/${id}`}
         />
       </Helmet>
-      <Container className="py-20">
+      <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-2 gap-14 items-start">
           <div>
             <img
@@ -404,7 +404,7 @@ function ProductDetails() {
 
           </div>
         </div>
-      </Container>
+      </div>
     </>
   );
 }

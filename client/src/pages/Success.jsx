@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import Container from "../components/Container";
+
 function Success() {
 
   return (
 
-    <Container className="py-20">
+    <div className="min-h-screen flex items-center justify-center bg-pink-50 px-6">
 
       <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md w-full">
 
@@ -32,7 +32,7 @@ function Success() {
 
       </div>
 
-    </Container>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import Container from "../components/Container";
+
 function AdminLogin() {
 
     const navigate = useNavigate();
@@ -50,7 +50,7 @@ function AdminLogin() {
 
     return (
 
-        <Container className="py-20">
+        <div className="min-h-screen flex items-center justify-center bg-pink-50">
 
             <form
                 onSubmit={handleSubmit}
@@ -92,7 +92,7 @@ function AdminLogin() {
 
             </form>
 
-        </Container>
+        </div>
     );
 }
 

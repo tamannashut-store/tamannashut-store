@@ -1,5 +1,4 @@
 import { Helmet } from "react-helmet-async";
-import Container from "../components/Container";
 
 function TermsConditions() {
   return (
@@ -18,7 +17,7 @@ function TermsConditions() {
         />
       </Helmet>
 
-      <Container className="py-20">
+      <div className="max-w-4xl mx-auto px-6 py-20">
         <h1 className="text-4xl font-bold mb-8">
           Terms & Conditions
         </h1>
@@ -83,7 +82,7 @@ function TermsConditions() {
             Email: support@tamannashut.com
           </p>
         </div>
-      </Container>
+      </div>
     </>
   );
 }

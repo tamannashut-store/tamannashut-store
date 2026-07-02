@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import Container from "../components/Container";
+
 function Contact() {
 
   const [name, setName] = useState("");
@@ -79,7 +79,7 @@ function Contact() {
         />
       </Helmet>
 
-      <Container className="py-20">
+      <div className="max-w-5xl mx-auto px-6 py-20">
 
         <h1 className="text-5xl font-bold mb-10">
           Contact Us
@@ -144,7 +144,7 @@ function Contact() {
           </form>
 
         </div>
-      </Container>
+      </div>
     </>
   );
 }

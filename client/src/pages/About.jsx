@@ -1,6 +1,6 @@
 function About() {
     return (
-      <Container className="py-20">
+      <div className="max-w-5xl mx-auto px-6 py-20">
         <h1 className="text-4xl font-bold mb-8">
           About Tamanna's Hut
         </h1>
@@ -12,7 +12,7 @@ function About() {
           soft fabrics and elegant styles to keep your little ones happy
           and comfortable.
         </p>
-      </Container>
+      </div>
     );
   }
   

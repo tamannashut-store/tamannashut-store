@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import Container from "../components/Container";
+
 function AdminDashboard() {
 
     const [products, setProducts] = useState([]);
@@ -110,7 +110,7 @@ function AdminDashboard() {
 
     return (
 
-        <Container className="py-20">
+        <div className="max-w-7xl mx-auto px-6 py-20">
 
             <button
                 onClick={() => {
@@ -247,7 +247,7 @@ function AdminDashboard() {
 
             </div>
 
-        </Container>
+        </div>
     );
 }
 

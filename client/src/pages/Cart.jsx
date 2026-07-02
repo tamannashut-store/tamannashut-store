@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import Container from "../components/Container";
+
 function Cart() {
 
     const {
@@ -69,7 +69,7 @@ function Cart() {
       };
     return (
 
-        <Container className="py-20">
+        <div className="max-w-7xl mx-auto px-6 py-20">
 
             <h1 className="text-4xl font-bold mb-10">
                 Shopping Cart
@@ -212,7 +212,7 @@ function Cart() {
 
             )}
 
-        </Container>
+        </div>
     );
 }
 

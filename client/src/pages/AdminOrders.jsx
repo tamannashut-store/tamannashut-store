@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import Container from "../components/Container";
+
 function AdminOrders() {
 
     const [orders, setOrders] = useState([]);
@@ -165,7 +165,7 @@ function AdminOrders() {
     };
     return (
 
-        <Container className="py-20">
+        <div className="max-w-7xl mx-auto px-6 py-20">
 
             <h1 className="text-5xl font-bold mb-10">
 
@@ -409,7 +409,7 @@ function AdminOrders() {
 
             </div>
 
-        </Container>
+        </div>
     );
 }
 

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import Container from "../components/Container";
 
 function MyOrders() {
 
@@ -157,7 +156,7 @@ function MyOrders() {
     }
     return (
 
-        <Container className="py-20 max-w-6xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6 py-20">
 
             <h1 className="text-4xl font-bold mb-10">
                 My Orders
@@ -388,7 +387,7 @@ ${order.status === "Pending"
 
             </div>
 
-        </Container>
+        </div>
 
     );
 

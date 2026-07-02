@@ -3,7 +3,7 @@ import { CartContext } from "../context/CartContext";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import Container from "../components/Container";
+
 function Checkout() {
 
     const { cartItems, setCartItems, clearCart } = useContext(CartContext);
@@ -411,7 +411,7 @@ function Checkout() {
     };
     return (
 
-        <Container className="py-20">
+        <div className="max-w-7xl mx-auto px-6 py-20">
 
             <h1 className="text-4xl font-bold mb-10">
 
@@ -674,7 +674,7 @@ function Checkout() {
 
             </div>
 
-        </Container>
+        </div>
 
     );
 }
