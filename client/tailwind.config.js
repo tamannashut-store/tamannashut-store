@@ -4,7 +4,17 @@ export default {
       "./index.html",
       "./src/**/*.{js,jsx,ts,tsx}",
     ],
+    fontFamily: {
+
+      sans: [
   
+          "Roboto",
+  
+          "sans-serif"
+  
+      ],
+  
+  },
     theme: {
       extend: {
         colors: {

@@ -42,7 +42,7 @@ function ProductDetails() {
   if (loading) {
     return (
       <div className="text-center py-20 text-2xl font-bold">
-        Loading...
+        <Skeleton height={400}/>
       </div>
     );
   }
