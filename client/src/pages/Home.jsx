@@ -146,7 +146,7 @@ function Home() {
           })}
         </script>
       </Helmet>
-      <div className="">
+      <div className="w-full overflow-hidden">
 
         {/* HERO SECTION */}
         <section className="bg-brand-background">

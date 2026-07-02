@@ -7,7 +7,6 @@ import CartProvider from "./context/CartContext";
 import WishlistProvider from "./context/WishlistContext";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "react-hot-toast";
-import { BrowserRouter } from "react-router-dom";
 import "@fontsource/roboto";
 
 axios.interceptors.response.use(
@@ -24,7 +23,6 @@ axios.interceptors.response.use(
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
       <HelmetProvider>
         <WishlistProvider>
           <CartProvider>
@@ -33,6 +31,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           </CartProvider>
         </WishlistProvider>
       </HelmetProvider>
-    </BrowserRouter>
   </React.StrictMode>
 );
