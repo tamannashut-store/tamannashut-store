@@ -6,6 +6,7 @@ import { WishlistContext } from "../context/WishlistContext";
 import { Helmet } from "react-helmet-async";
 import { toast } from "react-hot-toast";
 import Container from "../components/Container";
+import Button from "../components/Button";
 function Home() {
   const [products, setProducts] = useState([]);
   useEffect(() => {
