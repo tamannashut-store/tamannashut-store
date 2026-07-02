@@ -7,6 +7,7 @@ import { Helmet } from "react-helmet-async";
 import { toast } from "react-hot-toast";
 import SkeletonProduct from "../components/SkeletonProduct";
 import { LazyLoadImage } from "react-lazy-load-image-component";
+import "react-lazy-load-image-component/src/effects/blur.css";
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -217,16 +218,7 @@ function Home() {
 
             <div>
 
-              <LazyLoadImage effect="blur" 
-                src={banner1}
-                alt="Tamanna's Hut"
-                className="
-        w-full
-        h-[650px]
-        object-cover
-        rounded-[40px]
-        "
-              />
+              <img src={banner1} alt="Tamanna's Hut" className="w-full h-[650px] object-cover rounded-[40px]"/>
 
             </div>
 
