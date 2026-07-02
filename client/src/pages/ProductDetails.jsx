@@ -6,8 +6,7 @@ import toast from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-import Zoom from "react-medium-image-zoom";
-import "react-medium-image-zoom/dist/styles.css";
+import ImageMagnifier from "../components/ImageMagnifier";
 
 function ProductDetails() {
 
@@ -23,8 +22,7 @@ function ProductDetails() {
 
   const [comment, setComment] =
     useState("");
-  const [transformOrigin, setTransformOrigin] = useState("center center");
-  const [zoom, setZoom] = useState(false);
+
   useEffect(() => {
     fetchProduct();
   }, [id]);
@@ -57,7 +55,7 @@ function ProductDetails() {
       </div>
     );
   }
-
+  
   if (!product) {
     return (
       <div className="text-center py-20 text-xl font-semibold text-red-500">
@@ -237,34 +235,18 @@ function ProductDetails() {
       </Helmet>
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-2 gap-14 items-start">
-          <div
-            className="overflow-hidden rounded-3xl cursor-zoom-in"
-            onMouseEnter={() => setZoom(true)}
-            onMouseLeave={() => setZoom(false)}
-            onMouseMove={(e) => {
-              const { left, top, width, height } =
-                e.currentTarget.getBoundingClientRect();
-
-              const x = ((e.clientX - left) / width) * 100;
-              const y = ((e.clientY - top) / height) * 100;
-
-              setTransformOrigin(`${x}% ${y}%`);
-            }}
-          >
-            <img
+          <div>
+            <ImageMagnifier
               src={
                 product.image?.startsWith("http")
                   ? product.image
                   : `${import.meta.env.VITE_API_URL}${product.image}`
               }
-              alt={product.name}
-              className="w-full rounded-3xl transition-transform duration-75"
-              style={{
-                transform: zoom ? "scale(2.2)" : "scale(1)",
-                transformOrigin,
-              }}
+              alt={`${product.name} - Tamanna's Hut Kids Fashion`}
+              className="w-full rounded-3xl shadow-2xl"
             />
           </div>
+
           <div>
             <p className="uppercase tracking-[5px] text-pink-500 mb-4">
               Tamanna's Hut
