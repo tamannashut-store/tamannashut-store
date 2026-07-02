@@ -5,6 +5,7 @@ import { getProducts } from "../api/productApi";
 import { WishlistContext } from "../context/WishlistContext";
 import { Helmet } from "react-helmet-async";
 import { toast } from "react-hot-toast";
+import SkeletonProduct from "../components/SkeletonProduct";
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -13,9 +14,9 @@ function Home() {
   }, []);
 
   const fetchProducts = async () => {
+
     try {
       const { data } = await getProducts();
-
       if (Array.isArray(data)) {
         setProducts(data);
       } else {
@@ -23,10 +24,13 @@ function Home() {
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
   const { addToWishlist } = useContext(WishlistContext);
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -212,7 +216,7 @@ function Home() {
 
             <div>
 
-              <img
+              <LazyLoadImage effect="blur" 
                 src={banner1}
                 alt="Tamanna's Hut"
                 className="
@@ -280,7 +284,7 @@ hover:-translate-y-2
 transition
 duration-300
 ">
-                <img
+                <LazyLoadImage effect="blur"
                   src="https://images.unsplash.com/photo-1519238359922-989348752efb"
                   alt=""
                   className="h-[400px] w-full object-cover group-hover:scale-110 transition duration-500"
@@ -300,7 +304,7 @@ hover:-translate-y-2
 transition
 duration-300
 ">
-                <img
+                <LazyLoadImage effect="blur"
                   src="https://images.unsplash.com/photo-1519345182560-3f2917c472ef"
                   alt=""
                   className="h-[400px] w-full object-cover group-hover:scale-110 transition duration-500"
@@ -320,7 +324,7 @@ hover:-translate-y-2
 transition
 duration-300
 ">
-                <img
+                <LazyLoadImage effect="blur"
                   src="https://images.unsplash.com/photo-1514090458221-65bb69cf63e6"
                   alt=""
                   className="h-[400px] w-full object-cover group-hover:scale-110 transition duration-500"
@@ -346,41 +350,29 @@ duration-300
 
             <div className="grid md:grid-cols-4 gap-8">
 
-              {products.map((product) => (
-                <div key={product._id} className="
-                bg-white
-                rounded-[28px]
-                overflow-hidden
-                border
-                border-[#efe8dd]
-                hover:shadow-xl
-                transition
-                relative
-                ">
-                  <img src={
-                    product.image?.startsWith("http")
-                      ? product.image
-                      : `${import.meta.env.VITE_API_URL}${product.image}`
-                  } alt={`${product.name} - Tamanna's Hut Kids Fashion`} className="h-72 w-full object-cover" />
-                  <div className="p-5">
-                    <h3 className="font-semibold text-lg">
-                      {product.name}
-                    </h3>
-                    <button onClick={() => addToWishlist(product)} className="absolute top-4 right-4 bg-white shadow-lg p-3 rounded-full cursor-pointer">❤️</button>
-                    <p className="text-brand-primary font-bold mt-2">
-                      ₹{product.price}
-                    </p>
+              {loading ? Array.from({ length: 8 }).map((_, index) => <SkeletonProduct key={index} /> ) : products.map((product) => (
+                    <div key={product._id} className="bg-white rounded-[28px] overflow-hidden border border-[#efe8dd] hover:shadow-xl transition relative">
+                      <LazyLoadImage effect="blur" src={product.image?.startsWith("http") ? product.image : `${import.meta.env.VITE_API_URL}${product.image}`
+                      } alt={`${product.name} - Tamanna's Hut Kids Fashion`} className="h-72 w-full object-cover" />
+                      <div className="p-5">
+                        <h3 className="font-semibold text-lg">
+                          {product.name}
+                        </h3>
+                        <button onClick={() => addToWishlist(product)} className="absolute top-4 right-4 bg-white shadow-lg p-3 rounded-full cursor-pointer">❤️</button>
+                        <p className="text-brand-primary font-bold mt-2">
+                          ₹{product.price}
+                        </p>
 
-                    <Link to={`/product/${product._id}`}>
-                      <button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
-                        View Product
-                      </button>
-                    </Link>
+                        <Link to={`/product/${product._id}`}>
+                          <button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
+                            View Product
+                          </button>
+                        </Link>
 
-                  </div>
+                      </div>
 
-                </div>
-              ))}
+                    </div>
+                  ))}
 
             </div>
           </div>
@@ -464,7 +456,7 @@ duration-300
 
               <div className="mt-8 flex items-center gap-4">
 
-                <img
+                <LazyLoadImage effect="blur"
                   src="https://randomuser.me/api/portraits/women/44.jpg"
                   alt="customer"
                   className="w-14 h-14 rounded-full object-cover"
@@ -505,7 +497,7 @@ duration-300
 
               <div className="mt-8 flex items-center gap-4">
 
-                <img
+                <LazyLoadImage effect="blur"
                   src="https://randomuser.me/api/portraits/women/65.jpg"
                   alt="customer"
                   className="w-14 h-14 rounded-full object-cover"
@@ -546,7 +538,7 @@ duration-300
 
               <div className="mt-8 flex items-center gap-4">
 
-                <img
+                <LazyLoadImage effect="blur"
                   src="https://randomuser.me/api/portraits/women/68.jpg"
                   alt="customer"
                   className="w-14 h-14 rounded-full object-cover"
@@ -608,7 +600,7 @@ duration-300
                 rel="noreferrer"
                 className="overflow-hidden rounded-[30px] group block"
               >
-                <img
+                <LazyLoadImage effect="blur"
                   src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop"
                   alt="gallery"
                   className="h-80 w-full object-cover group-hover:scale-110 transition duration-500"
@@ -618,7 +610,7 @@ duration-300
 
             <div className="overflow-hidden rounded-[30px] group">
 
-              <img
+              <LazyLoadImage effect="blur"
                 src="https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=1000&auto=format&fit=crop"
                 alt="gallery"
                 className="h-80 w-full object-cover group-hover:scale-110 transition duration-500"
@@ -628,7 +620,7 @@ duration-300
 
             <div className="overflow-hidden rounded-[30px] group">
 
-              <img
+              <LazyLoadImage effect="blur"
                 src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1000&auto=format&fit=crop"
                 alt="gallery"
                 className="h-80 w-full object-cover group-hover:scale-110 transition duration-500"

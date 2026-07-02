@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import { Helmet } from "react-helmet-async";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
+import Zoom from "react-medium-image-zoom";
+import "react-medium-image-zoom/dist/styles.css";
 
 function ProductDetails() {
 
