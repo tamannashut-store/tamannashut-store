@@ -1,107 +1,165 @@
-import { useState, useRef } from "react";
+import { useRef } from "react";
 
 function ImageMagnifier({
-  src,
-  alt,
-  zoom = 2.5,
-  lensSize = 180,
+    src,
+    alt,
+    zoom = 2.5,
+    lensSize = 180,
 }) {
-  const imgRef = useRef(null);
 
-  const [showZoom, setShowZoom] = useState(false);
+    const containerRef = useRef(null);
+    const imageRef = useRef(null);
 
-  const [position, setPosition] = useState({
-    x: 0,
-    y: 0,
-  });
+    const lensRef = useRef(null);
 
-  const handleMove = (e) => {
-    const img = imgRef.current;
+    const zoomRef = useRef(null);
 
-    if (!img) return;
+    const handleMouseEnter = () => {
 
-    const rect = img.getBoundingClientRect();
+        lensRef.current.style.display = "block";
+        zoomRef.current.style.display = "block";
 
-    const x = Math.max(
-        lensSize / 2,
-        Math.min(e.clientX - rect.left, rect.width - lensSize / 2)
-      );
-      
-      const y = Math.max(
-        lensSize / 2,
-        Math.min(e.clientY - rect.top, rect.height - lensSize / 2)
-      );
-      
-      setPosition({ x, y });
-  };
+    };
 
-  return (
-    <div className="flex gap-8 items-start">
+    const handleMouseLeave = () => {
 
-      {/* IMAGE */}
+        lensRef.current.style.display = "none";
+        zoomRef.current.style.display = "none";
 
-      <div
-        className="relative overflow-hidden rounded-3xl border bg-white"
-        onMouseEnter={() => setShowZoom(true)}
-        onMouseLeave={() => setShowZoom(false)}
-        onMouseMove={handleMove}
-      >
-        <img
-          ref={imgRef}
-          src={src}
-          alt={alt}
-          draggable={false}
-          className="block w-full rounded-3xl select-none"
-        />
+    };
 
-        {showZoom && (
-          <div
-            className="absolute border-2 border-pink-500 bg-white/30 pointer-events-none"
-            style={{
-              width: lensSize,
-              height: lensSize,
-              left: position.x - lensSize / 2,
-              top: position.y - lensSize / 2,
-            }}
-          />
-        )}
-      </div>
+    const handleMouseMove = (e) => {
 
-      {/* ZOOM WINDOW */}
+        const img = imageRef.current;
 
-      {showZoom && imgRef.current && (
-        <div
-          className="hidden lg:block border rounded-3xl overflow-hidden shadow-xl bg-white"
-          style={{
-            width: 550,
-            height: 550,
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
+        const lens = lensRef.current;
 
-              backgroundImage: `url(${src})`,
-              backgroundRepeat: "no-repeat",
+        const zoomWindow = zoomRef.current;
 
-              backgroundSize: `${
-                imgRef.current.naturalWidth * zoom
-              }px ${
-                imgRef.current.naturalHeight * zoom
-              }px`,
+        if (!img) return;
 
-              backgroundPosition: `${
-                -(position.x * zoom - 550 / 2)
-              }px ${
-                -(position.y * zoom - 550 / 2)
-              }px`,
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
+        const rect = img.getBoundingClientRect();
+
+        let x = e.clientX - rect.left;
+
+        let y = e.clientY - rect.top;
+
+        const half = lensSize / 2;
+
+        x = Math.max(half, Math.min(x, rect.width - half));
+
+        y = Math.max(half, Math.min(y, rect.height - half));
+
+        lens.style.left = `${x - half}px`;
+
+        lens.style.top = `${y - half}px`;
+
+        const bgX =
+            (x / rect.width) * img.naturalWidth;
+
+        const bgY =
+            (y / rect.height) * img.naturalHeight;
+
+        zoomWindow.style.backgroundPosition =
+            `${-(bgX * zoom - 275)}px ${-(bgY * zoom - 275)}px`;
+
+    };
+    return (
+
+        <div className="flex gap-8 items-start">
+
+            <div
+
+                ref={containerRef}
+
+                className="relative overflow-hidden rounded-3xl"
+
+                onMouseEnter={handleMouseEnter}
+
+                onMouseLeave={handleMouseLeave}
+
+                onMouseMove={handleMouseMove}
+
+            >
+
+                <img
+
+                    ref={imageRef}
+
+                    src={src}
+
+                    alt={alt}
+
+                    draggable={false}
+
+                    className="block w-full rounded-3xl select-none"
+
+                />
+
+                <div
+
+                    ref={lensRef}
+
+                    style={{
+
+                        display: "none",
+
+                        width: lensSize,
+
+                        height: lensSize,
+
+                    }}
+
+                    className="
+                    absolute
+                    border-2
+                    border-pink-500
+                    bg-white/20
+                    pointer-events-none
+                    shadow-xl
+                    rounded-lg
+                    backdrop-blur-[1px]
+                    transition-none
+                    "
+
+                />
+
+            </div>
+            <div
+
+ref={zoomRef}
+
+style={{
+
+    display: "none",
+
+    width: 550,
+
+    height: 550,
+
+    backgroundImage: `url(${src})`,
+
+    backgroundRepeat: "no-repeat",
+
+    backgroundSize: `${imageRef.current?.naturalWidth * zoom || 0}px ${imageRef.current?.naturalHeight * zoom || 0}px`,
+
+}}
+
+className="
+hidden
+lg:block
+rounded-3xl
+border
+shadow-2xl
+bg-white
+"
+
+/>
+
+</div>
+
+);
+
 }
 
 export default ImageMagnifier;

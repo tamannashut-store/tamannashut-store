@@ -235,7 +235,6 @@ function ProductDetails() {
       </Helmet>
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-2 gap-14 items-start">
-          <div className="relative inline-block">
             <ImageMagnifier
               src={
                 product.image?.startsWith("http")
@@ -245,7 +244,6 @@ function ProductDetails() {
               alt={`${product.name} - Tamanna's Hut Kids Fashion`}
               className="w-full rounded-3xl shadow-2xl"
             />
-          </div>
 
           <div>
             <p className="uppercase tracking-[5px] text-pink-500 mb-4">
