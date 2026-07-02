@@ -73,7 +73,7 @@ function EditProduct() {
                 }
             );
 
-            alert("Product Updated");
+            toast.success("Product Updated");
 
             navigate("/admin");
 
@@ -81,7 +81,7 @@ function EditProduct() {
 
             console.log(error);
 
-            alert("Update Failed");
+            toast.error("Update Failed");
         }
     };
 

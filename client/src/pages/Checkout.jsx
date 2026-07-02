@@ -393,7 +393,7 @@ function Checkout() {
 
             console.log(error);
 
-            alert("Payment Failed");
+            toast.error("Payment Failed");
 
             setLoading(false);
 

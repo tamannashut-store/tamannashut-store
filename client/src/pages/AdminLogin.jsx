@@ -35,7 +35,7 @@ function AdminLogin() {
 
             } else {
 
-                alert("You are not admin");
+                toast.error("You are not admin");
 
                 localStorage.removeItem("user");
             }
@@ -44,7 +44,7 @@ function AdminLogin() {
 
             console.log(error);
 
-            alert("Login Failed");
+            toast.error("Login Failed");
         }
     };
 

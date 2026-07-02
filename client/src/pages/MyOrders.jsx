@@ -42,7 +42,7 @@ function MyOrders() {
 
         } catch (error) {
             console.log(error);
-            alert("Invoice download failed");
+            toast.error("Invoice download failed");
         }
     };
 
@@ -119,7 +119,7 @@ function MyOrders() {
                 }
             );
 
-            alert("Order Cancelled");
+            toast.error("Order Cancelled");
 
             setOrders(prev =>
                 prev.map(o =>
@@ -131,7 +131,7 @@ function MyOrders() {
 
             console.log(error);
 
-            alert(
+            toast.error(
                 error.response?.data?.message ||
                 "Cancellation Failed"
             );

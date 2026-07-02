@@ -92,7 +92,7 @@ function ProductDetails() {
 
       if (!user) {
 
-        alert("Please login first");
+        toast.error("Please login first");
 
         return;
       }
@@ -107,7 +107,7 @@ function ProductDetails() {
         }
       );
 
-      alert("Review submitted");
+      toast.success("Review submitted");
 
       setComment("");
       setRating(5);
@@ -118,7 +118,7 @@ function ProductDetails() {
 
       console.log(error);
 
-      alert("Failed to submit review");
+      toast.error("Failed to submit review");
 
     }
   };
@@ -348,7 +348,7 @@ function ProductDetails() {
                 }
 
                 if (!product.sizeStock?.find(item => item.size === selectedSize)) {
-                  alert("Selected size unavailable");
+                  toast.error("Selected size unavailable");
                   return;
                 }
                 if (availableStock <= 0) {
