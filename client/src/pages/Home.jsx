@@ -153,7 +153,6 @@ function Home() {
 
           <div
             className="
-    max-w-[1400px]
     mx-auto
     px-8
     py-20
