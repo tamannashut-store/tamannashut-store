@@ -38,6 +38,7 @@ function AdminLogin() {
                 toast.error("You are not admin");
 
                 localStorage.removeItem("user");
+                delete axios.defaults.headers.common["Authorization"];
             }
 
         } catch (error) {

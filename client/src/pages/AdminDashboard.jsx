@@ -115,6 +115,7 @@ function AdminDashboard() {
             <button
                 onClick={() => {
                     localStorage.removeItem("user");
+                    delete axios.defaults.headers.common["Authorization"];
                     window.location.href = "/admin-login";
                 }}
                 className="bg-red-500 text-white px-4 py-2 rounded-xl"

@@ -21,6 +21,7 @@ function Navbar() {
   );
   const handleLogout = () => {
     localStorage.removeItem("user");
+    delete axios.defaults.headers.common["Authorization"];
     window.dispatchEvent(
       new Event("cartUpdated")
     );

@@ -9,6 +9,11 @@ import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "react-hot-toast";
 import "@fontsource/roboto";
 
+const storedUser = JSON.parse(localStorage.getItem("user"));
+if (storedUser?.token) {
+  axios.defaults.headers.common["Authorization"] = `Bearer ${storedUser.token}`;
+}
+
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
