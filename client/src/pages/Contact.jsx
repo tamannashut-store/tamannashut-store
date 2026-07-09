@@ -42,7 +42,7 @@ function Contact() {
         return;
       }
       await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/contact`,
+        `${import.meta.env.VITE_API_URL}/api/contacts`,
         {
           name,
           email,
