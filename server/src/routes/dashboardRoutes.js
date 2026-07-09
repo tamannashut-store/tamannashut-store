@@ -9,24 +9,19 @@ router.get("/stats", async (req, res) => {
 
   try {
 
-    const totalOrders = await Order.countDocuments();
+    const [totalOrders, totalProducts, totalUsers, pendingOrders, revenueResult] =
+      await Promise.all([
+        Order.countDocuments(),
+        Product.countDocuments(),
+        User.countDocuments(),
+        Order.countDocuments({ status: "Pending" }),
+        Order.aggregate([
+          { $match: { status: "Delivered" } },
+          { $group: { _id: null, totalRevenue: { $sum: "$totalAmount" } } },
+        ]),
+      ]);
 
-    const totalProducts = await Product.countDocuments();
-
-    const totalUsers = await User.countDocuments();
-
-    const pendingOrders = await Order.countDocuments({
-      status: "Pending",
-    });
-
-    const deliveredOrders = await Order.find({
-      status: "Delivered",
-    });
-
-    const totalRevenue = deliveredOrders.reduce(
-      (acc, order) => acc + order.totalAmount,
-      0
-    );
+    const totalRevenue = revenueResult[0]?.totalRevenue || 0;
 
     res.json({
       totalOrders,

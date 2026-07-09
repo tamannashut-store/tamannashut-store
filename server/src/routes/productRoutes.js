@@ -77,10 +77,7 @@ router.get("/", async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const products = await Product.find()
-      .skip(skip)
-      .limit(limit);
-
+    const products = await Product.find().skip(skip).limit(limit).lean();
     const total = await Product.countDocuments();
 
     res.set("Cache-Control", "public, max-age=60");
@@ -97,7 +94,7 @@ router.get("/", async (req, res) => {
 });
 router.get("/:id", async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id).lean();
 
     if (!product) {
       return res.status(404).json({
