@@ -195,6 +195,11 @@ function Checkout() {
                 address: formData.address,
                 city: formData.city,
                 pincode: formData.pincode,
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${user.token}`,
+                },
             }
         );
         if (paymentMethod === "cod") {
