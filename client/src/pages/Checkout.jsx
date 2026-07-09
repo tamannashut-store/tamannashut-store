@@ -14,27 +14,32 @@ function Checkout() {
         const user = JSON.parse(
             localStorage.getItem("user")
         );
-    
+
         if (!user) {
-    
+
             sessionStorage.setItem(
                 "redirectAfterLogin",
                 "/checkout"
             );
-    
+
             navigate("/login");
-    
+
             return;
         }
-    
+
         const loadProfile = async () => {
-    
+
             try {
-    
+
                 const { data } = await axios.get(
-                    `${VITE_API_URL}/api/auth/profile/${user.user.id}`
+                    `${VITE_API_URL}/api/auth/profile/${user.user.id}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${user.token}`,
+                        },
+                    }
                 );
-    
+
                 setFormData({
                     name: data.name || "",
                     email: data.email || "",
@@ -43,16 +48,14 @@ function Checkout() {
                     city: data.city || "",
                     pincode: data.pincode || "",
                 });
-    
+
             } catch (error) {
-    
                 console.log(error);
-    
             }
         };
-    
+
         loadProfile();
-    
+
     }, [navigate]);
     const [loading, setLoading] = useState(false);
     const [coupon, setCoupon] = useState("");
