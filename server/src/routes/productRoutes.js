@@ -156,10 +156,10 @@ router.put(
 
       // MULTIPLE IMAGE UPDATE
 
-      if(req.files && req.files.length > 0){
+      if (req.files && req.files.length > 0) {
 
         const uploadPromises = req.files.map(
-          (file)=> uploadToCloudinary(file.buffer)
+          (file) => uploadToCloudinary(file.buffer)
         );
 
 
@@ -169,7 +169,7 @@ router.put(
 
 
         product.images = results.map(
-          (result)=>({
+          (result) => ({
             url: result.secure_url,
             public_id: result.public_id
           })
@@ -185,12 +185,12 @@ router.put(
       return res.json(updatedProduct);
 
 
-    } catch(error){
+    } catch (error) {
 
       console.log(error);
 
       return res.status(500).json({
-        message:error.message,
+        message: error.message,
       });
 
     }
@@ -201,19 +201,48 @@ router.delete("/:id", async (req, res) => {
 
   try {
 
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({
+        message: "Product not found"
+      });
+    }
+
+
+    // Delete images from Cloudinary
+    if (product.images && product.images.length > 0) {
+
+      for (const img of product.images) {
+
+        await cloudinary.uploader.destroy(
+          img.public_id
+        );
+
+      }
+
+    }
+
+
     await Product.findByIdAndDelete(req.params.id);
-    cloudinary.uploader.destroy(public_id)
+
 
     res.json({
-      message: "Product deleted",
+      success: true,
+      message: "Product deleted"
     });
+
 
   } catch (error) {
 
+    console.log("DELETE PRODUCT ERROR:", error);
+
     res.status(500).json({
-      message: error.message,
+      message: error.message
     });
+
   }
+
 });
 router.post("/:id/review", async (req, res) => {
 
