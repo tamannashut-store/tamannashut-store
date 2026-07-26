@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -19,6 +19,8 @@ function Admin() {
     ]);
     const navigate = useNavigate();
     const [previewImages, setPreviewImages] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const fileRef = useRef(null);
 
     const fetchProducts = async () => {
         try {
@@ -34,11 +36,26 @@ function Admin() {
     useEffect(() => {
         fetchProducts();
     }, []);
+    useEffect(() => {
+
+        return () => {
+
+            previewImages.forEach((url) => {
+                URL.revokeObjectURL(url);
+            });
+
+        };
+
+    }, [previewImages]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
+        if (images.length === 0) {
+            toast.error("Please select images");
+            return;
+        }
         try {
+            setLoading(true);
             const formData = new FormData();
 
             formData.append("name", name);
@@ -68,12 +85,16 @@ function Admin() {
                 }
             );
 
-            alert("Product Added");
+            toast.success("Product Added");
 
             setName("");
             setPrice("");
             setDescription("");
             setImages([]);
+            setPreviewImages([]);
+            if (fileRef.current) {
+                fileRef.current.value = "";
+            }
             setCategory("");
             setSizeStock([
                 { size: "0-3M", stock: 0 },
@@ -85,6 +106,11 @@ function Admin() {
             fetchProducts();
         } catch (error) {
             console.log(error);
+            toast.error(
+                error.response?.data?.message || "Upload failed"
+            );
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -196,24 +222,30 @@ function Admin() {
                 </div>
                 <div>
                     <label className="block mb-2 font-semibold">
-                        Upload Product Image
+                        Upload Product Images (Max 10)
                     </label>
 
                     <input
+                        ref={fileRef}
                         type="file"
                         multiple
                         accept="image/*"
                         onChange={(e) => {
 
-                            const files = [...e.target.files];
+                            const files = Array.from(e.target.files);
+
+                            if (files.length > 10) {
+                                toast.error("Maximum 10 images allowed");
+                                return;
+                            }
 
                             setImages(files);
 
-                            setPreviewImages(
-                                files.map(file =>
-                                    URL.createObjectURL(file)
-                                )
+                            const previews = files.map(file =>
+                                URL.createObjectURL(file)
                             );
+
+                            setPreviewImages(previews);
 
                         }}
                     />
@@ -245,9 +277,18 @@ function Admin() {
                         className="w-full border p-4 rounded-2xl"
                     >
                         <option value="">Select Category</option>
-                        <option value="Girls">Girls</option>
-                        <option value="Boys">Boys</option>
-                        <option value="New Arrivals">New Arrivals</option>
+
+                        <option value="girls">
+                            Girls
+                        </option>
+
+                        <option value="boys">
+                            Boys
+                        </option>
+
+                        <option value="new-arrivals">
+                            New Arrivals
+                        </option>
                     </select>
                 </div>
 
@@ -266,10 +307,13 @@ function Admin() {
                 </div>
 
                 <button
+                    disabled={loading}
                     type="submit"
-                    className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full text-lg font-semibold transition"
+                    className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white py-4 rounded-full text-lg font-semibold"
                 >
-                    Add Product
+                    {
+                        loading ? "Uploading Images..." : "Add Product"
+                    }
                 </button>
             </form>
 
