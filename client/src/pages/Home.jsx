@@ -218,7 +218,7 @@ function Home() {
 
             <div>
 
-              <img src={banner1} alt="Tamanna's Hut" className="w-full h-[650px] object-cover rounded-[40px]"/>
+              <img src={banner1} alt="Tamanna's Hut" className="w-full h-[650px] object-cover rounded-[40px]" />
 
             </div>
 
@@ -343,29 +343,32 @@ duration-300
 
             <div className="grid md:grid-cols-4 gap-8">
 
-              {loading ? Array.from({ length: 8 }).map((_, index) => <SkeletonProduct key={index} /> ) : products.map((product) => (
-                    <div key={product._id} className="bg-white rounded-[28px] overflow-hidden border border-[#efe8dd] hover:shadow-xl transition relative">
-                      <LazyLoadImage effect="blur" src={product.image?.startsWith("http") ? product.image : `${import.meta.env.VITE_API_URL}${product.image}`
-                      } alt={`${product.name} - Tamanna's Hut Kids Fashion`} className="h-72 w-full object-cover" />
-                      <div className="p-5">
-                        <h3 className="font-semibold text-lg">
-                          {product.name}
-                        </h3>
-                        <button onClick={() => addToWishlist(product)} className="absolute top-4 right-4 bg-white shadow-lg p-3 rounded-full cursor-pointer">❤️</button>
-                        <p className="text-brand-primary font-bold mt-2">
-                          ₹{product.price}
-                        </p>
+              {loading ? Array.from({ length: 8 }).map((_, index) => <SkeletonProduct key={index} />) : products.map((product) => (
+                <div key={product._id} className="bg-white rounded-[28px] overflow-hidden border border-[#efe8dd] hover:shadow-xl transition relative">
+                  <LazyLoadImage effect="blur" src={
+                    product.images?.[0]?.url ||
+                    "/placeholder.png"
+                  }
+                    alt={`${product.name} - Tamanna's Hut Kids Fashion`} className="h-72 w-full object-cover" />
+                  <div className="p-5">
+                    <h3 className="font-semibold text-lg">
+                      {product.name}
+                    </h3>
+                    <button onClick={() => addToWishlist(product)} className="absolute top-4 right-4 bg-white shadow-lg p-3 rounded-full cursor-pointer">❤️</button>
+                    <p className="text-brand-primary font-bold mt-2">
+                      ₹{product.price}
+                    </p>
 
-                        <Link to={`/product/${product._id}`}>
-                          <button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
-                            View Product
-                          </button>
-                        </Link>
+                    <Link to={`/product/${product._id}`}>
+                      <button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
+                        View Product
+                      </button>
+                    </Link>
 
-                      </div>
+                  </div>
 
-                    </div>
-                  ))}
+                </div>
+              ))}
 
             </div>
           </div>
