@@ -94,7 +94,10 @@ router.get("/", async (req, res) => {
     const products = await Product.find().skip(skip).limit(limit).lean();
     const total = await Product.countDocuments();
 
-    res.set("Cache-Control", "public, max-age=60");
+    res.set(
+      "Cache-Control",
+      "no-store"
+    );
 
     res.json({
       products,

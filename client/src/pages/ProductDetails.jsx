@@ -236,11 +236,8 @@ function ProductDetails() {
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-2 gap-14 items-start">
             <ImageMagnifier
-              src={
-                product.image?.startsWith("http")
-                  ? product.image
-                  : `${import.meta.env.VITE_API_URL}${product.image}`
-              }
+              src={product.images?.[0]?.url ||
+                    "/placeholder.png"}
               alt={`${product.name} - Tamanna's Hut Kids Fashion`}
               className="w-full rounded-3xl shadow-2xl"
             />

@@ -123,8 +123,12 @@ function Admin() {
                 `${import.meta.env.VITE_API_URL}/api/products/${productId}`
             );
 
-            alert("Product Deleted");
-            fetchProducts();
+            toast.success("Product Deleted");
+            setProducts((prevProducts) =>
+                prevProducts.filter(
+                    (product) => product._id !== productId
+                )
+            );
         } catch (error) {
             console.log(error);
             toast.error("Delete Failed");
