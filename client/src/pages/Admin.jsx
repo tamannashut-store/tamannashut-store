@@ -7,7 +7,7 @@ function Admin() {
 
     const [name, setName] = useState("");
     const [price, setPrice] = useState("");
-    const [image, setImage] = useState(null);
+    const [images, setImages] = useState([]);
     const [description, setDescription] = useState("");
     const [category, setCategory] = useState("");
     const [products, setProducts] = useState([]);
@@ -18,6 +18,7 @@ function Admin() {
         { size: "9-12M", stock: 0 },
     ]);
     const navigate = useNavigate();
+    const [previewImages, setPreviewImages] = useState([]);
 
     const fetchProducts = async () => {
         try {
@@ -43,7 +44,14 @@ function Admin() {
             formData.append("name", name);
             formData.append("price", price);
             formData.append("description", description);
-            formData.append("image", image);
+            images.forEach((image) => {
+
+                formData.append(
+                    "images",
+                    image
+                );
+
+            });
             formData.append("category", category);
             formData.append(
                 "sizeStock",
@@ -65,7 +73,7 @@ function Admin() {
             setName("");
             setPrice("");
             setDescription("");
-            setImage(null);
+            setImages([]);
             setCategory("");
             setSizeStock([
                 { size: "0-3M", stock: 0 },
@@ -191,11 +199,39 @@ function Admin() {
                         Upload Product Image
                     </label>
 
-                    <input required
+                    <input
                         type="file"
-                        onChange={(e) => setImage(e.target.files[0])}
-                        className="w-full border p-4 rounded-2xl"
+                        multiple
+                        accept="image/*"
+                        onChange={(e) => {
+
+                            const files = [...e.target.files];
+
+                            setImages(files);
+
+                            setPreviewImages(
+                                files.map(file =>
+                                    URL.createObjectURL(file)
+                                )
+                            );
+
+                        }}
                     />
+                    <div className="flex gap-4 mt-4 flex-wrap">
+
+                        {
+                            previewImages.map((img, index) => (
+
+                                <img
+                                    key={index}
+                                    src={img}
+                                    className="w-24 h-24 rounded-xl object-cover"
+                                />
+
+                            ))
+                        }
+
+                    </div>
                 </div>
 
                 <div>
@@ -244,11 +280,7 @@ function Admin() {
                         className="bg-white shadow-xl rounded-3xl p-5"
                     >
                         <img
-                            src={
-                                product.image?.startsWith("http")
-                                    ? product.image
-                                    : `${import.meta.env.VITE_API_URL}${product.image}`
-                            }
+                            src={product.images?.[0]?.url}
                             alt={`${product.name} - Tamanna's Hut Kids Fashion`}
                             className="w-full h-64 object-cover rounded-2xl"
                         />

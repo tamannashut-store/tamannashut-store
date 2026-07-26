@@ -36,19 +36,33 @@ const uploadToCloudinary = (fileBuffer) => {
 //   }
 // });
 
-router.post("/", upload.single("image"), async (req, res) => {
+router.post("/", upload.array("images", 10), async (req, res) => {
   try {
-    let imageUrl = "";
+    let images = [];
 
-    if (req.file && req.file.buffer)  {
+    if (req.files && req.files.length > 0) {
+
       try {
-        const result = await uploadToCloudinary(req.file.buffer);
-        imageUrl = result.secure_url;
+
+        const uploadPromises = req.files.map(
+          (file) => uploadToCloudinary(file.buffer)
+        );
+
+        const results = await Promise.all(uploadPromises);
+
+        images = results.map((result) => ({
+          url: result.secure_url,
+          public_id: result.public_id,
+        }));
+
       } catch (err) {
+
         console.log("Cloudinary upload failed:", err.message);
+
         return res.status(500).json({
           message: "Image upload failed",
         });
+
       }
     }
 
@@ -58,15 +72,15 @@ router.post("/", upload.single("image"), async (req, res) => {
       description: req.body.description,
       category: req.body.category,
       sizeStock: JSON.parse(req.body.sizeStock || "[]"),
-      image: imageUrl,
+      images,
     });
 
     await product.save();
 
-    res.status(201).json(product);
+    return res.status(201).json(product);
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
   }
 });
 
@@ -111,7 +125,7 @@ router.get("/:id", async (req, res) => {
 });
 router.put(
   "/:id",
-  upload.single("image"),
+  upload.array("images", 10),
   async (req, res) => {
 
     try {
@@ -120,40 +134,65 @@ router.put(
         req.params.id
       );
 
+
       if (!product) {
 
         return res.status(404).json({
           message: "Product not found",
         });
+
       }
+
 
       product.name = req.body.name;
       product.price = req.body.price;
       product.description = req.body.description;
       product.category = req.body.category;
+
       product.sizeStock = JSON.parse(
         req.body.sizeStock || "[]"
       );
 
-      // IMAGE UPDATE
 
-      if (req.file && req.file.buffer) {
-        const result = await uploadToCloudinary(req.file.buffer);
-        product.image = result.secure_url;
+      // MULTIPLE IMAGE UPDATE
+
+      if(req.files && req.files.length > 0){
+
+        const uploadPromises = req.files.map(
+          (file)=> uploadToCloudinary(file.buffer)
+        );
+
+
+        const results = await Promise.all(
+          uploadPromises
+        );
+
+
+        product.images = results.map(
+          (result)=>({
+            url: result.secure_url,
+            public_id: result.public_id
+          })
+        );
+
       }
+
 
       const updatedProduct =
         await product.save();
 
-      res.json(updatedProduct);
 
-    } catch (error) {
+      return res.json(updatedProduct);
+
+
+    } catch(error){
 
       console.log(error);
 
-      res.status(500).json({
-        message: error.message,
+      return res.status(500).json({
+        message:error.message,
       });
+
     }
   }
 );
@@ -163,6 +202,7 @@ router.delete("/:id", async (req, res) => {
   try {
 
     await Product.findByIdAndDelete(req.params.id);
+    cloudinary.uploader.destroy(public_id)
 
     res.json({
       message: "Product deleted",

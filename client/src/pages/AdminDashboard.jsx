@@ -82,7 +82,7 @@ function AdminDashboard() {
             const productsRes = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/products`
             );
-            console.log("ADMIN TOKEN:", token);
+
             const ordersRes = await axios.get(
                 `${import.meta.env.VITE_API_URL}/api/orders`,
                 {
@@ -92,34 +92,28 @@ function AdminDashboard() {
                 }
             );
 
-            setProducts(productsRes.data.products || []);
-            setOrders(ordersRes.data);
-
+            setProducts( productsRes.data.products || []);
+            const ordersData = ordersRes.data.orders || ordersRes.data.data || ordersRes.data;
+            setOrders(Array.isArray(ordersData) ? ordersData : []);
         } catch (error) {
-
             console.log(error);
-
         }
-
     };
 
-    const totalRevenue = orders.reduce(
-        (acc, order) => acc + order.totalAmount,
-        0
-    );
+    const totalSales = Array.isArray(orders) ? orders.reduce((acc, order) =>
+                acc + Number(order.totalAmount || 0), 0
+        ):0;
 
     return (
 
         <div className="max-w-7xl mx-auto px-6 py-20">
-
             <button
                 onClick={() => {
                     localStorage.removeItem("user");
                     delete axios.defaults.headers.common["Authorization"];
                     window.location.href = "/admin-login";
                 }}
-                className="bg-red-500 text-white px-4 py-2 rounded-xl"
-            >
+                className="bg-red-500 text-white px-4 py-2 rounded-xl">
                 Logout
             </button>
             <Link
@@ -178,7 +172,7 @@ function AdminDashboard() {
                     </h2>
 
                     <h3 className="text-5xl font-bold mt-4 text-pink-500">
-                        ₹{Number(totalRevenue).toLocaleString("en-IN", {
+                        ₹{Number(totalSales).toLocaleString("en-IN", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2
                         })}

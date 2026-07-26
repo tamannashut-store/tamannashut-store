@@ -21,10 +21,11 @@
 // import rateLimit from "express-rate-limit";
 // import helmet from "helmet";
 // import errorHandler from "./middleware/errorHandler.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 import express from "express";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import compression from "compression";
@@ -42,7 +43,6 @@ import googleFeedRoutes from "./routes/googleFeedRoutes.js";
 import robotsRoutes from "./routes/robotsRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 
-dotenv.config();
 const app = express();
 app.set("trust proxy", 1);
 app.set("etag", true);
