@@ -134,6 +134,12 @@ function AdminDashboard() {
             >
                 Admin
             </Link>
+            <Link
+                to="/admin/orders"
+                className="bg-blue-500 text-white px-5 py-3 rounded-xl"
+            >
+                Orders
+            </Link>
 
             <h1 className="text-5xl font-bold mb-12">
                 Admin Dashboard
