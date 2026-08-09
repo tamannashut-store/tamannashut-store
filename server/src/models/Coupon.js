@@ -6,10 +6,16 @@ const couponSchema =
     code: {
       type: String,
       unique: true,
+      required: true,
+      trim: true,
+      uppercase: true,
     },
 
     discount: {
       type: Number,
+      required: true,
+      min: 1,
+      max: 100,
     },
 
     active: {

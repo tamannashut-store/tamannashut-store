@@ -3,8 +3,41 @@ import Product from "../models/Product.js";
 import upload from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
+import { admin, protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+const parseProductFields = (body) => {
+  const name = String(body.name || "").trim();
+  const price = Number(body.price);
+  const description = String(body.description || "").trim().slice(0, 5000);
+  const category = String(body.category || "").trim().toLowerCase().replace(/\s+/g, "-");
+  const sizeStock = JSON.parse(body.sizeStock || "[]");
+
+  if (!name || name.length > 200) {
+    throw Object.assign(new Error("Product name is required and must be under 200 characters"), { status: 400 });
+  }
+  if (!Number.isFinite(price) || price < 0) {
+    throw Object.assign(new Error("Enter a valid product price"), { status: 400 });
+  }
+  if (!["girls", "boys", "new-arrivals"].includes(category)) {
+    throw Object.assign(new Error("Select a valid product category"), { status: 400 });
+  }
+  if (!Array.isArray(sizeStock) || sizeStock.length > 30) {
+    throw Object.assign(new Error("Invalid size inventory"), { status: 400 });
+  }
+
+  const normalizedStock = sizeStock.map((item) => {
+    const size = String(item.size || "").trim().slice(0, 30);
+    const stock = Number(item.stock);
+    if (!size || !Number.isInteger(stock) || stock < 0) {
+      throw Object.assign(new Error("Every size must have a valid non-negative stock quantity"), { status: 400 });
+    }
+    return { size, stock };
+  });
+
+  return { name, price, description, category, sizeStock: normalizedStock };
+};
+
 const uploadToCloudinary = (fileBuffer) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -36,8 +69,9 @@ const uploadToCloudinary = (fileBuffer) => {
 //   }
 // });
 
-router.post("/", upload.array("images", 10), async (req, res) => {
+router.post("/", protect, admin, upload.array("images", 10), async (req, res) => {
   try {
+    const fields = parseProductFields(req.body);
     let images = [];
 
     if (req.files && req.files.length > 0) {
@@ -66,33 +100,75 @@ router.post("/", upload.array("images", 10), async (req, res) => {
       }
     }
 
-    const product = new Product({
-      name: req.body.name,
-      price: req.body.price,
-      description: req.body.description,
-      category: req.body.category,
-      sizeStock: JSON.parse(req.body.sizeStock || "[]"),
-      images,
-    });
+    if (images.length === 0) {
+      return res.status(400).json({ message: "At least one product image is required" });
+    }
+
+    const product = new Product({ ...fields, images });
 
     await product.save();
 
     return res.status(201).json(product);
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: error.message });
+    return res.status(error.status || 500).json({ message: error.message });
   }
 });
 
 router.get("/", async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 48);
+    const filter = {};
+
+    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const search = String(req.query.search || "").trim().slice(0, 100);
+    if (search) {
+      const searchRegex = new RegExp(escapeRegex(search), "i");
+      filter.$or = [
+        { name: searchRegex },
+        { description: searchRegex },
+        { category: searchRegex },
+      ];
+    }
+
+    const category = String(req.query.category || "").trim();
+    if (category) {
+      const categoryPattern = category === "new-arrivals"
+        ? "^new(?:-|\\s)arrivals$"
+        : `^${escapeRegex(category)}$`;
+      filter.category = new RegExp(categoryPattern, "i");
+    }
+
+    const size = String(req.query.size || "").trim().slice(0, 20);
+    if (size) {
+      filter.sizeStock = { $elemMatch: { size, stock: { $gt: 0 } } };
+    } else if (req.query.inStock === "true") {
+      filter.sizeStock = { $elemMatch: { stock: { $gt: 0 } } };
+    }
+
+    const minPrice = Number(req.query.minPrice);
+    const maxPrice = Number(req.query.maxPrice);
+    if (Number.isFinite(minPrice) || Number.isFinite(maxPrice)) {
+      filter.price = {};
+      if (Number.isFinite(minPrice)) filter.price.$gte = Math.max(minPrice, 0);
+      if (Number.isFinite(maxPrice)) filter.price.$lte = Math.max(maxPrice, 0);
+    }
+
+    const sortOptions = {
+      newest: { createdAt: -1 },
+      "price-asc": { price: 1 },
+      "price-desc": { price: -1 },
+      rating: { averageRating: -1, createdAt: -1 },
+    };
+    const sort = sortOptions[req.query.sort] || sortOptions.newest;
 
     const skip = (page - 1) * limit;
 
-    const products = await Product.find().skip(skip).limit(limit).lean();
-    const total = await Product.countDocuments();
+    const [products, total] = await Promise.all([
+      Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+      Product.countDocuments(filter),
+    ]);
 
     res.set(
       "Cache-Control",
@@ -103,6 +179,8 @@ router.get("/", async (req, res) => {
       products,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
+      totalProducts: total,
+      pageSize: limit,
     });
 
   } catch (error) {
@@ -128,6 +206,8 @@ router.get("/:id", async (req, res) => {
 });
 router.put(
   "/:id",
+  protect,
+  admin,
   upload.array("images", 10),
   async (req, res) => {
     let uploadedImages = [];
@@ -147,14 +227,12 @@ router.put(
       }
 
 
-      product.name = req.body.name;
-      product.price = req.body.price;
-      product.description = req.body.description;
-      product.category = req.body.category;
-
-      product.sizeStock = JSON.parse(
-        req.body.sizeStock || "[]"
-      );
+      const fields = parseProductFields(req.body);
+      product.name = fields.name;
+      product.price = fields.price;
+      product.description = fields.description;
+      product.category = fields.category;
+      product.sizeStock = fields.sizeStock;
 
 
       const originalImages = product.images.map((image) => ({
@@ -257,7 +335,7 @@ router.put(
   }
 );
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", protect, admin, async (req, res) => {
 
   try {
 
@@ -304,7 +382,7 @@ router.delete("/:id", async (req, res) => {
   }
 
 });
-router.post("/:id/review", async (req, res) => {
+router.post("/:id/review", protect, async (req, res) => {
 
   try {
 
@@ -321,9 +399,25 @@ router.post("/:id/review", async (req, res) => {
 
     }
 
-    product.reviews.push(
-      req.body
+    const existingReview = product.reviews.find(
+      (review) => review.userId === String(req.user._id)
     );
+    if (existingReview) {
+      return res.status(409).json({ message: "You have already reviewed this product" });
+    }
+
+    const rating = Number(req.body.rating);
+    const comment = String(req.body.comment || "").trim().slice(0, 1000);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || !comment) {
+      return res.status(400).json({ message: "A rating from 1 to 5 and a comment are required" });
+    }
+
+    product.reviews.push({
+      userId: String(req.user._id),
+      name: req.user.name,
+      rating,
+      comment,
+    });
 
     product.averageRating =
       product.reviews.reduce(

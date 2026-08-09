@@ -1,10 +1,11 @@
 import express from "express";
 import { sendEmail } from "../utils/sendEmail.js";
 import Contact from "../models/Contact.js";
+import { admin, protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+router.get("/", protect, admin, async (req, res) => {
     try {
         const contacts = await Contact.find()
             .sort({ createdAt: -1 });
@@ -43,8 +44,6 @@ router.post("/", async (req, res) => {
             email,
             message,
         });
-
-        console.log(contact);
 
         // Admin Email
         await sendEmail(

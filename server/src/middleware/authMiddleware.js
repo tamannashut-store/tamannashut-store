@@ -18,19 +18,13 @@ export const protect = async (req, res, next) => {
 
         const token = authHeader.split(" ")[1];
 
-        console.log("TOKEN:", token);
-
         const decoded = jwt.verify(
             token,
             process.env.JWT_SECRET
         );
 
-        console.log("DECODED:", decoded);
-
         const user = await User.findById(decoded.id)
             .select("-password");
-
-        console.log("USER FOUND:", user);
 
         if (!user) {
             return res.status(401).json({
@@ -44,8 +38,6 @@ export const protect = async (req, res, next) => {
 
     } catch (error) {
 
-        console.log("AUTH ERROR:", error);
-
         return res.status(401).json({
             message: "Token invalid",
         });
@@ -55,9 +47,6 @@ export const protect = async (req, res, next) => {
 };
 
 export const admin = (req, res, next) => {
-
-    console.log("ADMIN CHECK:", req.user);
-
     if (
         req.user &&
         req.user.isAdmin

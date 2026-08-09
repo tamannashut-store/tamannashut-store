@@ -57,7 +57,7 @@ function App() {
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/change-password" element={<ChangePassword />} />
-        <Route path="/admin-coupons" element={<AdminCoupons />} />
+        <Route path="/admin-coupons" element={<AdminRoute><AdminCoupons /></AdminRoute>} />
         <Route path="/return-policy" element={<ReturnPolicy />} />
         <Route path="/shipping-policy" element={<ShippingPolicy />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />

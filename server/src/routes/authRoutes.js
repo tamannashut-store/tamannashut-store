@@ -111,6 +111,10 @@ router.get("/profile/:id", protect, async (req, res) => {
 
     try {
 
+        if (String(req.user._id) !== req.params.id && !req.user.isAdmin) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
         const user = await User.findById(
             req.params.id
         ).select("-password");
@@ -129,6 +133,10 @@ router.get("/profile/:id", protect, async (req, res) => {
 router.put("/profile/:id", protect, async (req, res) => {
 
     try {
+
+        if (String(req.user._id) !== req.params.id && !req.user.isAdmin) {
+            return res.status(403).json({ message: "Access denied" });
+        }
 
         const user = await User.findById(
             req.params.id
@@ -173,6 +181,10 @@ router.put("/profile/:id", protect, async (req, res) => {
 router.put("/change-password/:id", protect, async (req, res) => {
 
     try {
+
+        if (String(req.user._id) !== req.params.id) {
+            return res.status(403).json({ message: "Access denied" });
+        }
 
         const { currentPassword, newPassword } =
             req.body;

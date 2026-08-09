@@ -44,7 +44,7 @@ function Hero() {
 
             </Link>
 
-            <Link to="/new">
+            <Link to="/shop?category=new-arrivals">
 
               <button className="border border-black px-8 py-4 rounded-full text-lg font-semibold hover:bg-black hover:text-white transition">
 

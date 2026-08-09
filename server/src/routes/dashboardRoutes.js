@@ -2,10 +2,11 @@ import express from "express";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import { admin, protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/stats", async (req, res) => {
+router.get("/stats", protect, admin, async (req, res) => {
 
   try {
 

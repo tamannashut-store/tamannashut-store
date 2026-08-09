@@ -61,8 +61,18 @@ app.use(compression());
 app.use(express.json());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  limit: 300,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
 });
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { message: "Too many login attempts. Please try again later." },
+});
+app.use("/api", limiter);
 app.use(
   "/uploads",
   express.static(path.join(process.cwd(), "server/src/uploads"))
@@ -70,14 +80,13 @@ app.use(
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/", sitemapRoutes);
 app.use("/", googleFeedRoutes);
 app.use("/", robotsRoutes);
-app.use(limiter);
 app.get("/api", (req, res) => {
   res.json({ message: "API is working" });
 });

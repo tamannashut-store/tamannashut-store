@@ -5,6 +5,7 @@ import { FiShoppingBag, FiHeart, FiUser, FiSearch } from "react-icons/fi";
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { CartContext } from "../context/CartContext";
+import axios from "axios";
 
 function Navbar() {
 
@@ -67,21 +68,21 @@ function Navbar() {
           <div className="hidden lg:flex items-center gap-10 text-[15px] tracking-wide uppercase font-medium text-[#355E3B]">
 
             <Link
-              to="/girls"
+              to="/shop?category=girls"
               className="hover:text-[#F0B7BE] transition"
             >
               Girls
             </Link>
 
             <Link
-              to="/boys"
+              to="/shop?category=boys"
               className="hover:text-[#F0B7BE] transition"
             >
               Boys
             </Link>
 
             <Link
-              to="/new"
+              to="/shop?category=new-arrivals"
               className="hover:text-[#F0B7BE] transition"
             >
               New Arrivals
@@ -305,7 +306,7 @@ function Navbar() {
               </Link>
 
               <Link
-                to="/girls"
+                to="/shop?category=girls"
                 onClick={() => setMenuOpen(false)}
                 className="hover:text-[#F0B7BE]"
               >
@@ -313,7 +314,7 @@ function Navbar() {
               </Link>
 
               <Link
-                to="/boys"
+                to="/shop?category=boys"
                 onClick={() => setMenuOpen(false)}
                 className="hover:text-[#F0B7BE]"
               >
@@ -321,7 +322,7 @@ function Navbar() {
               </Link>
 
               <Link
-                to="/new"
+                to="/shop?category=new-arrivals"
                 onClick={() => setMenuOpen(false)}
                 className="hover:text-[#F0B7BE]"
               >

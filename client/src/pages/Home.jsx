@@ -212,7 +212,7 @@ function Home() {
                 </Link>
 
                 <Link
-                  to="/new"
+                  to="/shop?category=new-arrivals"
                   className="border border-brand-primary text-brand-primary px-10 py-4 rounded-xl hover:bg-brand-primary hover:text-white transition inline-flex items-center justify-center"
                 >
                   Explore
