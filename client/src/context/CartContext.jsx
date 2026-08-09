@@ -82,19 +82,14 @@ function CartProvider({ children }) {
       cartItems.find(
         (item) =>
           item._id === product._id &&
-          item.selectedSize ===
-          product.selectedSize
+          item.selectedSize === product.selectedSize &&
+          (item.selectedSku || "") === (product.selectedSku || "")
       );
 
     let updatedCart;
 
     if (existingItem) {
-      const sizeData =
-        product.sizeStock?.find(
-          (s) =>
-            s.size ===
-            product.selectedSize
-        );
+      const sizeData = product.variants?.find((variant) => variant.sku === product.selectedSku) || product.sizeStock?.find((s) => s.size === product.selectedSize);
 
       if (
         existingItem.qty >=
@@ -107,8 +102,8 @@ function CartProvider({ children }) {
       updatedCart = cartItems.map(
         (item) =>
           item._id === product._id &&
-            item.selectedSize ===
-            product.selectedSize
+            item.selectedSize === product.selectedSize &&
+            (item.selectedSku || "") === (product.selectedSku || "")
             ? {
               ...item,
               qty: item.qty + 1,
@@ -120,7 +115,7 @@ function CartProvider({ children }) {
         ...cartItems,
         {
           ...product,
-          image: product.images?.[0]?.url || product.image || "",
+          image: product.image || product.images?.[0]?.url || "",
           qty: 1,
         },
       ];
@@ -132,21 +127,17 @@ function CartProvider({ children }) {
   // INCREASE QTY
   const increaseQty = (
     id,
-    selectedSize
+    selectedSize,
+    selectedSku = ""
   ) => {
     const updatedCart =
       cartItems.map((item) => {
         if (
           item._id === id &&
-          item.selectedSize ===
-          selectedSize
+          item.selectedSize === selectedSize &&
+          (item.selectedSku || "") === selectedSku
         ) {
-          const sizeData =
-            item.sizeStock?.find(
-              (s) =>
-                s.size ===
-                item.selectedSize
-            );
+          const sizeData = item.variants?.find((variant) => variant.sku === item.selectedSku) || item.sizeStock?.find((s) => s.size === item.selectedSize);
 
           if (
             item.qty >=
@@ -173,14 +164,15 @@ function CartProvider({ children }) {
   // DECREASE QTY
   const decreaseQty = (
     id,
-    selectedSize
+    selectedSize,
+    selectedSku = ""
   ) => {
     const updatedCart = cartItems
       .map((item) => {
         if (
           item._id === id &&
-          item.selectedSize ===
-          selectedSize
+          item.selectedSize === selectedSize &&
+          (item.selectedSku || "") === selectedSku
         ) {
           return {
             ...item,
@@ -200,15 +192,16 @@ function CartProvider({ children }) {
   // REMOVE ITEM
   const removeFromCart = (
     id,
-    selectedSize
+    selectedSize,
+    selectedSku = ""
   ) => {
     const updatedCart =
       cartItems.filter(
         (item) =>
           !(
             item._id === id &&
-            item.selectedSize ===
-            selectedSize
+            item.selectedSize === selectedSize &&
+            (item.selectedSku || "") === selectedSku
           )
       );
 

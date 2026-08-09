@@ -3,8 +3,8 @@ import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
-const itemKey = (item) => `${item._id}-${item.selectedSize}`;
-const itemImage = (item) => item.images?.[0]?.url || item.image || "/placeholder.png";
+const itemKey = (item) => `${item._id}-${item.selectedSku || item.selectedSize}`;
+const itemImage = (item) => item.image || item.images?.[0]?.url || "/placeholder.png";
 
 function Cart() {
   const { cartItems, removeFromCart, increaseQty, decreaseQty } = useContext(CartContext);
@@ -20,7 +20,7 @@ function Cart() {
         cartItems.map(async (item) => {
           try {
             const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${item._id}`, { signal: controller.signal });
-            const size = data.sizeStock?.find((entry) => entry.size === item.selectedSize);
+            const size = data.variants?.find((entry) => entry.sku === item.selectedSku) || data.sizeStock?.find((entry) => entry.size === item.selectedSize);
             return !size || Number(size.stock) < Number(item.qty) ? itemKey(item) : null;
           } catch (error) {
             return error.code === "ERR_CANCELED" ? null : itemKey(item);
@@ -77,18 +77,18 @@ function Cart() {
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <Link to={`/product/${item._id}`} className="line-clamp-2 text-lg font-semibold hover:text-brand-primary sm:text-xl">{item.name}</Link>
-                          <p className="mt-2 text-sm text-gray-500">Size: <span className="font-medium text-gray-700">{item.selectedSize}</span></p>
+                          <p className="mt-2 text-sm text-gray-500">Size: <span className="font-medium text-gray-700">{item.selectedSize}</span>{item.selectedColor && <> · Colour: <span className="font-medium text-gray-700">{item.selectedColor}</span></>}</p>
                         </div>
-                        <button onClick={() => removeFromCart(item._id, item.selectedSize)} className="text-sm text-gray-500 underline hover:text-red-600">Remove</button>
+                        <button onClick={() => removeFromCart(item._id, item.selectedSize, item.selectedSku)} className="text-sm text-gray-500 underline hover:text-red-600">Remove</button>
                       </div>
 
                       {invalid && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-700">This size is unavailable or the requested quantity exceeds stock.</p>}
 
                       <div className="mt-5 flex flex-wrap items-center justify-between gap-4">
                         <div className="inline-flex items-center rounded-xl border">
-                          <button aria-label="Decrease quantity" onClick={() => decreaseQty(item._id, item.selectedSize)} className="h-10 w-10 text-xl hover:bg-gray-50">−</button>
+                          <button aria-label="Decrease quantity" onClick={() => decreaseQty(item._id, item.selectedSize, item.selectedSku)} className="h-10 w-10 text-xl hover:bg-gray-50">−</button>
                           <span className="w-10 text-center font-semibold">{item.qty}</span>
-                          <button aria-label="Increase quantity" onClick={() => increaseQty(item._id, item.selectedSize)} className="h-10 w-10 text-xl hover:bg-gray-50">+</button>
+                          <button aria-label="Increase quantity" onClick={() => increaseQty(item._id, item.selectedSize, item.selectedSku)} className="h-10 w-10 text-xl hover:bg-gray-50">+</button>
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-brand-primary">₹{(Number(item.price) * item.qty).toLocaleString("en-IN")}</p>

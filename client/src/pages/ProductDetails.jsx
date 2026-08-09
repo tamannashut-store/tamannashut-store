@@ -14,6 +14,7 @@ function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
@@ -23,6 +24,8 @@ function ProductDetails() {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`, { signal });
       setProduct(data);
+      setSelectedColor(data.variants?.find((variant) => variant.active !== false)?.color || data.color || "");
+      setSelectedSize("");
       setSelectedImageIndex(0);
     } catch (error) {
       if (error.code !== "ERR_CANCELED") console.error(error);
@@ -49,12 +52,17 @@ function ProductDetails() {
   }
   if (!product) return <div className="px-6 py-24 text-center text-xl">Product not found.</div>;
 
-  const images = product.images?.length ? product.images : [{ url: "/placeholder.png", public_id: "placeholder" }];
-  const selectedSizeData = product.sizeStock?.find((item) => item.size === selectedSize);
-  const selectedVariant = product.variants?.find((item) => item.size === selectedSize && item.active !== false);
+  const allImages = product.images?.length ? product.images : [{ url: "/placeholder.png", public_id: "placeholder", color: "" }];
+  const colorOptions = [...new Set((product.variants || []).filter((item) => item.active !== false).map((item) => item.color).filter(Boolean))];
+  const colorImages = selectedColor ? allImages.filter((image) => !image.color || image.color.toLowerCase() === selectedColor.toLowerCase()) : allImages;
+  const images = colorImages.length ? colorImages : allImages;
+  const availableVariants = (product.variants || []).filter((item) => item.active !== false && (!selectedColor || !item.color || item.color.toLowerCase() === selectedColor.toLowerCase()));
+  const sizeOptions = availableVariants.length ? availableVariants : product.sizeStock || [];
+  const selectedVariant = availableVariants.find((item) => item.size === selectedSize);
+  const selectedSizeData = selectedVariant || product.sizeStock?.find((item) => item.size === selectedSize);
   const selectedPrice = Number(selectedVariant?.price ?? product.price);
   const cartQty = cartItems
-    .filter((item) => item._id === product._id && item.selectedSize === selectedSize)
+    .filter((item) => item._id === product._id && item.selectedSize === selectedSize && (!selectedVariant?.sku || item.selectedSku === selectedVariant.sku))
     .reduce((sum, item) => sum + item.qty, 0);
   const availableStock = Math.max(Number(selectedSizeData?.stock || 0) - cartQty, 0);
   const totalStock = product.sizeStock?.reduce((sum, item) => sum + Number(item.stock || 0), 0) || 0;
@@ -80,7 +88,7 @@ function ProductDetails() {
   const addSelectedToCart = () => {
     if (!selectedSize) return toast.error("Please select a size");
     if (availableStock <= 0) return toast.error("This size is out of stock");
-    addToCart({ ...product, price: selectedPrice, selectedSize, selectedSku: selectedVariant?.sku || "" });
+    addToCart({ ...product, price: selectedPrice, selectedSize, selectedColor, selectedSku: selectedVariant?.sku || "", image: images[0]?.url });
     toast.success("Added to your bag");
   };
 
@@ -158,14 +166,16 @@ function ProductDetails() {
               <div className="mt-6 flex flex-wrap items-end gap-3"><p className="text-4xl font-bold text-brand-primary">₹{selectedPrice.toLocaleString("en-IN")}</p>{Number(product.mrp) > selectedPrice && <><p className="pb-1 text-lg text-gray-400 line-through">₹{Number(product.mrp).toLocaleString("en-IN")}</p><span className="mb-1 rounded-full bg-green-50 px-2.5 py-1 text-sm font-semibold text-green-700">{Math.round((1 - selectedPrice / Number(product.mrp)) * 100)}% off</span></>}</div>
               <p className="mt-2 text-sm text-gray-500">Inclusive of all taxes</p>
 
+              {colorOptions.length > 0 && <div className="mt-8 border-t pt-7"><div className="flex items-center justify-between"><h2 className="font-semibold">Select colour</h2><span className="text-sm text-gray-500">{selectedColor}</span></div><div className="mt-4 flex flex-wrap gap-3">{colorOptions.map((color) => <button key={color} type="button" onClick={() => { setSelectedColor(color); setSelectedSize(""); setSelectedImageIndex(0); }} className={`rounded-full border-2 px-5 py-2.5 text-sm font-semibold transition ${selectedColor === color ? "border-brand-primary bg-brand-primary text-white" : "border-gray-200 bg-white hover:border-brand-primary"}`}>{color}</button>)}</div></div>}
+
               <div className="mt-8 border-t pt-7">
                 <div className="flex items-center justify-between">
                   <h2 className="font-semibold">Select size</h2>
                   <span className="text-sm text-gray-500">Age range</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {product.sizeStock?.map((item) => (
-                    <button key={item.size} type="button" disabled={item.stock <= 0} onClick={() => setSelectedSize(item.size)} className={`min-w-20 rounded-xl border-2 px-4 py-3 text-sm font-medium transition ${selectedSize === item.size ? "border-brand-primary bg-brand-primary text-white" : "border-gray-200 hover:border-brand-primary"} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`}>
+                  {sizeOptions.map((item) => (
+                    <button key={`${item.sku || "size"}-${item.size}`} type="button" disabled={item.stock <= 0} onClick={() => setSelectedSize(item.size)} className={`min-w-20 rounded-xl border-2 px-4 py-3 text-sm font-medium transition ${selectedSize === item.size ? "border-brand-primary bg-brand-primary text-white" : "border-gray-200 hover:border-brand-primary"} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`}>
                       {item.size}
                     </button>
                   ))}

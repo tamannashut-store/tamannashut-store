@@ -59,7 +59,7 @@ function AdminOrders() {
         return <article key={id}>
           <button type="button" onClick={() => setExpanded(isOpen ? null : id)} className="grid w-full gap-4 px-6 py-5 text-left hover:bg-slate-50 md:grid-cols-[1fr_1.2fr_0.8fr_0.7fr_0.7fr] md:items-center">
             <div><p className="font-mono text-xs font-semibold text-slate-700">#{id.slice(-8).toUpperCase()}</p><p className="mt-1 text-xs text-slate-400">{order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN") : "—"}</p></div>
-            <div><p className="font-semibold text-slate-900">{order.customerName || "Customer"}</p><p className="mt-1 text-xs text-slate-500">{order.phone || order.email}</p></div>
+            <div><p className="font-semibold text-slate-900">{order.customerName || "Customer"}</p>{order.phone ? <a href={`tel:${String(order.phone).replace(/\s/g, "")}`} onClick={(event) => event.stopPropagation()} className="mt-1 block text-xs text-[#397153] hover:underline">{order.phone}</a> : <p className="mt-1 text-xs text-slate-500">{order.email}</p>}</div>
             <StatusBadge value={order.status} /><p className="text-sm capitalize text-slate-500">{order.paymentMethod || "—"}</p><p className="font-bold text-slate-900 md:text-right">₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}</p>
           </button>
           {isOpen && <div className="border-t border-slate-100 bg-slate-50/70 p-6">

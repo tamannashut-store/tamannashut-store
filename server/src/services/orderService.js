@@ -34,6 +34,7 @@ export const calculateCart = async (items, couponCode = "") => {
   const normalized = items.map((item) => ({
     productId: String(item._id || item.productId || ""),
     selectedSize: String(item.selectedSize || "").trim(),
+    selectedSku: String(item.selectedSku || "").trim().toUpperCase(),
     qty: Number(item.qty),
   }));
   for (const item of normalized) {
@@ -49,7 +50,7 @@ export const calculateCart = async (items, couponCode = "") => {
   const lines = normalized.map((item) => {
     const product = productById.get(item.productId);
     if (!product) throw Object.assign(new Error("A product in your cart is no longer available"), { status: 409 });
-    const variant = product.variants?.find((entry) => entry.size === item.selectedSize && entry.active !== false);
+    const variant = product.variants?.find((entry) => (item.selectedSku ? entry.sku === item.selectedSku : entry.size === item.selectedSize) && entry.active !== false);
     const sizeData = variant || product.sizeStock?.find((entry) => entry.size === item.selectedSize);
     if (!sizeData || Number(sizeData.stock) < item.qty) {
       throw Object.assign(new Error(`${product.name} (${item.selectedSize}) has insufficient stock`), { status: 409 });
@@ -61,6 +62,7 @@ export const calculateCart = async (items, couponCode = "") => {
       price,
       qty: item.qty,
       selectedSize: item.selectedSize,
+      selectedColor: variant?.color || "",
       sku: variant?.sku || "",
       image: product.images?.[0]?.url || "",
       lineTotal: money(price * item.qty),
@@ -101,7 +103,7 @@ const restoreReservations = async (reservedItems) => {
       Product.updateOne(
         { _id: item._id },
         { $inc: { "variants.$[variant].stock": item.qty } },
-        { arrayFilters: [{ "variant.size": item.selectedSize, "variant.active": { $ne: false } }] }
+        { arrayFilters: [{ [item.sku ? "variant.sku" : "variant.size"]: item.sku || item.selectedSize, "variant.active": { $ne: false } }] }
       ),
     ])
   );
@@ -132,7 +134,7 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       await Product.updateOne(
         { _id: item._id },
         { $inc: { "variants.$[variant].stock": -item.qty } },
-        { arrayFilters: [{ "variant.size": item.selectedSize, "variant.active": { $ne: false } }] }
+        { arrayFilters: [{ [item.sku ? "variant.sku" : "variant.size"]: item.sku || item.selectedSize, "variant.active": { $ne: false } }] }
       );
       reservedItems.push(item);
     }
@@ -195,7 +197,7 @@ export const restoreOrderStock = async (order) => {
       Product.updateOne(
         { _id: item._id },
         { $inc: { "variants.$[variant].stock": Number(item.qty) } },
-        { arrayFilters: [{ "variant.size": item.selectedSize, "variant.active": { $ne: false } }] }
+        { arrayFilters: [{ [item.sku ? "variant.sku" : "variant.size"]: item.sku || item.selectedSize, "variant.active": { $ne: false } }] }
       ),
     ])
   );

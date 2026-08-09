@@ -1,11 +1,17 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { FiArrowRight, FiHeart, FiRefreshCw, FiShield, FiTruck } from "react-icons/fi";
+import { FiArrowRight, FiExternalLink, FiHeart, FiRefreshCw, FiShield, FiTruck } from "react-icons/fi";
+import { FaInstagram } from "react-icons/fa";
 import { getProducts } from "../api/productApi";
 import { WishlistContext } from "../context/WishlistContext";
 import ProductImageSlider from "../components/ProductImageSlider";
 import SkeletonProduct from "../components/SkeletonProduct";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Navigation, Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 const categories = [
   { key: "girls", label: "Girls", copy: "Dresses and sets for celebrations and everyday moments." },
@@ -59,7 +65,7 @@ function Home() {
     ...category,
     image: products.find((product) => product.category === category.key)?.images?.[0]?.url || null,
   })), [products]);
-  const heroProduct = products[0];
+  const heroProducts = products.slice(0, 6);
 
   return (
     <>
@@ -84,15 +90,11 @@ function Home() {
                 <span>Secure checkout</span><span>Easy returns</span><span>India-wide delivery</span>
               </div>
             </div>
-            <Link to={heroProduct ? `/product/${heroProduct._id}` : "/shop"} className="relative block min-h-[480px] overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_75%_25%,#dce9df_0,#c4d7c9_28%,#8dab96_65%,#52705b_100%)] lg:min-h-[620px]">
-              {heroProduct?.images?.[0]?.url && <img src={heroProduct.images[0].url} alt={heroProduct.name} className="absolute inset-0 h-full w-full object-cover" />}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-              <div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p>
-                <h2 className="mt-2 font-serif text-3xl md:text-4xl">{heroProduct?.name || "Explore our latest collection"}</h2>
-                {heroProduct && <p className="mt-2 text-lg">From ₹{Number(heroProduct.price).toLocaleString("en-IN")}</p>}
-              </div>
-            </Link>
+            <div className="min-w-0 overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_75%_25%,#dce9df_0,#8dab96_65%,#52705b_100%)]">
+              {heroProducts.length ? <Swiper modules={[Autoplay, Navigation, Pagination]} navigation pagination={{ clickable: true }} autoplay={{ delay: 4200, disableOnInteraction: false }} loop={heroProducts.length > 1} className="h-[480px] lg:h-[620px]">
+                {heroProducts.map((product) => <SwiperSlide key={product._id}><Link to={`/product/${product._id}`} className="relative block h-full"><img src={product.images?.[0]?.url} alt={product.name} className="h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10"><p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p><h2 className="mt-2 font-serif text-3xl md:text-4xl">{product.name}</h2><p className="mt-2 text-lg">From ₹{Number(product.price).toLocaleString("en-IN")}</p></div></Link></SwiperSlide>)}
+              </Swiper> : <Link to="/shop" className="flex h-[480px] items-end p-8 text-white lg:h-[620px]"><div><p className="text-xs font-semibold uppercase tracking-[0.22em]">Tamanna&apos;s Hut</p><h2 className="mt-3 font-serif text-4xl">Our collection is being prepared</h2></div></Link>}
+            </div>
           </div>
         </section>
 
@@ -132,6 +134,12 @@ function Home() {
           <div className="mx-auto flex max-w-[1400px] flex-col justify-between gap-8 px-5 py-16 md:flex-row md:items-center md:px-8">
             <div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">Need help choosing?</p><h2 className="mt-3 font-serif text-4xl">Talk to our team before you order.</h2><p className="mt-3 text-white/70">Sizing, availability or delivery—we&apos;re happy to help.</p></div>
             <Link to="/contact" className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-[#183d2b]">Contact us <FiArrowRight /></Link>
+          </div>
+        </section>
+        <section className="border-t border-slate-200 bg-white">
+          <div className="mx-auto flex max-w-[1400px] flex-col justify-between gap-6 px-5 py-12 md:flex-row md:items-center md:px-8">
+            <div className="flex items-center gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-600 via-rose-500 to-amber-400 text-2xl text-white"><FaInstagram /></span><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Follow our real collection</p><h2 className="mt-1 text-2xl font-semibold text-slate-950">@tamannashut on Instagram</h2><p className="mt-1 text-sm text-slate-500">See new launches, styling ideas and product updates directly from our official account.</p></div></div>
+            <a href="https://www.instagram.com/tamannashut" target="_blank" rel="noreferrer" className="btn-secondary shrink-0">Open Instagram <FiExternalLink /></a>
           </div>
         </section>
       </main>

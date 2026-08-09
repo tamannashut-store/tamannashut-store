@@ -97,7 +97,7 @@ function Contact() {
             </p>
 
             <p className="mb-3">
-              +91 9874328578
+              <a href="tel:+919874328578" className="hover:underline">+91 98743 28578</a>
             </p>
           </div>
 

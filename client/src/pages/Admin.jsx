@@ -20,6 +20,7 @@ function Admin() {
   const [variants, setVariants] = useState(initialVariants);
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
+  const [imageColors, setImageColors] = useState([]);
 
   const fetchProducts = useCallback(async (page = 1) => {
     try {
@@ -43,6 +44,7 @@ function Admin() {
 
   const changeForm = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   const updateVariant = (index, field, value) => setVariants((current) => current.map((variant, variantIndex) => variantIndex === index ? { ...variant, [field]: field === "stock" ? Number(value) : value } : variant));
+  const addVariant = () => setVariants((current) => [...current, { sku: "", size: "", color: form.color, stock: 0, price: form.price, active: true }]);
 
   const autoGenerateSkus = () => {
     const prefix = (form.baseSku || form.name).toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
@@ -57,11 +59,13 @@ function Admin() {
     previewUrls.current = urls;
     setImages(files);
     setPreviews(urls);
+    setImageColors(files.map(() => form.color || ""));
   };
 
   const makeCover = (index) => {
     setImages((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); return next; });
     setPreviews((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); previewUrls.current = next; return next; });
+    setImageColors((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); return next; });
   };
 
   const resetCreate = () => {
@@ -71,6 +75,7 @@ function Admin() {
     setVariants(initialVariants);
     setImages([]);
     setPreviews([]);
+    setImageColors([]);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -87,6 +92,7 @@ function Admin() {
       data.append("tags", JSON.stringify(form.tags.split(",").map((tag) => tag.trim()).filter(Boolean)));
       data.append("variants", JSON.stringify(variants));
       data.append("sizeStock", JSON.stringify(variants.map(({ size, stock }) => ({ size, stock }))));
+      data.append("imageColors", JSON.stringify(imageColors));
       images.forEach((image) => data.append("images", image));
       await axios.post(`${import.meta.env.VITE_API_URL}/api/products`, data);
       toast.success("Product listing created");
@@ -141,13 +147,13 @@ function Admin() {
               <label className="md:col-span-2"><span className="field-label">Description</span><textarea required rows="5" name="description" value={form.description} onChange={changeForm} className="field-control" /></label>
             </div></section>
 
-            <section className="surface-card p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">SKU variants</h2><p className="mt-1 text-sm text-slate-500">Each sellable size needs its own unique SKU.</p></div><button type="button" onClick={autoGenerateSkus} className="btn-secondary text-sm">Generate SKUs</button></div>
-              <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[680px] text-sm"><thead className="text-left text-xs uppercase tracking-wider text-slate-500"><tr><th className="pb-3">SKU</th><th>Size</th><th>Colour</th><th>Price</th><th>Stock</th></tr></thead><tbody>{variants.map((variant, index) => <tr key={variant.size} className="border-t"><td className="py-3 pr-2"><input value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value.toUpperCase())} className="field-control py-2 uppercase" /></td><td className="pr-2"><input value={variant.size} onChange={(event) => updateVariant(index, "size", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input value={variant.color} onChange={(event) => updateVariant(index, "color", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input type="number" min="0" value={variant.price} onChange={(event) => updateVariant(index, "price", event.target.value)} className="field-control py-2" /></td><td><input type="number" min="0" value={variant.stock} onChange={(event) => updateVariant(index, "stock", event.target.value)} className="field-control py-2" /></td></tr>)}</tbody></table></div>
+            <section className="surface-card p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">SKU variants</h2><p className="mt-1 text-sm text-slate-500">Add one row for every colour and size combination.</p></div><div className="flex gap-2"><button type="button" onClick={addVariant} className="btn-secondary text-sm">+ Add variant</button><button type="button" onClick={autoGenerateSkus} className="btn-secondary text-sm">Generate SKUs</button></div></div>
+              <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="text-left text-xs uppercase tracking-wider text-slate-500"><tr><th className="pb-3">SKU</th><th>Size</th><th>Colour</th><th>Price</th><th>Stock</th><th></th></tr></thead><tbody>{variants.map((variant, index) => <tr key={`${variant.sku}-${index}`} className="border-t"><td className="py-3 pr-2"><input value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value.toUpperCase())} className="field-control py-2 uppercase" /></td><td className="pr-2"><input value={variant.size} onChange={(event) => updateVariant(index, "size", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input value={variant.color} onChange={(event) => updateVariant(index, "color", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input type="number" min="0" value={variant.price} onChange={(event) => updateVariant(index, "price", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input type="number" min="0" value={variant.stock} onChange={(event) => updateVariant(index, "stock", event.target.value)} className="field-control py-2" /></td><td><button type="button" onClick={() => setVariants((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-xs text-red-600">Remove</button></td></tr>)}</tbody></table></div>
             </section>
           </div>
 
           <aside className="space-y-6">
-            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Images</h2><p className="mt-1 text-sm text-slate-500">First image is the cover. Maximum 10.</p><input ref={fileRef} type="file" multiple accept="image/*" onChange={selectImages} className="mt-4 w-full text-sm" /><div className="mt-4 grid grid-cols-3 gap-2">{previews.map((url, index) => <button type="button" key={url} onClick={() => makeCover(index)} className={`relative overflow-hidden rounded-xl border-2 ${index === 0 ? "border-brand-primary" : "border-transparent"}`}><img src={url} alt="" className="aspect-square w-full object-cover" />{index === 0 && <span className="absolute left-1 top-1 rounded bg-brand-primary px-1.5 py-0.5 text-[10px] text-white">Cover</span>}</button>)}</div></section>
+            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Images</h2><p className="mt-1 text-sm text-slate-500">Assign each photo to a colour. Leave blank for photos shared by every colour.</p><input ref={fileRef} type="file" multiple accept="image/*" onChange={selectImages} className="mt-4 w-full text-sm" /><div className="mt-4 grid grid-cols-2 gap-3">{previews.map((url, index) => <div key={url} className={`rounded-xl border-2 p-1 ${index === 0 ? "border-brand-primary" : "border-slate-200"}`}><button type="button" onClick={() => makeCover(index)} className="relative w-full overflow-hidden rounded-lg"><img src={url} alt="" className="aspect-square w-full object-cover" />{index === 0 && <span className="absolute left-1 top-1 rounded bg-brand-primary px-1.5 py-0.5 text-[10px] text-white">Cover</span>}</button><input value={imageColors[index] || ""} onChange={(event) => setImageColors((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.value : value))} placeholder="Colour (e.g. Red)" className="field-control mt-1 py-2 text-xs" /></div>)}</div></section>
             <section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Listing status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert at</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label><button disabled={loading} className="btn-primary mt-6 w-full">{loading ? "Creating…" : "Create listing"}</button></section>
           </aside>
         </form>

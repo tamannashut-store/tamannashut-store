@@ -78,7 +78,9 @@ const parseProductFields = (body) => {
   if (new Set(normalizedVariants.map((variant) => variant.sku)).size !== normalizedVariants.length) {
     throw Object.assign(new Error("Variant SKUs must be unique within a product"), { status: 400 });
   }
-  const syncedSizeStock = normalizedVariants.map((variant) => ({ size: variant.size, stock: variant.stock }));
+  const stockBySize = new Map();
+  normalizedVariants.forEach((variant) => stockBySize.set(variant.size, (stockBySize.get(variant.size) || 0) + variant.stock));
+  const syncedSizeStock = [...stockBySize].map(([size, stock]) => ({ size, stock }));
 
   return {
     name, price, mrp, baseSku, description, category, color, fabric, ageGroup,
@@ -132,9 +134,11 @@ router.post("/", protect, admin, upload.array("images", 10), async (req, res) =>
 
         const results = await Promise.all(uploadPromises);
 
-        images = results.map((result) => ({
+        const imageColors = JSON.parse(req.body.imageColors || "[]");
+        images = results.map((result, index) => ({
           url: result.secure_url,
           public_id: result.public_id,
+          color: String(imageColors[index] || "").trim().slice(0, 80),
         }));
 
       } catch (err) {
@@ -343,6 +347,7 @@ router.put(
       const originalImages = product.images.map((image) => ({
         url: image.url,
         public_id: image.public_id,
+        color: image.color || "",
       }));
 
       let retainedImages = originalImages;
@@ -355,7 +360,7 @@ router.put(
         retainedImages = requestedImages.map((image) => {
           const original = originalById.get(image.public_id);
           if (!original) throw new Error("Invalid existing image selection");
-          return original;
+          return { ...original, color: String(image.color ?? original.color ?? "").trim().slice(0, 80) };
         });
       }
 
@@ -363,9 +368,11 @@ router.put(
         const results = await Promise.all(
           req.files.map((file) => uploadToCloudinary(file.buffer))
         );
-        uploadedImages = results.map((result) => ({
+        const newImageColors = JSON.parse(req.body.newImageColors || "[]");
+        uploadedImages = results.map((result, index) => ({
           url: result.secure_url,
           public_id: result.public_id,
+          color: String(newImageColors[index] || "").trim().slice(0, 80),
         }));
       }
 
