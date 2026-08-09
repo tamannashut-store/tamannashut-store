@@ -39,6 +39,7 @@ function Home() {
   const { addToWishlist } = useContext(WishlistContext);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
+  const heroProducts = products.slice(0, 5);
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -223,57 +224,74 @@ function Home() {
             {/* RIGHT */}
 
             <div className="relative">
-<p>heroProducts: {heroProducts.length} products</p>
-              <Swiper
-                modules={[Autoplay, Pagination, Navigation]}
-                navigation
-                pagination={{ clickable: true }}
-                autoplay={{
-                  delay: 4000,
-                  disableOnInteraction: false,
-                }}
-                loop={heroProducts.length > 1}
-                className="w-full h-[650px] rounded-[40px] overflow-hidden"
-              >
 
-                {heroProducts.map((product) => (
+              {loading ? (
+                <div className="w-full h-[650px] rounded-[40px] bg-gray-200 animate-pulse" />
+              ) : heroProducts.length > 0 ? (
 
-                  <SwiperSlide key={product._id}>
+                <Swiper
+                  modules={[Autoplay, Pagination, Navigation]}
+                  navigation
+                  pagination={{ clickable: true }}
+                  autoplay={{
+                    delay: 4000,
+                    disableOnInteraction: false,
+                  }}
+                  loop={heroProducts.length > 1}
+                  className="w-full h-[650px] rounded-[40px] overflow-hidden"
+                >
 
-                    <Link
-                      to={`/product/${product._id}`}
-                      className="block relative w-full h-full group"
-                    >
+                  {heroProducts.map((product) => (
 
-                      <img
-                        src={product.images?.[0]?.url}
-                        alt={`${product.name} - Tamanna's Hut`}
-                        className="w-full h-full object-cover transition duration-700 group-hover:scale-105"
-                      />
+                    <SwiperSlide key={product._id}>
 
-                      <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black/70 to-transparent">
+                      <Link
+                        to={`/product/${product._id}`}
+                        className="block relative w-full h-full group"
+                      >
 
-                        <p className="text-white text-sm uppercase tracking-[3px]">
-                          Featured Collection
-                        </p>
+                        <img
+                          src={
+                            product.images?.[0]?.url ||
+                            "/placeholder.png"
+                          }
+                          alt={`${product.name} - Tamanna's Hut`}
+                          className="w-full h-full object-cover transition duration-700 group-hover:scale-105"
+                        />
 
-                        <h2 className="text-white text-3xl font-serif mt-2">
-                          {product.name}
-                        </h2>
+                        <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black/70 to-transparent">
 
-                        <p className="text-white text-xl font-semibold mt-2">
-                          ₹{product.price}
-                        </p>
+                          <p className="text-white text-sm uppercase tracking-[3px]">
+                            Featured Collection
+                          </p>
 
-                      </div>
+                          <h2 className="text-white text-3xl font-serif mt-2">
+                            {product.name}
+                          </h2>
 
-                    </Link>
+                          <p className="text-white text-xl font-semibold mt-2">
+                            ₹{product.price}
+                          </p>
 
-                  </SwiperSlide>
+                        </div>
 
-                ))}
+                      </Link>
 
-              </Swiper>
+                    </SwiperSlide>
+
+                  ))}
+
+                </Swiper>
+
+              ) : (
+
+                <div className="w-full h-[650px] rounded-[40px] bg-gray-100 flex items-center justify-center">
+                  <p className="text-gray-500">
+                    No featured products available
+                  </p>
+                </div>
+
+              )}
 
             </div>
 
