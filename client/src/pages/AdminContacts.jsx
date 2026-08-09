@@ -1,89 +1,17 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { FiMail } from "react-icons/fi";
+import { SellerEmpty, SellerHeader, SellerPage } from "../components/SellerUI";
 
 function AdminContacts() {
-
   const [contacts, setContacts] = useState([]);
-
-  useEffect(() => {
-    fetchContacts();
-  }, []);
-
-  const fetchContacts = async () => {
-
-    try {
-
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/contacts`
-      );
-
-      setContacts(data);
-
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto px-6 py-10">
-
-      <h1 className="text-4xl font-bold mb-8">
-        Contact Messages
-      </h1>
-
-      <div className="overflow-x-auto">
-
-        <table className="w-full border">
-
-          <thead>
-
-            <tr className="bg-gray-100">
-
-              <th className="p-3 border">Name</th>
-              <th className="p-3 border">Email</th>
-              <th className="p-3 border">Message</th>
-              <th className="p-3 border">Date</th>
-
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            {contacts.map((contact) => (
-
-              <tr key={contact._id}>
-
-                <td className="border p-3">
-                  {contact.name}
-                </td>
-
-                <td className="border p-3">
-                  {contact.email}
-                </td>
-
-                <td className="border p-3">
-                  {contact.message}
-                </td>
-
-                <td className="border p-3">
-                  {new Date(
-                    contact.createdAt
-                  ).toLocaleString()}
-                </td>
-
-              </tr>
-
-            ))}
-
-          </tbody>
-
-        </table>
-
-      </div>
-
-    </div>
-  );
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { let active = true; axios.get(`${import.meta.env.VITE_API_URL}/api/contacts`).then(({ data }) => { if (active) setContacts(Array.isArray(data) ? data : []); }).catch(() => {}).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
+  return <SellerPage><SellerHeader title="Customer messages" description="Questions and requests submitted through the storefront contact form." />
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 px-6 py-5"><h2 className="font-semibold">Inbox</h2><p className="mt-1 text-sm text-slate-500">{loading ? "Loading messages…" : `${contacts.length} message${contacts.length === 1 ? "" : "s"}`}</p></div>
+      {!loading && contacts.length === 0 ? <SellerEmpty title="Inbox is clear" description="New customer messages will appear here." /> : <div className="divide-y divide-slate-100">{contacts.map((contact) => <article key={contact._id} className="grid gap-4 px-6 py-5 md:grid-cols-[220px_1fr_150px]"><div><p className="font-semibold text-slate-900">{contact.name}</p><a href={`mailto:${contact.email}`} className="mt-1 flex items-center gap-2 text-sm text-[#397153]"><FiMail />{contact.email}</a></div><p className="text-sm leading-6 text-slate-600">{contact.message}</p><time className="text-xs text-slate-400 md:text-right">{contact.createdAt ? new Date(contact.createdAt).toLocaleString("en-IN") : "—"}</time></article>)}</div>}
+    </section>
+  </SellerPage>;
 }
-
 export default AdminContacts;

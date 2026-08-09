@@ -1,742 +1,140 @@
-import banner1 from "../assets/banner1.jpg";
-import { useEffect, useState, useContext } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
+import { FiArrowRight, FiHeart, FiRefreshCw, FiShield, FiTruck } from "react-icons/fi";
 import { getProducts } from "../api/productApi";
 import { WishlistContext } from "../context/WishlistContext";
-import { Helmet } from "react-helmet-async";
-import { toast } from "react-hot-toast";
-import SkeletonProduct from "../components/SkeletonProduct";
-import { LazyLoadImage } from "react-lazy-load-image-component";
-import "react-lazy-load-image-component/src/effects/blur.css";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Pagination, Navigation } from "swiper/modules";
-
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
 import ProductImageSlider from "../components/ProductImageSlider";
+import SkeletonProduct from "../components/SkeletonProduct";
+
+const categories = [
+  { key: "girls", label: "Girls", copy: "Dresses and sets for celebrations and everyday moments." },
+  { key: "boys", label: "Boys", copy: "Comfortable, polished styles made for active days." },
+  { key: "new-arrivals", label: "New arrivals", copy: "The newest pieces added to our growing collection." },
+];
+
+function ProductCard({ product, onWishlist }) {
+  const mrp = Number(product.mrp || product.price);
+  const price = Number(product.price);
+  const discount = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
+  return (
+    <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:-translate-y-1 hover:shadow-xl">
+      <div className="relative">
+        <ProductImageSlider product={product} className="h-72" />
+        <button type="button" onClick={() => onWishlist(product)} aria-label={`Save ${product.name}`} className="absolute right-3 top-3 z-10 grid h-10 w-10 place-items-center rounded-full bg-white/95 text-slate-700 shadow-sm hover:text-brand-primary">
+          <FiHeart />
+        </button>
+        {discount > 0 && <span className="absolute left-3 top-3 z-10 rounded-full bg-[#183d2b] px-3 py-1 text-xs font-semibold text-white">{discount}% off</span>}
+      </div>
+      <div className="p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{String(product.category || "Kidswear").replace("-", " ")}</p>
+        <h3 className="mt-2 line-clamp-2 min-h-12 text-lg font-semibold text-slate-900">{product.name}</h3>
+        <div className="mt-3 flex items-baseline gap-2">
+          <span className="text-xl font-bold text-[#183d2b]">₹{price.toLocaleString("en-IN")}</span>
+          {mrp > price && <span className="text-sm text-slate-400 line-through">₹{mrp.toLocaleString("en-IN")}</span>}
+        </div>
+        <Link to={`/product/${product._id}`} className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-semibold text-[#183d2b]">
+          View details <FiArrowRight />
+        </Link>
+      </div>
+    </article>
+  );
+}
 
 function Home() {
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { addToWishlist } = useContext(WishlistContext);
+
   useEffect(() => {
-    fetchProducts();
+    let active = true;
+    getProducts({ limit: 12 })
+      .then(({ data }) => { if (active) setProducts(Array.isArray(data) ? data : data.products || []); })
+      .catch(() => { if (active) setProducts([]); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, []);
 
-  const fetchProducts = async () => {
-
-    try {
-      const { data } = await getProducts();
-      if (Array.isArray(data)) {
-        setProducts(data);
-      } else {
-        setProducts(data.products || []);
-      }
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  const { addToWishlist } = useContext(WishlistContext);
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(true);
-  const heroProducts = products.slice(0, 5);
-
-  const handleSubscribe = (e) => {
-    e.preventDefault();
-
-    if (!email.trim()) {
-      toast.error("Please enter your email");
-      return;
-    }
-
-    toast.success("Thanks for joining Tamanna's Hut!");
-    setEmail("");
-  };
+  const categoryCards = useMemo(() => categories.map((category) => ({
+    ...category,
+    image: products.find((product) => product.category === category.key)?.images?.[0]?.url || null,
+  })), [products]);
+  const heroProduct = products[0];
 
   return (
     <>
       <Helmet>
-        <title>
-          Tamanna's Hut | Premium Kids Fashion Store
-        </title>
-
-        <meta
-          name="description"
-          content="Shop premium baby dresses, girls dresses, boys clothing and kids fashion online at Tamanna's Hut."
-        />
-
-        <meta
-          name="keywords"
-          content="kids fashion, baby dress, girls dress, boys clothing, Tamanna's Hut"
-        />
-        <meta
-          property="og:title"
-          content="Tamanna's Hut | Premium Kids Fashion Store"
-        />
-
-        <meta
-          property="og:description"
-          content="Shop premium baby dresses, girls dresses, boys clothing and kids fashion online."
-        />
-
-        <meta
-          property="og:image"
-          content="https://www.tamannashut.com/assets/logo-Bkaz0kee.png"
-        />
-
-        <meta
-          property="og:type"
-          content="website"
-        />
-        <link
-          rel="canonical"
-          href="https://tamannashut.com/"
-        />
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            "name": "Tamanna's Hut",
-            "url": "https://www.tamannashut.com",
-            "logo": "https://www.tamannashut.com/assets/logo-Bkaz0kee.png",
-            "email": "support@tamannashut.com",
-            "contactPoint": {
-              "@type": "ContactPoint",
-              "telephone": "+919874328578",
-              "contactType": "customer service",
-              "areaServed": "IN",
-              "availableLanguage": "English"
-            },
-            "sameAs": [
-              "https://www.instagram.com/tamannashut"
-            ]
-          })}
-        </script>
-
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebSite",
-            "name": "Tamanna's Hut",
-            "url": "https://tamannashut.com",
-            "potentialAction": {
-              "@type": "SearchAction",
-              "target": "https://tamannashut.com/shop?search={search_term_string}",
-              "query-input": "required name=search_term_string"
-            }
-          })}
-        </script>
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            "mainEntity": [
-              {
-                "@type": "Question",
-                "name": "What products does Tamanna's Hut sell?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Tamanna's Hut sells premium baby clothes, girls dresses, boys clothing and kids fashion."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "Do you deliver across India?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Yes, Tamanna's Hut delivers across India."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "Do you accept returns?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Yes, returns are accepted within 7 days according to our return policy."
-                }
-              }
-            ]
-          })}
-        </script>
+        <title>Tamanna&apos;s Hut | Premium Kidswear</title>
+        <meta name="description" content="Shop thoughtfully selected kidswear for girls and boys at Tamanna's Hut." />
+        <link rel="canonical" href="https://tamannashut.com/" />
       </Helmet>
-      <div className="w-full overflow-hidden">
 
-        {/* HERO SECTION */}
-        <section className="bg-brand-background">
-
-          <div
-            className="
-    max-w-[1400px]
-    mx-auto
-    px-8
-    py-20
-    lg:py-28
-    grid
-    lg:grid-cols-2
-    gap-16
-    items-center
-  "
-          >
-
-            {/* LEFT */}
-
-            <div>
-
-              <p className="uppercase tracking-[4px] text-brand-primary font-medium mb-5">
-                Tamanna's Hut Of Purity
-              </p>
-
-              <h1 className="text-5xl lg:text-7xl font-serif leading-tight text-brand-dark mb-6">
-
-                Timeless Style
-                <br />
-                For Every Moment
-
-              </h1>
-
-              <p className="text-lg lg:text-xl text-gray-600 mb-10 max-w-xl">
-
-                Beautiful kidswear crafted with premium fabrics,
-                comfort and elegance for every occasion.
-
-              </p>
-
-              <div className="flex gap-4">
-
-                <Link
-                  to="/shop"
-                  className="bg-brand-primary hover:bg-[#2d4d33] text-white px-10 py-4 rounded-xl transition inline-flex items-center justify-center"
-                >
-                  Shop Now
-                </Link>
-
-                <Link
-                  to="/shop?category=new-arrivals"
-                  className="border border-brand-primary text-brand-primary px-10 py-4 rounded-xl hover:bg-brand-primary hover:text-white transition inline-flex items-center justify-center"
-                >
-                  Explore
-                </Link>
-
+      <main className="bg-[#f8f7f3]">
+        <section className="border-b border-[#e7e3da]">
+          <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-5 py-10 md:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:py-16">
+            <div className="max-w-xl py-6">
+              <p className="eyebrow">New season · Thoughtful essentials</p>
+              <h1 className="mt-5 font-serif text-5xl leading-[1.04] text-slate-950 md:text-6xl lg:text-7xl">Beautiful clothes for their biggest little moments.</h1>
+              <p className="mt-6 max-w-lg text-lg leading-8 text-slate-600">Comfort-first kidswear selected for quality, easy movement and celebrations worth remembering.</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link to="/shop" className="btn-primary">Shop the collection <FiArrowRight /></Link>
+                <Link to="/shop?category=new-arrivals" className="btn-secondary">See what&apos;s new</Link>
               </div>
-
+              <div className="mt-10 grid grid-cols-3 gap-4 border-t border-slate-200 pt-6 text-sm text-slate-600">
+                <span>Secure checkout</span><span>Easy returns</span><span>India-wide delivery</span>
+              </div>
             </div>
-
-            {/* RIGHT */}
-
-            <div className="relative">
-
-              {loading ? (
-                <div className="w-full h-[650px] rounded-[40px] bg-gray-200 animate-pulse" />
-              ) : heroProducts.length > 0 ? (
-
-                <Swiper
-                  modules={[Autoplay, Pagination, Navigation]}
-                  navigation
-                  pagination={{ clickable: true }}
-                  autoplay={{
-                    delay: 4000,
-                    disableOnInteraction: false,
-                  }}
-                  loop={heroProducts.length > 1}
-                  className="w-full h-[650px] rounded-[40px] overflow-hidden"
-                >
-
-                  {heroProducts.map((product) => (
-
-                    <SwiperSlide key={product._id}>
-
-                      <Link
-                        to={`/product/${product._id}`}
-                        className="block relative w-full h-full group"
-                      >
-
-                        <img
-                          src={
-                            product.images?.[0]?.url ||
-                            "/placeholder.png"
-                          }
-                          alt={`${product.name} - Tamanna's Hut`}
-                          className="w-full h-full object-cover transition duration-700 group-hover:scale-105"
-                        />
-
-                        <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black/70 to-transparent">
-
-                          <p className="text-white text-sm uppercase tracking-[3px]">
-                            Featured Collection
-                          </p>
-
-                          <h2 className="text-white text-3xl font-serif mt-2">
-                            {product.name}
-                          </h2>
-
-                          <p className="text-white text-xl font-semibold mt-2">
-                            ₹{product.price}
-                          </p>
-
-                        </div>
-
-                      </Link>
-
-                    </SwiperSlide>
-
-                  ))}
-
-                </Swiper>
-
-              ) : (
-
-                <div className="w-full h-[650px] rounded-[40px] bg-gray-100 flex items-center justify-center">
-                  <p className="text-gray-500">
-                    No featured products available
-                  </p>
-                </div>
-
-              )}
-
-            </div>
-
-          </div>
-
-        </section>
-
-        <section className="bg-white border-y border-[#ece7df]">
-          <div className="max-w-7xl mx-auto py-8 grid md:grid-cols-4 text-center gap-6">
-
-            <div>
-              <h3 className="font-semibold text-brand-primary">
-                Premium Fabric
-              </h3>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-brand-primary">
-                Safe For Kids
-              </h3>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-brand-primary">
-                Easy Returns
-              </h3>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-brand-primary">
-                Fast Delivery
-              </h3>
-            </div>
-
+            <Link to={heroProduct ? `/product/${heroProduct._id}` : "/shop"} className="relative block min-h-[480px] overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_75%_25%,#dce9df_0,#c4d7c9_28%,#8dab96_65%,#52705b_100%)] lg:min-h-[620px]">
+              {heroProduct?.images?.[0]?.url && <img src={heroProduct.images[0].url} alt={heroProduct.name} className="absolute inset-0 h-full w-full object-cover" />}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p>
+                <h2 className="mt-2 font-serif text-3xl md:text-4xl">{heroProduct?.name || "Explore our latest collection"}</h2>
+                {heroProduct && <p className="mt-2 text-lg">From ₹{Number(heroProduct.price).toLocaleString("en-IN")}</p>}
+              </div>
+            </Link>
           </div>
         </section>
 
-        {/* CATEGORY SECTION */}
-        <section className="py-20 px-6 bg-white">
-
-          <div className="max-w-7xl mx-auto">
-
-            <h2 className="text-4xl font-bold text-center mb-14">
-              Shop By Category
-            </h2>
-
-            <div className="grid md:grid-cols-3 gap-8">
-
-              <div className="
-bg-white
-rounded-[30px]
-overflow-hidden
-border
-border-[#efe8dd]
-hover:-translate-y-2
-transition
-duration-300
-">
-                <LazyLoadImage effect="blur"
-                  src="https://images.unsplash.com/photo-1519238359922-989348752efb"
-                  alt=""
-                  className="h-[400px] w-full object-cover group-hover:scale-110 transition duration-500"
-                />
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold">Girls Collection</h3>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-[30px] overflow-hidden border border-[#efe8dd] hover:-translate-y-2 transition duration-300">
-                <LazyLoadImage effect="blur"
-                  src="https://images.unsplash.com/photo-1519345182560-3f2917c472ef" alt=""
-                  className="h-[400px] w-full object-cover group-hover:scale-110 transition duration-500"
-                />
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold">Boys Collection</h3>
-                </div>
-              </div>
-
-              <div className="
-bg-white
-rounded-[30px]
-overflow-hidden
-border
-border-[#efe8dd]
-hover:-translate-y-2
-transition
-duration-300
-">
-                <LazyLoadImage effect="blur"
-                  src="https://images.unsplash.com/photo-1514090458221-65bb69cf63e6"
-                  alt=""
-                  className="h-[400px] w-full object-cover group-hover:scale-110 transition duration-500"
-                />
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold">New Arrivals</h3>
-                </div>
-              </div>
-
-            </div>
+        <section className="mx-auto max-w-[1400px] px-5 py-20 md:px-8">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <div><p className="eyebrow">Shop their world</p><h2 className="mt-3 font-serif text-4xl text-slate-950 md:text-5xl">Made for every moment</h2></div>
+            <Link to="/shop" className="inline-flex items-center gap-2 font-semibold text-[#183d2b]">View all products <FiArrowRight /></Link>
+          </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {categoryCards.map((category) => (
+              <Link key={category.key} to={`/shop?category=${category.key}`} className="group relative min-h-[420px] overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#dbe8dd,#879e8d)]">
+                {category.image && <img src={category.image} alt={`${category.label} collection`} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-7 text-white"><h3 className="font-serif text-3xl">{category.label}</h3><p className="mt-2 max-w-xs text-sm leading-6 text-white/80">{category.copy}</p></div>
+              </Link>
+            ))}
           </div>
         </section>
-        <section className="py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-6">
 
-            <p className="uppercase tracking-[4px] text-brand-primary mb-3">
-              Our Collection
-            </p>
-
-            <h2 className="text-5xl font-serif">
-              Featured Products
-            </h2>
-
-            <div className="grid md:grid-cols-4 gap-8">
-
-              {loading ? Array.from({ length: 8 }).map((_, index) => <SkeletonProduct key={index} />) : products.map((product) => (
-                <div key={product._id} className="bg-white rounded-[28px] overflow-hidden border border-[#efe8dd] hover:shadow-xl transition relative">
-                  <ProductImageSlider product={product} className="h-72" />
-                  <div className="p-5">
-                    <h3 className="font-semibold text-lg">
-                      {product.name}
-                    </h3>
-                    <button onClick={() => addToWishlist(product)} className="absolute top-4 right-4 bg-white shadow-lg p-3 rounded-full cursor-pointer">❤️</button>
-                    <p className="text-brand-primary font-bold mt-2">
-                      ₹{product.price}
-                    </p>
-
-                    <Link to={`/product/${product._id}`}>
-                      <button className="mt-4 w-full bg-brand-primary hover:bg-[#2d4d33] text-white py-3 rounded-full transition">
-                        View Product
-                      </button>
-                    </Link>
-
-                  </div>
-
-                </div>
-              ))}
-
-            </div>
+        <section className="border-y border-slate-200 bg-white">
+          <div className="mx-auto grid max-w-[1400px] gap-px bg-slate-200 md:grid-cols-3">
+            {[[FiShield,"Secure payments","Protected checkout with trusted payment methods."],[FiTruck,"Reliable delivery","Clear order updates from purchase to delivery."],[FiRefreshCw,"Easy returns","Simple support when an item is not quite right."]].map(([Icon,title,copy]) => (
+              <div key={title} className="flex gap-4 bg-white px-8 py-8"><Icon className="mt-1 text-xl text-[#183d2b]"/><div><h3 className="font-semibold text-slate-900">{title}</h3><p className="mt-1 text-sm leading-6 text-slate-500">{copy}</p></div></div>
+            ))}
           </div>
         </section>
-        {/* FEATURES */}
-        <section className="py-24 bg-brand-background">
 
-          <div className="max-w-7xl mx-auto">
-
-            <h2 className="text-center text-5xl font-serif mb-16">
-              Why Parents Love Us
-            </h2>
-
-            <div className="bg-white rounded-3xl p-8 border border-[#ece7df] value-card-wrp">
-
-              <div className="value-card">
-                <h3 className="text-2xl font-semibold mb-4 text-brand-primary">
-                  Premium Quality
-                </h3>
-
-                <p className="text-gray-600">
-                  Soft fabrics and durable stitching for everyday comfort.
-                </p>
-              </div>
-
-              <div className="value-card">
-                <h3 className="text-2xl font-semibold mb-4 text-brand-primary">Comfort First</h3>
-                <p className="text-gray-600">Designed for active kids.</p>
-              </div>
-
-              <div className="value-card">
-                <h3 className="text-2xl font-semibold mb-4 text-brand-primary">Elegant Designs</h3>
-                <p className="text-gray-600">Stylish outfits for every occasion.</p>
-              </div>
-
-            </div>
-
+        <section className="mx-auto max-w-[1400px] px-5 py-20 md:px-8">
+          <div className="flex items-end justify-between gap-6"><div><p className="eyebrow">Fresh from the catalogue</p><h2 className="mt-3 font-serif text-4xl md:text-5xl">Latest products</h2></div><Link to="/shop" className="hidden font-semibold text-[#183d2b] sm:block">Shop all</Link></div>
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {loading ? Array.from({ length: 8 }, (_, index) => <SkeletonProduct key={index} />) : products.slice(0, 8).map((product) => <ProductCard key={product._id} product={product} onWishlist={addToWishlist} />)}
           </div>
-
+          {!loading && products.length === 0 && <div className="surface-card mt-10 py-16 text-center"><h3 className="text-xl font-semibold">The catalogue is being prepared</h3><p className="mt-2 text-slate-500">New products will appear here as soon as they are published.</p></div>}
         </section>
 
-        {/* TESTIMONIALS */}
-
-        <section className="mb-28">
-
-          <div className="text-center mb-16">
-
-            <p className="text-brand-primary uppercase tracking-[5px] font-semibold">
-
-              Happy Customers
-
-            </p>
-
-            <h2 className="text-5xl font-bold mt-4">
-
-              What Moms Say 💖
-
-            </h2>
-
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-10">
-
-            {/* CARD 1 */}
-
-            <div className="bg-white rounded-[35px] border border-[#ece7df] p-10 hover:-translate-y-2 transition duration-300">
-
-              <div className="flex text-yellow-400 text-2xl mb-6">
-
-                ⭐⭐⭐⭐⭐
-
-              </div>
-
-              <p className="text-gray-600 leading-relaxed text-lg">
-
-                Absolutely loved the quality and fitting.
-                The dress looked even prettier in real life.
-                My daughter was so happy!
-
-              </p>
-
-              <div className="mt-8 flex items-center gap-4">
-
-                <LazyLoadImage effect="blur"
-                  src="https://randomuser.me/api/portraits/women/44.jpg"
-                  alt="customer"
-                  className="w-14 h-14 rounded-full object-cover"
-                />
-
-                <div>
-
-                  <h4 className="font-bold text-lg">
-                    Priya Sharma
-                  </h4>
-
-                  <p className="text-gray-500 text-sm">
-                    Kolkata
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* CARD 2 */}
-
-            <div className="bg-white rounded-[35px] border border-[#ece7df] p-10 hover:-translate-y-2 transition duration-300">
-
-              <div className="flex text-yellow-400 text-2xl mb-6">
-
-                ⭐⭐⭐⭐⭐
-
-              </div>
-
-              <p className="text-gray-600 leading-relaxed text-lg">
-
-                Premium quality fabric and beautiful stitching.
-                Delivery was fast and packaging was amazing.
-
-              </p>
-
-              <div className="mt-8 flex items-center gap-4">
-
-                <LazyLoadImage effect="blur"
-                  src="https://randomuser.me/api/portraits/women/65.jpg"
-                  alt="customer"
-                  className="w-14 h-14 rounded-full object-cover"
-                />
-
-                <div>
-
-                  <h4 className="font-bold text-lg">
-                    Anjali Verma
-                  </h4>
-
-                  <p className="text-gray-500 text-sm">
-                    Delhi
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* CARD 3 */}
-
-            <div className="bg-white rounded-[35px] border border-[#ece7df] p-10 hover:-translate-y-2 transition duration-300">
-
-              <div className="flex text-yellow-400 text-2xl mb-6">
-
-                ⭐⭐⭐⭐⭐
-
-              </div>
-
-              <p className="text-gray-600 leading-relaxed text-lg">
-
-                Tamanna's Hut has become my favorite kids fashion store.
-                Stylish collections and very comfortable for children.
-
-              </p>
-
-              <div className="mt-8 flex items-center gap-4">
-
-                <LazyLoadImage effect="blur"
-                  src="https://randomuser.me/api/portraits/women/68.jpg"
-                  alt="customer"
-                  className="w-14 h-14 rounded-full object-cover"
-                />
-
-                <div>
-
-                  <h4 className="font-bold text-lg">
-                    Sneha Roy
-                  </h4>
-
-                  <p className="text-gray-500 text-sm">
-                    Mumbai
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </section>
-        {/* INSTAGRAM GALLERY */}
-
-        <section className="mb-28">
-
-          <div className="text-center mb-16">
-
-            <p className="text-brand-primary uppercase tracking-[5px] font-semibold">
-
-              Follow Us
-
-            </p>
-
-            <h2 className="text-5xl font-bold mt-4">
-
-              Instagram Gallery 📸
-
-            </h2>
-
-            <p className="text-gray-500 mt-5 text-lg">
-
-              @tamannashut
-
-            </p>
-
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
-
-
-            <div className="overflow-hidden rounded-[30px] group">
-
-              <a
-                href="https://instagram.com/tamannashut"
-                target="_blank"
-                rel="noreferrer"
-                className="overflow-hidden rounded-[30px] group block"
-              >
-                <LazyLoadImage effect="blur"
-                  src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1000&auto=format&fit=crop"
-                  alt="gallery"
-                  className="h-80 w-full object-cover group-hover:scale-110 transition duration-500"
-                />
-              </a>
-            </div>
-
-            <div className="overflow-hidden rounded-[30px] group">
-
-              <LazyLoadImage effect="blur"
-                src="https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=1000&auto=format&fit=crop"
-                alt="gallery"
-                className="h-80 w-full object-cover group-hover:scale-110 transition duration-500"
-              />
-
-            </div>
-
-            <div className="overflow-hidden rounded-[30px] group">
-
-              <LazyLoadImage effect="blur"
-                src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1000&auto=format&fit=crop"
-                alt="gallery"
-                className="h-80 w-full object-cover group-hover:scale-110 transition duration-500"
-              />
-
-            </div>
-
-          </div>
-
-        </section>
-        <section className="py-24 bg-white">
-          <div className="max-w-3xl mx-auto px-6 text-center">
-            <p className="uppercase tracking-[4px] text-brand-primary font-medium mb-4">
-              Join Our Community
-            </p>
-
-            <h2 className="text-5xl font-serif mb-6 text-brand-dark">
-              Stay Updated With New Arrivals
-            </h2>
-
-            <p className="text-gray-600 mb-8 text-lg">
-              Get updates on new arrivals, offers, and special collections.
-            </p>
-
-            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-4">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="
-          flex-1
-          border
-          border-[#ece7df]
-          rounded-xl
-          px-5
-          py-4
-          outline-none
-          focus:border-brand-primary
-        "
-              />
-
-              <button
-                type="submit"
-                className="
-          bg-brand-primary
-          hover:bg-[#2d4d33]
-          text-white
-          px-8
-          py-4
-          rounded-xl
-          transition
-        "
-              >
-                Subscribe
-              </button>
-            </form>
+        <section className="bg-[#183d2b] text-white">
+          <div className="mx-auto flex max-w-[1400px] flex-col justify-between gap-8 px-5 py-16 md:flex-row md:items-center md:px-8">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">Need help choosing?</p><h2 className="mt-3 font-serif text-4xl">Talk to our team before you order.</h2><p className="mt-3 text-white/70">Sizing, availability or delivery—we&apos;re happy to help.</p></div>
+            <Link to="/contact" className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-[#183d2b]">Contact us <FiArrowRight /></Link>
           </div>
         </section>
-      </div>
+      </main>
     </>
   );
 }

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import logo from "../assets/logo.png";
 
 function MyOrders() {
 
@@ -287,7 +288,7 @@ ${order.status === "Pending"
                                             onError={(e) => {
 
                                                 e.target.src =
-                                                    "https://dummyimage.com/80x80/e5e7eb/6b7280&text=No+Image";
+                                                    logo;
 
                                             }}
                                         />
