@@ -47,47 +47,11 @@ function Login() {
                 ) ||
                 [];
 
-            const userCartKey =
-                `cart_${data.user.id}`;
-
-            const userCart = JSON.parse(
-                localStorage.getItem(userCartKey)
-            ) || [];
-            console.log("Guest Cart:", guestCart);
-
-            console.log(
-              "User Cart Key:",
-              userCartKey
-            );
-            const mergedCart = [...userCart];
-            
-            console.log(
-              "Merged Cart:",
-              mergedCart
-            );
-
-            guestCart.forEach((guestItem) => {
-                const existing = mergedCart.find(item => item._id === guestItem._id && item.selectedSize === guestItem.selectedSize);
-                if (existing) {
-                    existing.qty = existing.qty + guestItem.qty;
-                    const maxStock =
-                        existing.sizeStock?.find(
-                            s => s.size === existing.selectedSize
-                        )?.stock || 999;
-
-                    if (existing.qty > maxStock) {
-                        existing.qty = maxStock;
-                    }
-                } else {
-                    mergedCart.push(guestItem);
-                }
-
-            });
-
-            localStorage.setItem(
-                userCartKey,
-                JSON.stringify(mergedCart)
-            );
+            if (guestCart.length) {
+                await axios.post(`${import.meta.env.VITE_API_URL}/api/cart/merge`, {
+                    items: guestCart.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty })),
+                });
+            }
 
             localStorage.removeItem(
                 "guest_cart"
@@ -99,8 +63,6 @@ function Login() {
                 new Event("cartUpdated")
             );
             toast.success("Login Successful");
-            console.log(data);
-
             navigate("/");
 
         } catch (error) {

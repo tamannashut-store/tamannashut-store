@@ -1,8 +1,10 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useState,
   useEffect,
 } from "react";
+import axios from "axios";
 
 export const CartContext = createContext();
 
@@ -18,11 +20,13 @@ function CartProvider({ children }) {
   });
   
   const [cartItems, setCartItems] = useState([]);
+  const [hydrated, setHydrated] = useState(false);
 
   // LOAD CART
   useEffect(() => {
 
-    const loadCart = () => {
+    const loadCart = async () => {
+      setHydrated(false);
   
       const user = JSON.parse(
         localStorage.getItem("user")
@@ -35,14 +39,31 @@ function CartProvider({ children }) {
   
       setCartKey(newCartKey);
   
-      const savedCart =
-        localStorage.getItem(newCartKey);
-  
-      setCartItems(
-        savedCart
-          ? JSON.parse(savedCart)
-          : []
-      );
+      if (user?.token) {
+        try {
+          const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/cart`);
+          let serverItems = data.items || [];
+          const migrationKey = `cart_migrated_${user.user?.id}`;
+          const cached = JSON.parse(localStorage.getItem(newCartKey) || "[]");
+          if (!localStorage.getItem(migrationKey) && cached.length) {
+            const merged = await axios.post(`${import.meta.env.VITE_API_URL}/api/cart/merge`, {
+              items: cached.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty })),
+            });
+            serverItems = merged.data.items || serverItems;
+          }
+          localStorage.setItem(migrationKey, "1");
+          setCartItems(serverItems);
+          setHydrated(true);
+        } catch (error) {
+          if (error.response?.status !== 401) console.error("Cart sync failed", error);
+          const cachedCart = localStorage.getItem(newCartKey);
+          setCartItems(cachedCart ? JSON.parse(cachedCart) : []);
+        }
+      } else {
+        const savedCart = localStorage.getItem("guest_cart");
+        setCartItems(savedCart ? JSON.parse(savedCart) : []);
+        setHydrated(true);
+      }
     };
   
     loadCart();
@@ -64,12 +85,20 @@ function CartProvider({ children }) {
   // SAVE CART
   useEffect(() => {
 
-  localStorage.setItem(
-    cartKey,
-    JSON.stringify(cartItems)
-  );
-
-}, [cartItems, cartKey]);
+    if (!hydrated) return undefined;
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user?.token) {
+      localStorage.setItem("guest_cart", JSON.stringify(cartItems));
+      return undefined;
+    }
+    localStorage.setItem(cartKey, JSON.stringify(cartItems));
+    const timer = setTimeout(() => {
+      axios.put(`${import.meta.env.VITE_API_URL}/api/cart`, {
+        items: cartItems.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty })),
+      }).catch((error) => console.error("Cart could not be saved", error));
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [cartItems, cartKey, hydrated]);
 
   // ADD TO CART
   const addToCart = (product) => {

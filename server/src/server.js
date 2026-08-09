@@ -42,6 +42,7 @@ import sitemapRoutes from "./routes/sitemapRoutes.js";
 import googleFeedRoutes from "./routes/googleFeedRoutes.js";
 import robotsRoutes from "./routes/robotsRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import cartRoutes from "./routes/cartRoutes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -84,6 +85,7 @@ app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use("/api/cart", cartRoutes);
 app.use("/", sitemapRoutes);
 app.use("/", googleFeedRoutes);
 app.use("/", robotsRoutes);

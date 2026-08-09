@@ -18,7 +18,7 @@ function Navbar() {
   const userData = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
 
   const submitSearch = (event) => { event.preventDefault(); if (search.trim()) navigate(`/shop?search=${encodeURIComponent(search.trim())}`); setSearchOpen(false); setMenuOpen(false); };
-  const logout = () => { localStorage.removeItem("user"); delete axios.defaults.headers.common.Authorization; setProfileOpen(false); navigate("/"); };
+  const logout = () => { localStorage.removeItem("user"); delete axios.defaults.headers.common.Authorization; window.dispatchEvent(new Event("cartUpdated")); setProfileOpen(false); navigate("/"); };
 
   return <>
     <div className="bg-[#183d2b] text-white"><div className="mx-auto flex h-9 max-w-[1400px] items-center justify-center gap-5 px-4 text-[11px] font-medium sm:gap-10 sm:text-xs"><span>Free shipping above ₹999</span><span className="hidden sm:inline">Cash on delivery available</span><span>Easy returns</span></div></div>

@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import ColorVariantEditor from "../components/ColorVariantEditor";
 
-const initialVariants = ["0-3M", "3-6M", "6-9M", "9-12M"].map((size) => ({ sku: "", size, color: "", stock: 0, price: "", active: true }));
+const initialVariants = [];
 
 function Admin() {
   const navigate = useNavigate();
@@ -43,13 +44,7 @@ function Admin() {
   useEffect(() => () => previewUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
 
   const changeForm = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
-  const updateVariant = (index, field, value) => setVariants((current) => current.map((variant, variantIndex) => variantIndex === index ? { ...variant, [field]: field === "stock" ? Number(value) : value } : variant));
-  const addVariant = () => setVariants((current) => [...current, { sku: "", size: "", color: form.color, stock: 0, price: form.price, active: true }]);
-
-  const autoGenerateSkus = () => {
-    const prefix = (form.baseSku || form.name).toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
-    setVariants((current) => current.map((variant) => ({ ...variant, sku: `${prefix}-${variant.size.replace(/[^A-Z0-9]+/gi, "")}`, color: variant.color || form.color, price: variant.price || form.price })));
-  };
+  const variantColors = [...new Set(variants.map((variant) => variant.color).filter(Boolean))];
 
   const selectImages = (event) => {
     const files = Array.from(event.target.files || []);
@@ -82,6 +77,8 @@ function Admin() {
   const createProduct = async (event) => {
     event.preventDefault();
     if (!images.length) return toast.error("Add at least one product image");
+    if (!variants.length) return toast.error("Add at least one colour style");
+    if (variants.some((variant) => !variant.color?.trim() || !variant.size?.trim())) return toast.error("Every variant needs a colour and size");
     if (variants.some((variant) => !variant.sku)) return toast.error("Generate or enter every variant SKU");
     try {
       setLoading(true);
@@ -140,20 +137,17 @@ function Admin() {
               <label><span className="field-label">MRP (₹)</span><input required min="0" type="number" name="mrp" value={form.mrp} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} placeholder="TH-DRESS-001" className="field-control uppercase" /></label>
               <label><span className="field-label">Category</span><select required name="category" value={form.category} onChange={changeForm} className="field-control"><option value="">Select</option><option value="girls">Girls</option><option value="boys">Boys</option><option value="new-arrivals">New arrivals</option></select></label>
-              <label><span className="field-label">Colour</span><input name="color" value={form.color} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">Fabric</span><input name="fabric" value={form.fabric} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">Age group</span><input name="ageGroup" value={form.ageGroup} onChange={changeForm} placeholder="0–12 months" className="field-control" /></label>
               <label><span className="field-label">Tags</span><input name="tags" value={form.tags} onChange={changeForm} placeholder="party, cotton, summer" className="field-control" /></label>
               <label className="md:col-span-2"><span className="field-label">Description</span><textarea required rows="5" name="description" value={form.description} onChange={changeForm} className="field-control" /></label>
             </div></section>
 
-            <section className="surface-card p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">SKU variants</h2><p className="mt-1 text-sm text-slate-500">Add one row for every colour and size combination.</p></div><div className="flex gap-2"><button type="button" onClick={addVariant} className="btn-secondary text-sm">+ Add variant</button><button type="button" onClick={autoGenerateSkus} className="btn-secondary text-sm">Generate SKUs</button></div></div>
-              <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[760px] text-sm"><thead className="text-left text-xs uppercase tracking-wider text-slate-500"><tr><th className="pb-3">SKU</th><th>Size</th><th>Colour</th><th>Price</th><th>Stock</th><th></th></tr></thead><tbody>{variants.map((variant, index) => <tr key={`${variant.sku}-${index}`} className="border-t"><td className="py-3 pr-2"><input value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value.toUpperCase())} className="field-control py-2 uppercase" /></td><td className="pr-2"><input value={variant.size} onChange={(event) => updateVariant(index, "size", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input value={variant.color} onChange={(event) => updateVariant(index, "color", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input type="number" min="0" value={variant.price} onChange={(event) => updateVariant(index, "price", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input type="number" min="0" value={variant.stock} onChange={(event) => updateVariant(index, "stock", event.target.value)} className="field-control py-2" /></td><td><button type="button" onClick={() => setVariants((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-xs text-red-600">Remove</button></td></tr>)}</tbody></table></div>
-            </section>
+            <ColorVariantEditor variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} onRenameColor={(oldColor, nextColor) => setImageColors((current) => current.map((color) => color === oldColor ? nextColor : color))} />
           </div>
 
           <aside className="space-y-6">
-            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Images</h2><p className="mt-1 text-sm text-slate-500">Assign each photo to a colour. Leave blank for photos shared by every colour.</p><input ref={fileRef} type="file" multiple accept="image/*" onChange={selectImages} className="mt-4 w-full text-sm" /><div className="mt-4 grid grid-cols-2 gap-3">{previews.map((url, index) => <div key={url} className={`rounded-xl border-2 p-1 ${index === 0 ? "border-brand-primary" : "border-slate-200"}`}><button type="button" onClick={() => makeCover(index)} className="relative w-full overflow-hidden rounded-lg"><img src={url} alt="" className="aspect-square w-full object-cover" />{index === 0 && <span className="absolute left-1 top-1 rounded bg-brand-primary px-1.5 py-0.5 text-[10px] text-white">Cover</span>}</button><input value={imageColors[index] || ""} onChange={(event) => setImageColors((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.value : value))} placeholder="Colour (e.g. Red)" className="field-control mt-1 py-2 text-xs" /></div>)}</div></section>
+            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Images by colour</h2><p className="mt-1 text-sm text-slate-500">Choose which colour each photo belongs to. Shared photos appear for every colour.</p><input ref={fileRef} type="file" multiple accept="image/*" onChange={selectImages} className="mt-4 w-full text-sm" /><div className="mt-4 grid grid-cols-2 gap-3">{previews.map((url, index) => <div key={url} className={`rounded-xl border-2 p-1 ${index === 0 ? "border-brand-primary" : "border-slate-200"}`}><button type="button" onClick={() => makeCover(index)} className="relative w-full overflow-hidden rounded-lg"><img src={url} alt="" className="aspect-square w-full object-cover" />{index === 0 && <span className="absolute left-1 top-1 rounded bg-brand-primary px-1.5 py-0.5 text-[10px] text-white">Cover</span>}</button><select value={imageColors[index] || ""} onChange={(event) => setImageColors((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.value : value))} className="field-control mt-1 py-2 text-xs"><option value="">Shared / size chart</option>{variantColors.map((color) => <option key={color} value={color}>{color}</option>)}</select></div>)}</div></section>
             <section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Listing status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert at</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label><button disabled={loading} className="btn-primary mt-6 w-full">{loading ? "Creating…" : "Create listing"}</button></section>
           </aside>
         </form>

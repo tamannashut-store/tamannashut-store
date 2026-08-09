@@ -35,11 +35,12 @@ function Register() {
                 "user",
                 JSON.stringify(data)
             );
-            const userCartKey = `cart_${data.user.id}`;
-            localStorage.setItem(
-                userCartKey,
-                JSON.stringify(guestCart)
-            );
+            axios.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
+            if (guestCart.length) {
+                await axios.post(`${VITE_API_URL}/api/cart/merge`, {
+                    items: guestCart.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty })),
+                });
+            }
             localStorage.removeItem(
                 "guest_cart"
             );

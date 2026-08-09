@@ -78,12 +78,15 @@ const parseProductFields = (body) => {
   if (new Set(normalizedVariants.map((variant) => variant.sku)).size !== normalizedVariants.length) {
     throw Object.assign(new Error("Variant SKUs must be unique within a product"), { status: 400 });
   }
+  if (!normalizedVariants.length) {
+    throw Object.assign(new Error("Add at least one product variant"), { status: 400 });
+  }
   const stockBySize = new Map();
   normalizedVariants.forEach((variant) => stockBySize.set(variant.size, (stockBySize.get(variant.size) || 0) + variant.stock));
   const syncedSizeStock = [...stockBySize].map(([size, stock]) => ({ size, stock }));
 
   return {
-    name, price, mrp, baseSku, description, category, color, fabric, ageGroup,
+    name, price, mrp, baseSku, description, category, color: color || normalizedVariants[0]?.color || "", fabric, ageGroup,
     tags, status, lowStockThreshold, variants: normalizedVariants, sizeStock: syncedSizeStock,
   };
 };
