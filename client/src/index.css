@@ -123,6 +123,8 @@ button:focus-visible, a:focus-visible {
     border-right: 2px solid currentColor;
     border-top: 2px solid currentColor;
 }
+.commerce-slider .swiper-button-prev .swiper-navigation-icon,
+.commerce-slider .swiper-button-next .swiper-navigation-icon { display: none; }
 .commerce-slider .swiper-button-prev::after { transform: rotate(-135deg); margin-left: .2rem; }
 .commerce-slider .swiper-button-next::after { transform: rotate(45deg); margin-right: .2rem; }
 .commerce-slider .swiper-button-prev:hover,
@@ -135,6 +137,8 @@ button:focus-visible, a:focus-visible {
 .gallery-dot-active { width: 1.35rem; background: #355e3b; opacity: 1; }
 .hero-slider .swiper-pagination-bullet { background: white; }
 .hero-slider .swiper-pagination-bullet-active { background: white; }
+.hero-slider .swiper-button-prev { left: 1.25rem; }
+.hero-slider .swiper-button-next { right: 1.25rem; }
 .product-card-slider .swiper-button-prev,
 .product-card-slider .swiper-button-next { width: 2.15rem; height: 2.15rem; opacity: 0; }
 .product-card-slider .swiper-button-prev { left: .65rem; }
