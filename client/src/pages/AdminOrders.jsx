@@ -1,76 +1,35 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { FiDownload, FiMail, FiSearch } from "react-icons/fi";
+import { FiDownload, FiMail, FiPackage, FiSearch } from "react-icons/fi";
 import { SellerEmpty, SellerHeader, SellerPage, StatusBadge } from "../components/SellerUI";
 
-const statuses = ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"];
+const statuses = ["All", "Pending", "Processing", "Confirmed", "Packed", "Shipped", "Delivered", "Cancellation Requested", "Cancelled", "Return Requested", "Return Approved", "Return Picked Up", "Returned", "Refund Pending", "Refunded", "RTO Initiated", "RTO Delivered"];
+const nextStatuses = {
+  Pending: ["Confirmed", "Cancelled"], Processing: ["Confirmed", "Packed", "Cancelled"], Confirmed: ["Packed", "Cancellation Requested", "Cancelled"], Packed: ["Shipped", "Cancelled"],
+  Shipped: ["Delivered", "RTO Initiated"], Delivered: ["Return Requested"], "Cancellation Requested": ["Cancelled", "Confirmed"],
+  "Return Requested": ["Return Approved", "Delivered"], "Return Approved": ["Return Picked Up"], "Return Picked Up": ["Returned"],
+  Returned: ["Refund Pending"], "Refund Pending": ["Refunded"], "RTO Initiated": ["RTO Delivered"], "RTO Delivered": ["Refund Pending", "Cancelled"],
+};
 
 function AdminOrders() {
-  const [orders, setOrders] = useState([]);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("All");
-  const [expanded, setExpanded] = useState(null);
-  const [tracking, setTracking] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState([]); const [search, setSearch] = useState(""); const [status, setStatus] = useState("All");
+  const [expanded, setExpanded] = useState(null); const [drafts, setDrafts] = useState({}); const [loading, setLoading] = useState(true);
+  const loadOrders = async () => { try { const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/orders`); setOrders(Array.isArray(data) ? data : data.orders || []); } catch { toast.error("Could not load orders"); } finally { setLoading(false); } };
+  useEffect(() => { let active = true; axios.get(`${import.meta.env.VITE_API_URL}/api/orders`).then(({ data }) => { if (active) setOrders(Array.isArray(data) ? data : data.orders || []); }).catch(() => { if (active) toast.error("Could not load orders"); }).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
+  const filtered = useMemo(() => orders.filter((order) => { const term = search.toLowerCase(); return (!term || [order._id, order.customerName, order.phone, order.email, order.tracking?.trackingId].some((value) => String(value || "").toLowerCase().includes(term))) && (status === "All" || order.status === status); }), [orders, search, status]);
+  const updateOrder = async (id, values, message) => { try { await axios.put(`${import.meta.env.VITE_API_URL}/api/orders/${id}`, values); toast.success(message); await loadOrders(); } catch (error) { toast.error(error.response?.data?.message || "Order could not be updated"); } };
+  const download = async (id, type) => { try { const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/orders/${type}/${id}`, { responseType: "blob" }); const url = URL.createObjectURL(response.data); const link = document.createElement("a"); link.href = url; link.download = `${type}-${id}.pdf`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 30000); } catch { toast.error("Document download failed"); } };
+  const resend = async (id) => { try { await axios.post(`${import.meta.env.VITE_API_URL}/api/orders/resend-invoice/${id}`); toast.success("Invoice sent"); } catch { toast.error("Invoice could not be sent"); } };
+  const changeDraft = (id, key, value) => setDrafts((current) => ({ ...current, [id]: { ...current[id], [key]: value } }));
 
-  const loadOrders = async () => {
-    try { const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/orders`); const list = data.orders || data.data || data; setOrders(Array.isArray(list) ? list : []); }
-    catch { toast.error("Could not load orders"); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => {
-    let active = true;
-    axios.get(`${import.meta.env.VITE_API_URL}/api/orders`)
-      .then(({ data }) => { if (active) { const list = data.orders || data.data || data; setOrders(Array.isArray(list) ? list : []); } })
-      .catch(() => { if (active) toast.error("Could not load orders"); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, []);
-
-  const filtered = useMemo(() => orders.filter((order) => {
-    const term = search.toLowerCase();
-    const matchesSearch = !term || [order._id, order.customerName, order.phone, order.email].some((value) => String(value || "").toLowerCase().includes(term));
-    return matchesSearch && (status === "All" || order.status === status);
-  }), [orders, search, status]);
-
-  const updateOrder = async (id, values, successMessage) => {
-    try { await axios.put(`${import.meta.env.VITE_API_URL}/api/orders/${id}`, values); toast.success(successMessage); loadOrders(); }
-    catch (error) { toast.error(error.response?.data?.message || "Order could not be updated"); }
-  };
-  const invoice = async (id, resend = false) => {
-    try {
-      if (resend) { await axios.post(`${import.meta.env.VITE_API_URL}/api/orders/resend-invoice/${id}`, {}); toast.success("Invoice sent"); return; }
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/orders/invoice/${id}`, { responseType: "blob" });
-      const url = URL.createObjectURL(response.data); window.open(url, "_blank", "noopener,noreferrer"); setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch { toast.error("Invoice action failed"); }
-  };
-
-  return <SellerPage>
-    <SellerHeader title="Orders" description="Review purchases, update fulfilment and keep customers informed." />
-    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row">
-      <label className="relative flex-1"><FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/><input className="field-control pl-11" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search order, customer, phone or email" /></label>
-      <select className="field-control md:w-52" value={status} onChange={(e) => setStatus(e.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select>
-    </div>
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-6 py-5"><h2 className="font-semibold">All orders</h2><p className="mt-1 text-sm text-slate-500">{loading ? "Loading…" : `${filtered.length} result${filtered.length === 1 ? "" : "s"}`}</p></div>
-      {!loading && filtered.length === 0 ? <SellerEmpty title="No matching orders" description="Try changing the search or status filter." /> : <div className="divide-y divide-slate-100">{filtered.map((order) => {
-        const id = String(order._id); const isOpen = expanded === id;
-        return <article key={id}>
-          <button type="button" onClick={() => setExpanded(isOpen ? null : id)} className="grid w-full gap-4 px-6 py-5 text-left hover:bg-slate-50 md:grid-cols-[1fr_1.2fr_0.8fr_0.7fr_0.7fr] md:items-center">
-            <div><p className="font-mono text-xs font-semibold text-slate-700">#{id.slice(-8).toUpperCase()}</p><p className="mt-1 text-xs text-slate-400">{order.createdAt ? new Date(order.createdAt).toLocaleDateString("en-IN") : "—"}</p></div>
-            <div><p className="font-semibold text-slate-900">{order.customerName || "Customer"}</p>{order.phone ? <a href={`tel:${String(order.phone).replace(/\s/g, "")}`} onClick={(event) => event.stopPropagation()} className="mt-1 block text-xs text-[#397153] hover:underline">{order.phone}</a> : <p className="mt-1 text-xs text-slate-500">{order.email}</p>}</div>
-            <StatusBadge value={order.status} /><p className="text-sm capitalize text-slate-500">{order.paymentMethod || "—"}</p><p className="font-bold text-slate-900 md:text-right">₹{Number(order.totalAmount || 0).toLocaleString("en-IN")}</p>
-          </button>
-          {isOpen && <div className="border-t border-slate-100 bg-slate-50/70 p-6">
-            <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-              <div><h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Items</h3><div className="mt-3 space-y-3">{(order.products || []).map((item, index) => <div key={`${item._id}-${item.selectedSize}-${index}`} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-3"><div className="h-16 w-14 overflow-hidden rounded-lg bg-slate-100">{item.image && <img src={item.image.startsWith("http") ? item.image : `${import.meta.env.VITE_API_URL}${item.image}`} alt="" className="h-full w-full object-cover" />}</div><div className="min-w-0 flex-1"><p className="truncate font-medium">{item.name}</p><p className="mt-1 text-xs text-slate-500">Size {item.selectedSize} · Qty {item.qty}</p></div><p className="font-semibold">₹{Number(item.price * item.qty).toLocaleString("en-IN")}</p></div>)}</div><div className="mt-5 rounded-xl border border-slate-200 bg-white p-4 text-sm leading-6 text-slate-600"><p className="font-semibold text-slate-900">Delivery address</p><p className="mt-1">{order.address}</p><p>{order.city} {order.pincode}</p><p>{order.email}</p></div></div>
-              <aside className="space-y-4"><label className="field-label">Order status<select className="field-control mt-2" value={order.status} onChange={(e) => updateOrder(id, { status: e.target.value }, "Order status updated")}>{statuses.slice(1).map((item) => <option key={item}>{item}</option>)}</select></label><label className="field-label">Tracking number<input className="field-control mt-2" value={tracking[id] ?? order.tracking?.trackingId ?? ""} onChange={(e) => setTracking((current) => ({ ...current, [id]: e.target.value }))} placeholder="Courier tracking ID" /></label><button type="button" onClick={() => updateOrder(id, { trackingNumber: { trackingId: tracking[id] ?? order.tracking?.trackingId ?? "" } }, "Tracking updated")} className="btn-secondary w-full">Save tracking</button><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => invoice(id)} className="btn-secondary"><FiDownload /> Invoice</button><button type="button" onClick={() => invoice(id, true)} className="btn-secondary"><FiMail /> Send</button></div></aside>
-            </div>
-          </div>}
-        </article>;
-      })}</div>}
-    </section>
-  </SellerPage>;
+  return <SellerPage><SellerHeader title="Orders" description="Confirm, fulfil, track, return and refund customer orders." />
+    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row"><label className="relative flex-1"><FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"/><input className="field-control pl-11" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search order, customer, phone, email or AWB" /></label><select className="field-control md:w-64" value={status} onChange={(event) => setStatus(event.target.value)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select></div>
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b px-6 py-5"><h2 className="font-semibold">All orders</h2><p className="mt-1 text-sm text-slate-500">{loading ? "Loading…" : `${filtered.length} results`}</p></div>
+      {!loading && !filtered.length ? <SellerEmpty title="No matching orders" description="Try changing the search or status filter." /> : <div className="divide-y">{filtered.map((order) => { const id = String(order._id); const draft = drafts[id] || {}; return <article key={id}><button type="button" onClick={() => setExpanded(expanded === id ? null : id)} className="grid w-full gap-4 px-6 py-5 text-left hover:bg-slate-50 md:grid-cols-[1fr_1.2fr_1fr_.7fr_.7fr] md:items-center"><div><p className="font-mono text-xs font-semibold">#{id.slice(-8).toUpperCase()}</p><p className="mt-1 text-xs text-slate-400">{new Date(order.createdAt).toLocaleDateString("en-IN")}</p></div><div><p className="font-semibold">{order.customerName}</p><a href={`tel:${order.phone}`} onClick={(event) => event.stopPropagation()} className="text-xs text-brand-primary">{order.phone}</a></div><StatusBadge value={order.status}/><p className="text-sm text-slate-500">{order.paymentMethod}</p><p className="font-bold md:text-right">₹{Number(order.totalAmount).toLocaleString("en-IN")}</p></button>
+        {expanded === id && <div className="border-t bg-slate-50/70 p-6"><div className="grid gap-6 xl:grid-cols-[1fr_360px]"><div><h3 className="field-label">Items</h3><div className="space-y-3">{order.products.map((item, index) => <div key={`${item.sku}-${index}`} className="flex gap-4 rounded-xl border bg-white p-3"><img src={item.image || "/placeholder.png"} alt="" className="h-16 w-14 rounded-lg object-cover"/><div className="min-w-0 flex-1"><p className="font-medium">{item.name}</p><p className="text-xs text-slate-500">{item.selectedColor} · {item.selectedSize} · SKU {item.sku || "—"} · Qty {item.qty}</p></div><p className="font-semibold">₹{item.price * item.qty}</p></div>)}</div><div className="mt-5 grid gap-4 rounded-xl border bg-white p-4 text-sm sm:grid-cols-2"><div><p className="font-semibold">Delivery address</p><p className="mt-1 text-slate-600">{order.address}<br/>{order.city} - {order.pincode}<br/>{order.email}</p></div><div><p className="font-semibold">Timeline</p><div className="mt-2 space-y-2">{(order.statusHistory || []).map((item, index) => <div key={`${item.status}-${index}`}><p className="font-medium">{item.status}</p><p className="text-xs text-slate-500">{item.note} · {new Date(item.createdAt).toLocaleString("en-IN")}</p></div>)}</div></div></div>{order.internalNotes?.length > 0 && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4"><p className="font-semibold">Internal notes</p>{order.internalNotes.map((item, index) => <p key={index} className="mt-2 text-sm">{item.note} <span className="text-xs text-slate-500">— {item.createdBy}</span></p>)}</div>}</div>
+          <aside className="space-y-4"><section className="rounded-xl border bg-white p-4"><p className="font-semibold">Next action</p><select value="" onChange={(event) => event.target.value && updateOrder(id, { status: event.target.value }, `Order moved to ${event.target.value}`)} className="field-control mt-3"><option value="">Choose status…</option>{(nextStatuses[order.status] || []).map((item) => <option key={item}>{item}</option>)}</select></section><section className="rounded-xl border bg-white p-4"><p className="font-semibold">Shipping</p><input value={draft.courier ?? order.tracking?.courier ?? ""} onChange={(event) => changeDraft(id, "courier", event.target.value)} placeholder="Courier name" className="field-control mt-3"/><input value={draft.trackingId ?? order.tracking?.trackingId ?? ""} onChange={(event) => changeDraft(id, "trackingId", event.target.value)} placeholder="AWB / tracking number" className="field-control mt-2"/><button type="button" onClick={() => updateOrder(id, { tracking: { courier: draft.courier ?? order.tracking?.courier, trackingId: draft.trackingId ?? order.tracking?.trackingId } }, "Tracking saved")} className="btn-secondary mt-2 w-full">Save shipping</button></section><section className="rounded-xl border bg-white p-4"><p className="font-semibold">Internal note</p><textarea rows="3" value={draft.note || ""} onChange={(event) => changeDraft(id, "note", event.target.value)} className="field-control mt-3" placeholder="Visible only to staff"/><button type="button" onClick={() => updateOrder(id, { internalNote: draft.note }, "Note added")} className="btn-secondary mt-2 w-full">Add note</button></section><div className="grid grid-cols-2 gap-2"><button onClick={() => download(id, "invoice")} className="btn-secondary"><FiDownload/> Invoice</button><button onClick={() => download(id, "packing-slip")} className="btn-secondary"><FiPackage/> Pack slip</button></div><button onClick={() => resend(id)} className="btn-secondary w-full"><FiMail/> Email invoice</button></aside></div></div>}
+      </article>; })}</div>}
+    </section></SellerPage>;
 }
 export default AdminOrders;

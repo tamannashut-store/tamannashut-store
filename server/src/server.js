@@ -43,6 +43,7 @@ import googleFeedRoutes from "./routes/googleFeedRoutes.js";
 import robotsRoutes from "./routes/robotsRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
+import { razorpayWebhook } from "./routes/razorpayWebhook.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -59,6 +60,7 @@ app.use(
 
 app.use(helmet());
 app.use(compression());
+app.post("/api/payment/webhook", express.raw({ type: "application/json", limit: "256kb" }), razorpayWebhook);
 app.use(express.json());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,

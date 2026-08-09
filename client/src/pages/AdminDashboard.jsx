@@ -24,9 +24,9 @@ function AdminDashboard() {
   }, []);
 
   const metrics = useMemo(() => {
-    const revenue = orders.filter((order) => String(order.status).toLowerCase() !== "cancelled").reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+    const revenue = orders.filter((order) => !["cancelled", "refunded", "rto delivered"].includes(String(order.status).toLowerCase())).reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
     const lowStock = products.filter((product) => (product.variants?.length ? product.variants : product.sizeStock || []).some((item) => Number(item.stock) <= Number(product.lowStockThreshold ?? 3))).length;
-    return { revenue, lowStock, openOrders: orders.filter((order) => !["delivered", "cancelled"].includes(String(order.status).toLowerCase())).length };
+    return { revenue, lowStock, openOrders: orders.filter((order) => !["delivered", "cancelled", "refunded", "rto delivered"].includes(String(order.status).toLowerCase())).length };
   }, [orders, products]);
 
   const cards = [

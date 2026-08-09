@@ -125,7 +125,7 @@ function Checkout() {
       if (!window.Razorpay) throw new Error("Payment service is still loading. Please try again.");
       const { data: razorpayOrder } = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/payment/create-order`,
-        { products: checkoutProducts, couponCode, customer }
+        { products: checkoutProducts, couponCode, customer, idempotencyKey }
       );
 
       const razorpay = new window.Razorpay({
