@@ -96,3 +96,49 @@ button:focus-visible, a:focus-visible {
     width: 100%;
     text-align: center;
 }
+
+.commerce-slider {
+    --swiper-navigation-color: #234229;
+    --swiper-pagination-color: #355e3b;
+    --swiper-pagination-bullet-inactive-color: #ffffff;
+    --swiper-pagination-bullet-inactive-opacity: .72;
+}
+.commerce-slider .swiper-button-prev,
+.commerce-slider .swiper-button-next,
+.gallery-arrow {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid rgb(255 255 255 / 72%);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 92%);
+    color: #234229;
+    box-shadow: 0 8px 24px rgb(20 44 27 / 20%);
+    transition: transform .18s ease, background-color .18s ease, opacity .18s ease;
+}
+.commerce-slider .swiper-button-prev::after,
+.commerce-slider .swiper-button-next::after { font-size: .9rem; font-weight: 800; }
+.commerce-slider .swiper-button-prev:hover,
+.commerce-slider .swiper-button-next:hover,
+.gallery-arrow:hover { background: #355e3b; color: white; transform: scale(1.06); }
+.commerce-slider .swiper-pagination { bottom: .75rem !important; }
+.commerce-slider .swiper-pagination-bullet,
+.gallery-dot { width: .45rem; height: .45rem; border-radius: 999px; background: #cbd5cc; opacity: .85; transition: width .2s ease, background-color .2s ease; }
+.commerce-slider .swiper-pagination-bullet-active,
+.gallery-dot-active { width: 1.35rem; background: #355e3b; opacity: 1; }
+.hero-slider .swiper-pagination-bullet { background: white; }
+.hero-slider .swiper-pagination-bullet-active { background: white; }
+.product-card-slider .swiper-button-prev,
+.product-card-slider .swiper-button-next { width: 2rem; height: 2rem; opacity: 0; }
+.product-card-slider:hover .swiper-button-prev,
+.product-card-slider:hover .swiper-button-next,
+.product-card-slider:focus-within .swiper-button-prev,
+.product-card-slider:focus-within .swiper-button-next { opacity: 1; }
+.gallery-arrow { position: absolute; top: 50%; z-index: 10; display: grid; place-items: center; transform: translateY(-50%); font-size: 1.65rem; line-height: 1; }
+.gallery-arrow:hover { transform: translateY(-50%) scale(1.06); }
+@media (max-width: 640px) {
+    .commerce-slider .swiper-button-prev,
+    .commerce-slider .swiper-button-next,
+    .gallery-arrow { width: 2.25rem; height: 2.25rem; }
+    .product-card-slider .swiper-button-prev,
+    .product-card-slider .swiper-button-next { opacity: 1; }
+}

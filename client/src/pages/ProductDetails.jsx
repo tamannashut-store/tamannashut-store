@@ -54,7 +54,9 @@ function ProductDetails() {
 
   const allImages = product.images?.length ? product.images : [{ url: "/placeholder.png", public_id: "placeholder", color: "" }];
   const colorOptions = [...new Set((product.variants || []).filter((item) => item.active !== false).map((item) => item.color).filter(Boolean))];
-  const colorImages = selectedColor ? allImages.filter((image) => (!image.color || image.color.toLowerCase() === selectedColor.toLowerCase()) && (!image.size || !selectedSize || image.size === selectedSize)) : allImages;
+  const matchingColorImages = selectedColor ? allImages.filter((image) => image.color?.toLowerCase() === selectedColor.toLowerCase() && (!image.size || !selectedSize || image.size === selectedSize)) : [];
+  const sharedImages = allImages.filter((image) => !image.color && (!image.size || !selectedSize || image.size === selectedSize));
+  const colorImages = selectedColor ? [...matchingColorImages, ...sharedImages] : allImages;
   const images = colorImages.length ? colorImages : allImages;
   const availableVariants = (product.variants || []).filter((item) => item.active !== false && (!selectedColor || !item.color || item.color.toLowerCase() === selectedColor.toLowerCase()));
   const sizeOptions = availableVariants.length ? availableVariants : product.sizeStock || [];
@@ -148,7 +150,8 @@ function ProductDetails() {
                   ))}
                 </div>
                 <div className="order-1 min-w-0 sm:order-2">
-                  <ImageMagnifier src={(images[selectedImageIndex] || images[0])?.url} alt={`${product.name} view ${selectedImageIndex + 1}`} />
+                  <div className="relative"><ImageMagnifier src={(images[selectedImageIndex] || images[0])?.url} alt={`${product.name} view ${selectedImageIndex + 1}`} />{images.length > 1 && <><button type="button" onClick={() => setSelectedImageIndex((current) => (current - 1 + images.length) % images.length)} className="gallery-arrow left-3" aria-label="Previous product image">‹</button><button type="button" onClick={() => setSelectedImageIndex((current) => (current + 1) % images.length)} className="gallery-arrow right-3" aria-label="Next product image">›</button></>} </div>
+                  {images.length > 1 && <div className="mt-4 flex justify-center gap-2" aria-label="Product image position">{images.map((image, index) => <button key={`dot-${image.public_id || index}`} type="button" onClick={() => setSelectedImageIndex(index)} aria-label={`Show product image ${index + 1}`} className={`gallery-dot ${selectedImageIndex === index ? "gallery-dot-active" : ""}`} />)}</div>}
                 </div>
               </div>
             </section>

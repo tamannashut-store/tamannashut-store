@@ -22,7 +22,7 @@ function ProductImageSlider({ product, className = "h-72" }) {
         pagination={hasGallery ? { clickable: true } : false}
         loop={hasGallery}
         nested
-        className={`w-full ${className}`}
+        className={`commerce-slider product-card-slider w-full ${className}`}
       >
         {images.map((image, index) => (
           <SwiperSlide key={image.public_id || `${image.url}-${index}`}>

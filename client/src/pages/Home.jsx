@@ -91,7 +91,7 @@ function Home() {
               </div>
             </div>
             <div className="min-w-0 overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_75%_25%,#dce9df_0,#8dab96_65%,#52705b_100%)]">
-              {heroProducts.length ? <Swiper modules={[Autoplay, Navigation, Pagination]} navigation pagination={{ clickable: true }} autoplay={{ delay: 4200, disableOnInteraction: false }} loop={heroProducts.length > 1} className="h-[480px] lg:h-[620px]">
+              {heroProducts.length ? <Swiper modules={[Autoplay, Navigation, Pagination]} navigation pagination={{ clickable: true }} autoplay={{ delay: 4200, disableOnInteraction: false }} loop={heroProducts.length > 1} className="commerce-slider hero-slider h-[480px] lg:h-[620px]">
                 {heroProducts.map((product) => <SwiperSlide key={product._id}><Link to={`/product/${product._id}`} className="relative block h-full"><img src={product.images?.[0]?.url} alt={product.name} className="h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10"><p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p><h2 className="mt-2 font-serif text-3xl md:text-4xl">{product.name}</h2><p className="mt-2 text-lg">From ₹{Number(product.price).toLocaleString("en-IN")}</p></div></Link></SwiperSlide>)}
               </Swiper> : <Link to="/shop" className="flex h-[480px] items-end p-8 text-white lg:h-[620px]"><div><p className="text-xs font-semibold uppercase tracking-[0.22em]">Tamanna&apos;s Hut</p><h2 className="mt-3 font-serif text-4xl">Our collection is being prepared</h2></div></Link>}
             </div>
