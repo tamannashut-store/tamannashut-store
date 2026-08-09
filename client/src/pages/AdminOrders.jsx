@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -243,7 +243,7 @@ function AdminOrders() {
                                 <p className="font-semibold">
 
                                     Payment:
-                                    <span className="text-pink-500 ml-2">
+                                    <span className="text-brand-primary ml-2">
 
                                         {order.paymentMethod}
 
@@ -362,7 +362,7 @@ function AdminOrders() {
                                     onClick={() =>
                                         resendInvoice(order._id)
                                     }
-                                    className="bg-pink-500 text-white px-4 py-2 rounded-xl"
+                                    className="bg-brand-primary text-white px-4 py-2 rounded-xl"
                                 >
                                     Send Invoice
                                 </button>

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 function MyOrders() {
 
@@ -240,7 +241,7 @@ ${order.status === "Pending"
                                     <div className="mt-6 bg-gray-50 p-4 rounded-xl">
                                         <p className="font-semibold">Tracking Number</p>
 
-                                        <p className="text-pink-500">
+                                        <p className="text-brand-primary">
                                             {order.tracking.trackingId}
                                         </p>
                                         {order.tracking?.courier && (
@@ -252,7 +253,7 @@ ${order.status === "Pending"
                                             href={`https://www.shiprocket.in/shipment-tracking/?tracking_id=${order.tracking.trackingId}`}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="inline-block mt-3 bg-pink-500 text-white px-4 py-2 rounded-xl"
+                                            className="inline-block mt-3 bg-brand-primary text-white px-4 py-2 rounded-xl"
                                         >
                                             Track Package
                                         </a>
@@ -276,7 +277,7 @@ ${order.status === "Pending"
 
                                     <div
                                         key={index}
-                                        className="flex items-center gap-4 bg-pink-50 rounded-2xl p-4"
+                                        className="flex items-center gap-4 bg-brand-background rounded-2xl p-4"
                                     >
 
                                         <img

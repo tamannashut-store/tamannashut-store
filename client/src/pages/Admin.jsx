@@ -1,422 +1,170 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+const initialVariants = ["0-3M", "3-6M", "6-9M", "9-12M"].map((size) => ({ sku: "", size, color: "", stock: 0, price: "", active: true }));
+
 function Admin() {
+  const navigate = useNavigate();
+  const fileRef = useRef(null);
+  const previewUrls = useRef([]);
+  const [products, setProducts] = useState([]);
+  const [meta, setMeta] = useState({ page: 1, totalPages: 1, totalProducts: 0 });
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [selected, setSelected] = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ name: "", price: "", mrp: "", baseSku: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
+  const [variants, setVariants] = useState(initialVariants);
+  const [images, setImages] = useState([]);
+  const [previews, setPreviews] = useState([]);
 
-    const [name, setName] = useState("");
-    const [price, setPrice] = useState("");
-    const [images, setImages] = useState([]);
-    const [description, setDescription] = useState("");
-    const [category, setCategory] = useState("");
-    const [products, setProducts] = useState([]);
-    const [sizeStock, setSizeStock] = useState([
-        { size: "0-3M", stock: 0 },
-        { size: "3-6M", stock: 0 },
-        { size: "6-9M", stock: 0 },
-        { size: "9-12M", stock: 0 },
-    ]);
-    const navigate = useNavigate();
-    const [previewImages, setPreviewImages] = useState([]);
-    const previewImagesRef = useRef([]);
-    const [loading, setLoading] = useState(false);
-    const fileRef = useRef(null);
+  const fetchProducts = useCallback(async (page = 1) => {
+    try {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/admin/list`, {
+        params: { page, limit: 20, search: search || undefined, status: statusFilter || undefined },
+      });
+      setProducts(data.products || []);
+      setMeta({ page: data.currentPage, totalPages: data.totalPages, totalProducts: data.totalProducts });
+      setSelected([]);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Could not load products");
+    }
+  }, [search, statusFilter]);
 
-    const fetchProducts = async () => {
-        try {
-            const { data } = await axios.get(
-                `${import.meta.env.VITE_API_URL}/api/products`
-            );
-            setProducts(data.products || []);
-        } catch (error) {
-            console.log(error);
-        }
-    };
+  useEffect(() => {
+    const timer = setTimeout(() => fetchProducts(1), 250);
+    return () => clearTimeout(timer);
+  }, [fetchProducts]);
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
-    useEffect(() => () => {
-        previewImagesRef.current.forEach((url) => URL.revokeObjectURL(url));
-    }, []);
+  useEffect(() => () => previewUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
 
-    const makeCover = (selectedIndex) => {
-        setImages((current) => {
-            const updated = [...current];
-            const [selected] = updated.splice(selectedIndex, 1);
-            updated.unshift(selected);
-            return updated;
-        });
-        setPreviewImages((current) => {
-            const updated = [...current];
-            const [selected] = updated.splice(selectedIndex, 1);
-            updated.unshift(selected);
-            previewImagesRef.current = updated;
-            return updated;
-        });
-    };
+  const changeForm = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const updateVariant = (index, field, value) => setVariants((current) => current.map((variant, variantIndex) => variantIndex === index ? { ...variant, [field]: field === "stock" ? Number(value) : value } : variant));
 
-    const removeImage = (selectedIndex) => {
-        const removedUrl = previewImages[selectedIndex];
-        if (removedUrl) URL.revokeObjectURL(removedUrl);
-        setImages((current) => current.filter((_, index) => index !== selectedIndex));
-        setPreviewImages((current) => current.filter((_, index) => index !== selectedIndex));
-        previewImagesRef.current = previewImagesRef.current.filter((_, index) => index !== selectedIndex);
-    };
+  const autoGenerateSkus = () => {
+    const prefix = (form.baseSku || form.name).toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30);
+    setVariants((current) => current.map((variant) => ({ ...variant, sku: `${prefix}-${variant.size.replace(/[^A-Z0-9]+/gi, "")}`, color: variant.color || form.color, price: variant.price || form.price })));
+  };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (images.length === 0) {
-            toast.error("Please select images");
-            return;
-        }
-        try {
-            setLoading(true);
-            const formData = new FormData();
+  const selectImages = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 10) return toast.error("Maximum 10 images allowed");
+    previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    const urls = files.map((file) => URL.createObjectURL(file));
+    previewUrls.current = urls;
+    setImages(files);
+    setPreviews(urls);
+  };
 
-            formData.append("name", name);
-            formData.append("price", price);
-            formData.append("description", description);
-            images.forEach((image) => {
+  const makeCover = (index) => {
+    setImages((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); return next; });
+    setPreviews((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); previewUrls.current = next; return next; });
+  };
 
-                formData.append(
-                    "images",
-                    image
-                );
+  const resetCreate = () => {
+    previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    previewUrls.current = [];
+    setForm({ name: "", price: "", mrp: "", baseSku: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
+    setVariants(initialVariants);
+    setImages([]);
+    setPreviews([]);
+    if (fileRef.current) fileRef.current.value = "";
+  };
 
-            });
-            formData.append("category", category);
-            formData.append(
-                "sizeStock",
-                JSON.stringify(sizeStock)
-            );
+  const createProduct = async (event) => {
+    event.preventDefault();
+    if (!images.length) return toast.error("Add at least one product image");
+    if (variants.some((variant) => !variant.sku)) return toast.error("Generate or enter every variant SKU");
+    try {
+      setLoading(true);
+      const data = new FormData();
+      Object.entries(form).forEach(([key, value]) => {
+        if (key !== "tags") data.append(key, value);
+      });
+      data.append("tags", JSON.stringify(form.tags.split(",").map((tag) => tag.trim()).filter(Boolean)));
+      data.append("variants", JSON.stringify(variants));
+      data.append("sizeStock", JSON.stringify(variants.map(({ size, stock }) => ({ size, stock }))));
+      images.forEach((image) => data.append("images", image));
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/products`, data);
+      toast.success("Product listing created");
+      resetCreate();
+      setShowCreate(false);
+      fetchProducts(1);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Product could not be created");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            await axios.post(
-                `${import.meta.env.VITE_API_URL}/api/products`,
-                formData,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
-            );
+  const deleteProduct = async (id) => {
+    if (!window.confirm("Permanently delete this product and its images?")) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/products/${id}`);
+      toast.success("Product deleted");
+      fetchProducts(meta.page);
+    } catch (error) { toast.error(error.response?.data?.message || "Delete failed"); }
+  };
 
-            toast.success("Product Added");
+  const bulkStatus = async (status) => {
+    if (!selected.length) return toast.error("Select at least one product");
+    try {
+      await axios.patch(`${import.meta.env.VITE_API_URL}/api/products/admin/bulk-status`, { ids: selected, status });
+      toast.success(`${selected.length} products updated`);
+      fetchProducts(meta.page);
+    } catch (error) { toast.error(error.response?.data?.message || "Bulk update failed"); }
+  };
 
-            setName("");
-            setPrice("");
-            setDescription("");
-            setImages([]);
-            previewImagesRef.current.forEach((url) => URL.revokeObjectURL(url));
-            previewImagesRef.current = [];
-            setPreviewImages([]);
-            if (fileRef.current) {
-                fileRef.current.value = "";
-            }
-            setCategory("");
-            setSizeStock([
-                { size: "0-3M", stock: 0 },
-                { size: "3-6M", stock: 0 },
-                { size: "6-9M", stock: 0 },
-                { size: "9-12M", stock: 0 },
-            ]);
+  return (
+    <div className="p-5 md:p-8 xl:p-10">
+      <header className="flex flex-wrap items-end justify-between gap-5">
+        <div><p className="eyebrow">Catalogue</p><h1 className="mt-2 text-3xl font-bold md:text-4xl">Product listings</h1><p className="mt-2 text-sm text-slate-500">{meta.totalProducts} products across all listing states</p></div>
+        <button onClick={() => setShowCreate((value) => !value)} className="btn-primary">{showCreate ? "Close form" : "+ Add product"}</button>
+      </header>
 
-            fetchProducts();
-        } catch (error) {
-            console.log(error);
-            toast.error(
-                error.response?.data?.message || "Upload failed"
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
+      {showCreate && (
+        <form onSubmit={createProduct} className="mt-8 grid gap-6 xl:grid-cols-[1fr_400px]">
+          <div className="space-y-6">
+            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Listing information</h2><div className="mt-5 grid gap-4 md:grid-cols-2">
+              <label className="md:col-span-2"><span className="field-label">Product name</span><input required name="name" value={form.name} onChange={changeForm} className="field-control" /></label>
+              <label><span className="field-label">Selling price (₹)</span><input required min="0" type="number" name="price" value={form.price} onChange={changeForm} className="field-control" /></label>
+              <label><span className="field-label">MRP (₹)</span><input required min="0" type="number" name="mrp" value={form.mrp} onChange={changeForm} className="field-control" /></label>
+              <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} placeholder="TH-DRESS-001" className="field-control uppercase" /></label>
+              <label><span className="field-label">Category</span><select required name="category" value={form.category} onChange={changeForm} className="field-control"><option value="">Select</option><option value="girls">Girls</option><option value="boys">Boys</option><option value="new-arrivals">New arrivals</option></select></label>
+              <label><span className="field-label">Colour</span><input name="color" value={form.color} onChange={changeForm} className="field-control" /></label>
+              <label><span className="field-label">Fabric</span><input name="fabric" value={form.fabric} onChange={changeForm} className="field-control" /></label>
+              <label><span className="field-label">Age group</span><input name="ageGroup" value={form.ageGroup} onChange={changeForm} placeholder="0–12 months" className="field-control" /></label>
+              <label><span className="field-label">Tags</span><input name="tags" value={form.tags} onChange={changeForm} placeholder="party, cotton, summer" className="field-control" /></label>
+              <label className="md:col-span-2"><span className="field-label">Description</span><textarea required rows="5" name="description" value={form.description} onChange={changeForm} className="field-control" /></label>
+            </div></section>
 
-    const handleDelete = async (productId) => {
-        const confirmDelete = window.confirm("Delete this product?");
-        if (!confirmDelete) return;
+            <section className="surface-card p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-semibold">SKU variants</h2><p className="mt-1 text-sm text-slate-500">Each sellable size needs its own unique SKU.</p></div><button type="button" onClick={autoGenerateSkus} className="btn-secondary text-sm">Generate SKUs</button></div>
+              <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[680px] text-sm"><thead className="text-left text-xs uppercase tracking-wider text-slate-500"><tr><th className="pb-3">SKU</th><th>Size</th><th>Colour</th><th>Price</th><th>Stock</th></tr></thead><tbody>{variants.map((variant, index) => <tr key={variant.size} className="border-t"><td className="py-3 pr-2"><input value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value.toUpperCase())} className="field-control py-2 uppercase" /></td><td className="pr-2"><input value={variant.size} onChange={(event) => updateVariant(index, "size", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input value={variant.color} onChange={(event) => updateVariant(index, "color", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input type="number" min="0" value={variant.price} onChange={(event) => updateVariant(index, "price", event.target.value)} className="field-control py-2" /></td><td><input type="number" min="0" value={variant.stock} onChange={(event) => updateVariant(index, "stock", event.target.value)} className="field-control py-2" /></td></tr>)}</tbody></table></div>
+            </section>
+          </div>
 
-        try {
-            await axios.delete(
-                `${import.meta.env.VITE_API_URL}/api/products/${productId}`
-            );
+          <aside className="space-y-6">
+            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Images</h2><p className="mt-1 text-sm text-slate-500">First image is the cover. Maximum 10.</p><input ref={fileRef} type="file" multiple accept="image/*" onChange={selectImages} className="mt-4 w-full text-sm" /><div className="mt-4 grid grid-cols-3 gap-2">{previews.map((url, index) => <button type="button" key={url} onClick={() => makeCover(index)} className={`relative overflow-hidden rounded-xl border-2 ${index === 0 ? "border-brand-primary" : "border-transparent"}`}><img src={url} alt="" className="aspect-square w-full object-cover" />{index === 0 && <span className="absolute left-1 top-1 rounded bg-brand-primary px-1.5 py-0.5 text-[10px] text-white">Cover</span>}</button>)}</div></section>
+            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Listing status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert at</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label><button disabled={loading} className="btn-primary mt-6 w-full">{loading ? "Creating…" : "Create listing"}</button></section>
+          </aside>
+        </form>
+      )}
 
-            toast.success("Product Deleted");
-            setProducts((prevProducts) =>
-                prevProducts.filter(
-                    (product) => product._id !== productId
-                )
-            );
-        } catch (error) {
-            console.log(error);
-            toast.error("Delete Failed");
-        }
-    };
-
-    return (
-        <div className="max-w-5xl mx-auto px-6 py-20">
-            <button
-                onClick={() => {
-                    localStorage.removeItem("user");
-                    delete axios.defaults.headers.common["Authorization"];
-                    window.location.href = "/admin-login";
-                }}
-                className="bg-red-500 text-white px-4 py-2 rounded-xl"
-            >
-                Logout
-            </button>
-            <h1 className="text-5xl font-bold mb-10">
-                Admin Dashboard
-            </h1>
-
-            <form
-                onSubmit={handleSubmit}
-                className="bg-white shadow-2xl rounded-[40px] p-10 space-y-6"
-            >
-                <div>
-                    <label className="block mb-2 font-semibold">
-                        Product Name
-                    </label>
-
-                    <input required
-                        type="text"
-                        placeholder="Enter product name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full border p-4 rounded-2xl outline-none focus:border-pink-500"
-                    />
-                </div>
-
-                <div>
-                    <label className="block mb-2 font-semibold">
-                        Product Price
-                    </label>
-
-                    <input required
-                        type="number"
-                        placeholder="Enter product price"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        className="w-full border p-4 rounded-2xl outline-none focus:border-pink-500"
-                    />
-                </div>
-                <div>
-
-                    <h3 className="font-semibold mb-4">
-                        Size Wise Stock
-                    </h3>
-
-                    <div className="grid gap-4">
-
-                        {sizeStock.map((item, index) => (
-
-                            <div
-                                key={item.size}
-                                className="flex items-center gap-4"
-                            >
-
-                                <span className="w-24 font-medium">
-                                    {item.size}
-                                </span>
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={item.stock}
-                                    onChange={(e) => {
-
-                                        const updated = [...sizeStock];
-
-                                        updated[index].stock =
-                                            Number(e.target.value);
-
-                                        setSizeStock(updated);
-
-                                    }}
-                                    className="border p-3 rounded-xl w-40"
-                                />
-
-                            </div>
-
-                        ))}
-
-                    </div>
-
-                </div>
-                <div>
-                    <label className="block mb-2 font-semibold">
-                        Upload Product Images (Max 10)
-                    </label>
-
-                    <input
-                        ref={fileRef}
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={(e) => {
-
-                            const files = Array.from(e.target.files);
-
-                            if (files.length > 10) {
-                                toast.error("Maximum 10 images allowed");
-                                return;
-                            }
-
-                            previewImagesRef.current.forEach((url) => URL.revokeObjectURL(url));
-                            setImages(files);
-
-                            const previews = files.map(file =>
-                                URL.createObjectURL(file)
-                            );
-
-                            previewImagesRef.current = previews;
-                            setPreviewImages(previews);
-
-                        }}
-                    />
-                    <p className="mt-2 text-sm text-gray-500">
-                        The first image is the cover shown across the store. Choose clear front, back and detail photos.
-                    </p>
-                    <div className="grid grid-cols-2 gap-4 mt-4 sm:grid-cols-3 md:grid-cols-5">
-
-                        {
-                            previewImages.map((img, index) => (
-
-                                <div key={img} className="rounded-2xl border bg-gray-50 p-2">
-                                    <div className="relative">
-                                        <img
-                                            src={img}
-                                            alt={`Product preview ${index + 1}`}
-                                            className="aspect-square w-full rounded-xl object-cover"
-                                        />
-                                        {index === 0 && (
-                                            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-xs text-white">
-                                                Cover
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="mt-2 flex flex-col gap-1 text-xs">
-                                        {index > 0 && (
-                                            <button type="button" onClick={() => makeCover(index)} className="rounded-lg border bg-white px-2 py-1">
-                                                Make cover
-                                            </button>
-                                        )}
-                                        <button type="button" onClick={() => removeImage(index)} className="rounded-lg px-2 py-1 text-red-600">
-                                            Remove
-                                        </button>
-                                    </div>
-                                </div>
-
-                            ))
-                        }
-
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block mb-2 font-semibold">
-                        Category
-                    </label>
-
-                    <select required
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        className="w-full border p-4 rounded-2xl"
-                    >
-                        <option value="">Select Category</option>
-
-                        <option value="girls">
-                            Girls
-                        </option>
-
-                        <option value="boys">
-                            Boys
-                        </option>
-
-                        <option value="new-arrivals">
-                            New Arrivals
-                        </option>
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block mb-2 font-semibold">
-                        Product Description
-                    </label>
-
-                    <textarea
-                        rows="5"
-                        placeholder="Enter product description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="w-full border p-4 rounded-2xl outline-none focus:border-pink-500"
-                    ></textarea>
-                </div>
-
-                <button
-                    disabled={loading}
-                    type="submit"
-                    className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white py-4 rounded-full text-lg font-semibold"
-                >
-                    {
-                        loading ? "Uploading Images..." : "Add Product"
-                    }
-                </button>
-            </form>
-
-            <div className="mt-16 grid md:grid-cols-3 gap-8">
-                {products.map((product) => (
-                    <div
-                        key={product._id}
-                        className="bg-white shadow-xl rounded-3xl p-5"
-                    >
-                        <img
-                            src={product.images?.[0]?.url}
-                            alt={`${product.name} - Tamanna's Hut Kids Fashion`}
-                            className="w-full h-64 object-cover rounded-2xl"
-                        />
-
-                        <h2 className="text-xl font-bold mt-4">
-                            {product.name}
-                        </h2>
-
-                        <p className="text-pink-500 font-bold mt-2">
-                            ₹{product.price}
-                        </p>
-                        <div className="mt-2 text-gray-600">
-
-                            {product.sizeStock?.map((item) => (
-
-                                <p key={item.size}>
-                                    {item.size}: {item.stock}
-                                </p>
-
-                            ))}
-
-                        </div>
-                        <div className="flex gap-3 mt-5">
-                            <button
-                                onClick={() =>
-                                    navigate(`/admin/edit/${product._id}`)
-                                }
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl"
-                            >
-                                Edit
-                            </button>
-
-                            <button
-                                onClick={() => handleDelete(product._id)}
-                                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl"
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
+      <section className="surface-card mt-8 overflow-hidden">
+        <div className="flex flex-wrap gap-3 border-b p-4"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or SKU" className="field-control max-w-sm" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="field-control max-w-44"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select>{selected.length > 0 && <><button onClick={() => bulkStatus("active")} className="btn-secondary text-sm">Activate</button><button onClick={() => bulkStatus("archived")} className="btn-secondary text-sm">Archive</button></>}</div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500"><tr><th className="p-4"><input type="checkbox" checked={products.length > 0 && selected.length === products.length} onChange={(event) => setSelected(event.target.checked ? products.map((product) => product._id) : [])} /></th><th>Product</th><th>Status</th><th>Price</th><th>Inventory</th><th>Updated</th><th className="pr-5 text-right">Actions</th></tr></thead><tbody>{products.map((product) => {
+          const stock = (product.variants?.length ? product.variants : product.sizeStock || []).reduce((sum, item) => sum + Number(item.stock || 0), 0);
+          const low = stock <= Number(product.lowStockThreshold ?? 3);
+          return <tr key={product._id} className="border-t hover:bg-slate-50/60"><td className="p-4"><input type="checkbox" checked={selected.includes(product._id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, product._id] : current.filter((id) => id !== product._id))} /></td><td className="py-4"><div className="flex items-center gap-3"><img src={product.images?.[0]?.url || "/placeholder.png"} alt="" className="h-14 w-12 rounded-lg object-cover" /><div><p className="font-semibold">{product.name}</p><p className="mt-1 text-xs text-slate-500">{product.baseSku || "No base SKU"} · {product.variants?.length || product.sizeStock?.length || 0} variants</p></div></div></td><td><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.status === "draft" ? "bg-amber-50 text-amber-700" : product.status === "archived" ? "bg-slate-100 text-slate-600" : "bg-green-50 text-green-700"}`}>{product.status || "active"}</span></td><td><p className="font-semibold">₹{Number(product.price).toLocaleString("en-IN")}</p>{product.mrp > product.price && <p className="text-xs text-slate-400 line-through">₹{product.mrp}</p>}</td><td><p className={low ? "font-semibold text-red-600" : "font-semibold text-slate-700"}>{stock} units</p><p className="text-xs text-slate-500">{low ? "Low stock" : "Available"}</p></td><td className="text-slate-500">{new Date(product.updatedAt).toLocaleDateString("en-IN")}</td><td className="pr-5 text-right"><button onClick={() => navigate(`/admin/edit/${product._id}`)} className="font-semibold text-brand-primary">Edit</button><button onClick={() => deleteProduct(product._id)} className="ml-4 text-red-600">Delete</button></td></tr>;
+        })}</tbody></table></div>
+        {!products.length && <div className="p-12 text-center text-slate-500">No products match these filters.</div>}
+        <div className="flex items-center justify-between border-t p-4 text-sm"><span>Page {meta.page} of {meta.totalPages}</span><div className="flex gap-2"><button disabled={meta.page <= 1} onClick={() => fetchProducts(meta.page - 1)} className="btn-secondary py-2 text-sm disabled:opacity-40">Previous</button><button disabled={meta.page >= meta.totalPages} onClick={() => fetchProducts(meta.page + 1)} className="btn-secondary py-2 text-sm disabled:opacity-40">Next</button></div></div>
+      </section>
+    </div>
+  );
 }
 
 export default Admin;

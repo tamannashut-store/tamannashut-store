@@ -6,240 +6,91 @@ import toast from "react-hot-toast";
 function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const createdPreviewUrls = useRef([]);
-
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [sizeStock, setSizeStock] = useState([]);
-  const [imageItems, setImageItems] = useState([]);
+  const previewUrls = useRef([]);
+  const [form, setForm] = useState({ name: "", price: "", mrp: "", baseSku: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
+  const [variants, setVariants] = useState([]);
+  const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const previewUrls = createdPreviewUrls.current;
-    const fetchProduct = async () => {
-      try {
-        const { data } = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/products/${id}`
-        );
-        setName(data.name || "");
-        setPrice(data.price ?? "");
-        setDescription(data.description || "");
-        setCategory(data.category || "");
-        setSizeStock(data.sizeStock || []);
-        setImageItems(
-          (data.images || []).map((image) => ({
-            id: image.public_id,
-            type: "existing",
-            public_id: image.public_id,
-            url: image.url,
-          }))
-        );
-      } catch (error) {
-        console.error(error);
-        toast.error("Could not load this product");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProduct();
-    return () => {
-      previewUrls.forEach((url) => URL.revokeObjectURL(url));
-    };
+    const urls = previewUrls.current;
+    axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`)
+      .then(({ data }) => {
+        setForm({
+          name: data.name || "", price: data.price ?? "", mrp: data.mrp ?? data.price ?? "", baseSku: data.baseSku || "",
+          category: String(data.category || "").toLowerCase().replace(/\s+/g, "-"), color: data.color || "", fabric: data.fabric || "",
+          ageGroup: data.ageGroup || "", tags: (data.tags || []).join(", "), status: data.status || "active",
+          lowStockThreshold: data.lowStockThreshold ?? 3, description: data.description || "",
+        });
+        setVariants(data.variants?.length ? data.variants : (data.sizeStock || []).map((item) => ({ sku: `${data.baseSku || data._id}-${item.size}`.toUpperCase(), size: item.size, color: data.color || "", stock: item.stock, price: data.price, active: true })));
+        setImages((data.images || []).map((image) => ({ id: image.public_id, type: "existing", public_id: image.public_id, url: image.url })));
+      })
+      .catch(() => toast.error("Could not load this product"))
+      .finally(() => setLoading(false));
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
   }, [id]);
 
+  const changeForm = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const changeVariant = (index, field, value) => setVariants((current) => current.map((variant, variantIndex) => variantIndex === index ? { ...variant, [field]: field === "stock" ? Number(value) : value } : variant));
+  const addVariant = () => setVariants((current) => [...current, { sku: "", size: "", color: form.color, stock: 0, price: form.price, active: true }]);
   const addImages = (event) => {
     const files = Array.from(event.target.files || []);
-    if (imageItems.length + files.length > 10) {
-      toast.error("A product can have a maximum of 10 images");
-      event.target.value = "";
-      return;
-    }
-
-    const additions = files.map((file, index) => {
-      const url = URL.createObjectURL(file);
-      createdPreviewUrls.current.push(url);
-      return {
-        id: `new-${Date.now()}-${index}-${file.name}`,
-        type: "new",
-        file,
-        url,
-      };
-    });
-    setImageItems((current) => [...current, ...additions]);
+    if (images.length + files.length > 10) return toast.error("Maximum 10 images allowed");
+    const next = files.map((file, index) => { const url = URL.createObjectURL(file); previewUrls.current.push(url); return { id: `new-${Date.now()}-${index}`, type: "new", file, url }; });
+    setImages((current) => [...current, ...next]);
     event.target.value = "";
   };
+  const moveCover = (index) => setImages((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); return next; });
 
-  const makeCover = (index) => {
-    setImageItems((current) => {
-      const updated = [...current];
-      const [selected] = updated.splice(index, 1);
-      updated.unshift(selected);
-      return updated;
-    });
-  };
-
-  const moveImage = (index, direction) => {
-    const target = index + direction;
-    if (target < 0 || target >= imageItems.length) return;
-    setImageItems((current) => {
-      const updated = [...current];
-      [updated[index], updated[target]] = [updated[target], updated[index]];
-      return updated;
-    });
-  };
-
-  const removeImage = (index) => {
-    setImageItems((current) => current.filter((_, itemIndex) => itemIndex !== index));
-  };
-
-  const handleUpdate = async (event) => {
+  const submit = async (event) => {
     event.preventDefault();
-    if (imageItems.length === 0) {
-      toast.error("Keep at least one product image");
-      return;
-    }
-
+    if (!images.length || !variants.length) return toast.error("Keep at least one image and variant");
     try {
       setSaving(true);
-      const formData = new FormData();
-      formData.append("name", name);
-      formData.append("price", price);
-      formData.append("description", description);
-      formData.append("category", category);
-      formData.append("sizeStock", JSON.stringify(sizeStock));
-
-      const existingImages = imageItems
-        .filter((item) => item.type === "existing")
-        .map(({ public_id, url }) => ({ public_id, url }));
-      const newItems = imageItems.filter((item) => item.type === "new");
-      const newIndexById = new Map(newItems.map((item, index) => [item.id, index]));
-
-      formData.append("existingImages", JSON.stringify(existingImages));
-      formData.append(
-        "imageOrder",
-        JSON.stringify(
-          imageItems.map((item) =>
-            item.type === "existing"
-              ? { type: "existing", public_id: item.public_id }
-              : { type: "new", fileIndex: newIndexById.get(item.id) }
-          )
-        )
-      );
-      newItems.forEach((item) => formData.append("images", item.file));
-
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/products/${id}`,
-        formData
-      );
+      const data = new FormData();
+      Object.entries(form).forEach(([key, value]) => data.append(key, key === "tags" ? JSON.stringify(String(value).split(",").map((tag) => tag.trim()).filter(Boolean)) : value));
+      data.append("variants", JSON.stringify(variants));
+      data.append("sizeStock", JSON.stringify(variants.map(({ size, stock }) => ({ size, stock }))));
+      const existing = images.filter((image) => image.type === "existing");
+      const newImages = images.filter((image) => image.type === "new");
+      const newIndex = new Map(newImages.map((image, index) => [image.id, index]));
+      data.append("existingImages", JSON.stringify(existing.map(({ public_id, url }) => ({ public_id, url }))));
+      data.append("imageOrder", JSON.stringify(images.map((image) => image.type === "existing" ? { type: "existing", public_id: image.public_id } : { type: "new", fileIndex: newIndex.get(image.id) })));
+      data.append("inventoryReason", "Seller listing updated");
+      newImages.forEach((image) => data.append("images", image.file));
+      await axios.put(`${import.meta.env.VITE_API_URL}/api/products/${id}`, data);
       toast.success("Product updated");
       navigate("/admin");
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Update failed");
-    } finally {
-      setSaving(false);
-    }
+    } catch (error) { toast.error(error.response?.data?.message || "Update failed"); }
+    finally { setSaving(false); }
   };
 
-  if (loading) {
-    return <div className="mx-auto max-w-6xl px-6 py-20">Loading product…</div>;
-  }
+  if (loading) return <div className="p-10 text-slate-500">Loading product…</div>;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-16">
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-wider text-brand-primary">Seller listing</p>
-          <h1 className="mt-1 text-4xl font-bold">Edit product</h1>
+    <div className="p-5 md:p-8 xl:p-10">
+      <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1></div><button onClick={() => navigate("/admin")} className="btn-secondary">Back to products</button></header>
+      <form onSubmit={submit} className="mt-8 grid gap-6 xl:grid-cols-[1fr_380px]">
+        <div className="space-y-6">
+          <section className="surface-card p-6"><h2 className="text-xl font-semibold">Product information</h2><div className="mt-5 grid gap-4 md:grid-cols-2">
+            <label className="md:col-span-2"><span className="field-label">Name</span><input required name="name" value={form.name} onChange={changeForm} className="field-control" /></label>
+            <label><span className="field-label">Selling price (₹)</span><input required type="number" min="0" name="price" value={form.price} onChange={changeForm} className="field-control" /></label>
+            <label><span className="field-label">MRP (₹)</span><input required type="number" min={form.price || 0} name="mrp" value={form.mrp} onChange={changeForm} className="field-control" /></label>
+            <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} className="field-control uppercase" /></label>
+            <label><span className="field-label">Category</span><select required name="category" value={form.category} onChange={changeForm} className="field-control"><option value="girls">Girls</option><option value="boys">Boys</option><option value="new-arrivals">New arrivals</option></select></label>
+            <label><span className="field-label">Colour</span><input name="color" value={form.color} onChange={changeForm} className="field-control" /></label>
+            <label><span className="field-label">Fabric</span><input name="fabric" value={form.fabric} onChange={changeForm} className="field-control" /></label>
+            <label><span className="field-label">Age group</span><input name="ageGroup" value={form.ageGroup} onChange={changeForm} className="field-control" /></label>
+            <label><span className="field-label">Tags</span><input name="tags" value={form.tags} onChange={changeForm} className="field-control" /></label>
+            <label className="md:col-span-2"><span className="field-label">Description</span><textarea required rows="6" name="description" value={form.description} onChange={changeForm} className="field-control" /></label>
+          </div></section>
+          <section className="surface-card p-6"><div className="flex items-center justify-between"><div><h2 className="text-xl font-semibold">SKU variants</h2><p className="mt-1 text-sm text-slate-500">Stock changes are recorded in inventory history.</p></div><button type="button" onClick={addVariant} className="btn-secondary text-sm">+ Variant</button></div>
+            <div className="mt-5 overflow-x-auto"><table className="w-full min-w-[700px] text-sm"><thead className="text-left text-xs uppercase text-slate-500"><tr><th className="pb-3">SKU</th><th>Size</th><th>Colour</th><th>Price</th><th>Stock</th><th></th></tr></thead><tbody>{variants.map((variant, index) => <tr key={`${variant.sku}-${index}`} className="border-t"><td className="py-3 pr-2"><input value={variant.sku} onChange={(event) => changeVariant(index, "sku", event.target.value.toUpperCase())} className="field-control py-2 uppercase" /></td><td className="pr-2"><input value={variant.size} onChange={(event) => changeVariant(index, "size", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input value={variant.color || ""} onChange={(event) => changeVariant(index, "color", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input type="number" min="0" value={variant.price ?? form.price} onChange={(event) => changeVariant(index, "price", event.target.value)} className="field-control py-2" /></td><td className="pr-2"><input type="number" min="0" value={variant.stock} onChange={(event) => changeVariant(index, "stock", event.target.value)} className="field-control py-2" /></td><td><button type="button" onClick={() => setVariants((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="text-red-600">Remove</button></td></tr>)}</tbody></table></div>
+          </section>
+          <section className="surface-card p-6"><div className="flex items-center justify-between"><div><h2 className="text-xl font-semibold">Product images</h2><p className="mt-1 text-sm text-slate-500">Click any photo to make it the cover.</p></div><label className="btn-secondary cursor-pointer text-sm">Add photos<input type="file" multiple accept="image/*" onChange={addImages} className="hidden" /></label></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">{images.map((image, index) => <div key={image.id} className="rounded-xl border p-2"><button type="button" onClick={() => moveCover(index)} className="relative w-full"><img src={image.url} alt="" className="aspect-square w-full rounded-lg object-cover" />{index === 0 && <span className="absolute left-2 top-2 rounded bg-brand-primary px-2 py-1 text-xs text-white">Cover</span>}</button><button type="button" onClick={() => setImages((current) => current.filter((_, imageIndex) => imageIndex !== index))} className="mt-2 w-full text-xs text-red-600">Remove</button></div>)}</div></section>
         </div>
-        <button type="button" onClick={() => navigate("/admin")} className="rounded-xl border px-5 py-3">
-          Back to products
-        </button>
-      </div>
-
-      <form onSubmit={handleUpdate} className="grid gap-8 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-8">
-          <section className="rounded-3xl border bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Product information</h2>
-            <div className="mt-6 grid gap-5 sm:grid-cols-2">
-              <label className="sm:col-span-2">
-                <span className="mb-2 block font-medium">Product name</span>
-                <input required value={name} onChange={(event) => setName(event.target.value)} className="w-full rounded-xl border p-3" />
-              </label>
-              <label>
-                <span className="mb-2 block font-medium">Price (₹)</span>
-                <input required min="0" type="number" value={price} onChange={(event) => setPrice(event.target.value)} className="w-full rounded-xl border p-3" />
-              </label>
-              <label>
-                <span className="mb-2 block font-medium">Category</span>
-                <select required value={category} onChange={(event) => setCategory(event.target.value)} className="w-full rounded-xl border p-3">
-                  <option value="">Select category</option>
-                  <option value="girls">Girls</option>
-                  <option value="boys">Boys</option>
-                  <option value="new-arrivals">New Arrivals</option>
-                  <option value="Girls">Girls (legacy)</option>
-                  <option value="Boys">Boys (legacy)</option>
-                  <option value="New Arrivals">New Arrivals (legacy)</option>
-                </select>
-              </label>
-              <label className="sm:col-span-2">
-                <span className="mb-2 block font-medium">Description</span>
-                <textarea rows="6" value={description} onChange={(event) => setDescription(event.target.value)} className="w-full rounded-xl border p-3" />
-              </label>
-            </div>
-          </section>
-
-          <section className="rounded-3xl border bg-white p-6 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-semibold">Product photos</h2>
-                <p className="mt-1 text-sm text-gray-500">The first photo is the storefront cover. Add up to 10 photos.</p>
-              </div>
-              <label className="cursor-pointer rounded-xl bg-brand-primary px-4 py-2 text-white">
-                Add photos
-                <input type="file" multiple accept="image/*" onChange={addImages} className="hidden" />
-              </label>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-              {imageItems.map((item, index) => (
-                <div key={item.id} className="rounded-2xl border bg-gray-50 p-2">
-                  <div className="relative">
-                    <img src={item.url} alt={`Product photo ${index + 1}`} className="aspect-square w-full rounded-xl object-cover" />
-                    {index === 0 && <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-xs text-white">Cover</span>}
-                  </div>
-                  <div className="mt-2 grid grid-cols-2 gap-1 text-xs">
-                    <button type="button" disabled={index === 0} onClick={() => moveImage(index, -1)} className="rounded-lg border bg-white py-1 disabled:opacity-30">←</button>
-                    <button type="button" disabled={index === imageItems.length - 1} onClick={() => moveImage(index, 1)} className="rounded-lg border bg-white py-1 disabled:opacity-30">→</button>
-                    {index > 0 && <button type="button" onClick={() => makeCover(index)} className="col-span-2 rounded-lg border bg-white py-1">Make cover</button>}
-                    <button type="button" onClick={() => removeImage(index)} className="col-span-2 rounded-lg py-1 text-red-600">Remove</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <aside className="space-y-6">
-          <section className="rounded-3xl border bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold">Inventory by size</h2>
-            <div className="mt-5 space-y-3">
-              {sizeStock.map((item, index) => (
-                <label key={item.size} className="flex items-center justify-between gap-4">
-                  <span>{item.size}</span>
-                  <input type="number" min="0" value={item.stock} onChange={(event) => setSizeStock((current) => current.map((stockItem, stockIndex) => stockIndex === index ? { ...stockItem, stock: Number(event.target.value) } : stockItem))} className="w-28 rounded-xl border p-2" />
-                </label>
-              ))}
-            </div>
-          </section>
-          <button disabled={saving} type="submit" className="w-full rounded-xl bg-brand-primary py-4 font-semibold text-white disabled:bg-gray-400">
-            {saving ? "Saving product…" : "Save product"}
-          </button>
-        </aside>
+        <aside className="space-y-6"><section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label></section><button disabled={saving} className="btn-primary w-full py-4">{saving ? "Saving…" : "Save listing"}</button></aside>
       </form>
     </div>
   );

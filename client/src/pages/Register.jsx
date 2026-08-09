@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -83,7 +83,7 @@ function Register() {
                 <input type="text" name="name" placeholder="Name" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
                 <input type="email" name="email" placeholder="Email" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
                 <input type="password" name="password" placeholder="Password" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
-                <button type="submit" className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full text-lg font-semibold">Register</button>
+                <button type="submit" className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white py-4 rounded-full text-lg font-semibold">Register</button>
             </form>
         </div>
     );

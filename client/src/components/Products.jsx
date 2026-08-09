@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 const products = [
     {
         id: 1,
@@ -27,7 +27,7 @@ const products = [
     {
         id: 4,
         name: "Premium Ethnic Set",
-        price: "₹1199",
+        price: "₹1,199",
         image:
             "https://images.unsplash.com/photo-1514090458221-65bb69cf63e6?q=80&w=800&auto=format&fit=crop",
     },
@@ -72,27 +72,17 @@ function Products() {
                                 {product.name}
                             </h3>
 
-                            <p className="text-pink-500 text-xl font-semibold mt-3">
+                            <p className="text-brand-primary text-xl font-semibold mt-3">
                                 {product.price}
                             </p>
                             <div className="text-yellow-500">
 
-                                ⭐ {product.averageRating?.toFixed(1) || "0.0"}
+                                ★ {product.averageRating?.toFixed(1) || "0.0"}
 
                             </div>
-                            <button
-                                onClick={() => addToCart(product)}
-                                disabled={product.stock <= 0}
-                                className={`px-6 py-3 rounded-full text-white font-semibold
-    ${product.stock <= 0
-                                        ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-pink-500 hover:bg-pink-600"
-                                    }`}
-                            >
-                                {product.stock <= 0
-                                    ? "Out Of Stock"
-                                    : "Add To Cart"}
-                            </button>
+                            <span className="mt-5 inline-flex rounded-full bg-brand-primary px-6 py-3 font-semibold text-white">
+                                View product
+                            </span>
 
                         </div>
                     </Link>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -239,7 +239,7 @@ function Profile() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full font-semibold"
+          className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white py-4 rounded-full font-semibold"
         >
 
           {loading

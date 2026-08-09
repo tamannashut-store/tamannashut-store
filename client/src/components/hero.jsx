@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 
 function Hero() {
 
@@ -12,7 +12,7 @@ function Hero() {
 
         <div className="z-10">
 
-          <p className="text-pink-500 font-semibold uppercase tracking-widest mb-4">
+          <p className="text-brand-primary font-semibold uppercase tracking-widest mb-4">
 
             Premium Kids Collection
 
@@ -21,7 +21,7 @@ function Hero() {
           <h1 className="text-5xl md:text-7xl font-extrabold leading-tight text-gray-900">
 
             Fashion For
-            <span className="text-pink-500"> Little Stars</span>
+            <span className="text-brand-primary"> Little Stars</span>
 
           </h1>
 
@@ -36,7 +36,7 @@ function Hero() {
 
             <Link to="/shop">
 
-              <button className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg transition">
+              <button className="bg-brand-primary hover:bg-brand-primary-dark text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg transition">
 
                 Shop Now
 
@@ -87,7 +87,7 @@ function Hero() {
             <div>
 
               <h2 className="text-3xl font-bold text-gray-900">
-                4.9★
+                4.9 ★
               </h2>
 
               <p className="text-gray-500">
@@ -123,3 +123,4 @@ function Hero() {
 }
 
 export default Hero;
+

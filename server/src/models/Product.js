@@ -4,6 +4,8 @@ const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     price: { type: Number, required: true },
+    mrp: { type: Number },
+    baseSku: { type: String, trim: true, uppercase: true },
     description: String,
     images: [
       {
@@ -18,11 +20,32 @@ const productSchema = new mongoose.Schema(
       },
     ],
     category: String,
+    color: { type: String, trim: true },
+    fabric: { type: String, trim: true },
+    ageGroup: { type: String, trim: true },
+    tags: [{ type: String, trim: true, lowercase: true }],
+    status: {
+      type: String,
+      enum: ["draft", "active", "archived"],
+      default: "active",
+      index: true,
+    },
+    lowStockThreshold: { type: Number, default: 3, min: 0 },
 
     sizeStock: [
       {
         size: String,
         stock: Number,
+      },
+    ],
+    variants: [
+      {
+        sku: { type: String, trim: true, uppercase: true },
+        size: { type: String, trim: true },
+        color: { type: String, trim: true },
+        stock: { type: Number, default: 0, min: 0 },
+        price: { type: Number, min: 0 },
+        active: { type: Boolean, default: true },
       },
     ],
 
@@ -52,6 +75,7 @@ productSchema.index({ createdAt: -1 });
 productSchema.index({ category: 1 });
 productSchema.index({ price: 1 });
 productSchema.index({ averageRating: -1 });
+productSchema.index({ "variants.sku": 1 });
 
 const Product = mongoose.model("Product", productSchema);
 

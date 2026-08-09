@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { useState, useContext } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 import { FiShoppingBag, FiHeart, FiUser, FiSearch } from "react-icons/fi";
@@ -42,14 +42,14 @@ function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   return (
     <div>
-      <div className="bg-[#355E3B] border-b border-pink-100">
+      <div className="bg-[#355E3B] border-b border-brand-accent">
         <div className="max-w-[1400px] mx-auto px-6 h-10 flex items-center justify-center gap-8 text-sm text-white">
 
-          <span>🚚 Free Shipping Above ₹999</span>
+          <span>Free shipping above ₹999</span>
 
-          <span>💳 COD Available</span>
+          <span>Cash on delivery available</span>
 
-          <span>↩ Easy Returns</span>
+          <span>Easy returns</span>
 
         </div>
       </div>
@@ -382,3 +382,4 @@ function Navbar() {
 }
 
 export default Navbar;
+

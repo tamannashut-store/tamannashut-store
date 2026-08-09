@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -146,7 +146,7 @@ function Login() {
 
                 <button
                     type="submit"
-                    className="w-full bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full text-lg font-semibold"
+                    className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white py-4 rounded-full text-lg font-semibold"
                 >
                     Login
                 </button>

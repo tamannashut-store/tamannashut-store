@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
@@ -118,7 +118,7 @@ function AdminDashboard() {
             </button>
             <Link
                 to="/admin-coupons"
-                className="bg-pink-500 text-white px-4 py-2 rounded-xl"
+                className="bg-brand-primary text-white px-4 py-2 rounded-xl"
             >
                 Manage Coupons
             </Link>
@@ -177,7 +177,7 @@ function AdminDashboard() {
                         Total Revenue
                     </h2>
 
-                    <h3 className="text-5xl font-bold mt-4 text-pink-500">
+                    <h3 className="text-5xl font-bold mt-4 text-brand-primary">
                         ₹{Number(totalSales).toLocaleString("en-IN", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2
@@ -233,7 +233,7 @@ function AdminDashboard() {
 
                                 <button
                                     onClick={() => resendInvoice(order._id)}
-                                    className="bg-pink-500 text-white px-3 py-2 rounded-lg"
+                                    className="bg-brand-primary text-white px-3 py-2 rounded-lg"
                                 >
                                     Send Again
                                 </button>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -54,7 +54,7 @@ function AdminLogin() {
 
     return (
 
-        <div className="min-h-screen flex items-center justify-center bg-pink-50">
+        <div className="min-h-screen flex items-center justify-center bg-brand-background">
 
             <form
                 onSubmit={handleSubmit}
@@ -89,7 +89,7 @@ function AdminLogin() {
 
                 <button
                     type="submit"
-                    className="w-full mt-8 bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-full font-semibold"
+                    className="w-full mt-8 bg-brand-primary hover:bg-brand-primary-dark text-white py-4 rounded-full font-semibold"
                 >
                     Login
                 </button>
@@ -101,3 +101,4 @@ function AdminLogin() {
 }
 
 export default AdminLogin;
+

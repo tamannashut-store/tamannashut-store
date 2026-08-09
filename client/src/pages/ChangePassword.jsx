@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -77,7 +77,7 @@ function ChangePassword() {
         />
 
         <button
-          className="w-full bg-pink-500 text-white py-4 rounded-full"
+          className="w-full bg-brand-primary text-white py-4 rounded-full"
         >
           Update Password
         </button>

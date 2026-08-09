@@ -4,6 +4,87 @@
 button{
     cursor: pointer;
 }
+html {
+    scroll-behavior: smooth;
+}
+body {
+    margin: 0;
+    min-width: 320px;
+    background: #FAF8F4;
+    color: #26312a;
+    font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 {
+    text-wrap: balance;
+}
+button, input, select, textarea {
+    font: inherit;
+}
+input, select, textarea {
+    border-color: #dfe4df;
+    transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: #355E3B;
+    box-shadow: 0 0 0 3px rgb(53 94 59 / 12%);
+    outline: none;
+}
+button:focus-visible, a:focus-visible {
+    outline: 3px solid rgb(53 94 59 / 25%);
+    outline-offset: 3px;
+}
+::selection {
+    background: #355E3B;
+    color: white;
+}
+.page-shell {
+    width: min(100% - 2rem, 80rem);
+    margin-inline: auto;
+    padding-block: 4rem;
+}
+.surface-card {
+    border: 1px solid #e5e7e4;
+    border-radius: 1.5rem;
+    background: white;
+    box-shadow: 0 12px 35px rgb(30 50 36 / 6%);
+}
+.eyebrow {
+    color: #355E3B;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+}
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .75rem;
+    background: #355E3B;
+    color: white;
+    font-weight: 600;
+    padding: .85rem 1.25rem;
+    transition: background-color .18s ease, transform .18s ease;
+}
+.btn-primary:hover { background: #234229; transform: translateY(-1px); }
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d8ded8;
+    border-radius: .75rem;
+    background: white;
+    color: #355E3B;
+    font-weight: 600;
+    padding: .8rem 1.2rem;
+}
+.field-label { display: block; margin-bottom: .5rem; font-size: .875rem; font-weight: 600; color: #37433b; }
+.field-control { width: 100%; border: 1px solid #dfe4df; border-radius: .75rem; background: white; padding: .8rem .95rem; }
+.policy-page { width: min(100% - 2rem, 58rem); margin-inline: auto; padding-block: 4rem; }
+.policy-page > div { border: 1px solid #e5e7e4; border-radius: 1.5rem; background: white; padding: clamp(1.5rem, 4vw, 3rem); box-shadow: 0 12px 35px rgb(30 50 36 / 6%); }
+.policy-page h1 { font-size: clamp(2rem, 5vw, 3rem); color: #26312a; }
+.policy-page h2 { color: #355E3B; }
 .value-card-wrp{
     display: flex;
     align-items: center;

@@ -49,17 +49,19 @@ export const calculateCart = async (items, couponCode = "") => {
   const lines = normalized.map((item) => {
     const product = productById.get(item.productId);
     if (!product) throw Object.assign(new Error("A product in your cart is no longer available"), { status: 409 });
-    const sizeData = product.sizeStock?.find((entry) => entry.size === item.selectedSize);
+    const variant = product.variants?.find((entry) => entry.size === item.selectedSize && entry.active !== false);
+    const sizeData = variant || product.sizeStock?.find((entry) => entry.size === item.selectedSize);
     if (!sizeData || Number(sizeData.stock) < item.qty) {
       throw Object.assign(new Error(`${product.name} (${item.selectedSize}) has insufficient stock`), { status: 409 });
     }
-    const price = money(product.price);
+    const price = money(variant?.price ?? product.price);
     return {
       _id: product._id,
       name: product.name,
       price,
       qty: item.qty,
       selectedSize: item.selectedSize,
+      sku: variant?.sku || "",
       image: product.images?.[0]?.url || "",
       lineTotal: money(price * item.qty),
     };
@@ -91,12 +93,17 @@ export const calculateCart = async (items, couponCode = "") => {
 
 const restoreReservations = async (reservedItems) => {
   await Promise.allSettled(
-    reservedItems.map((item) =>
+    reservedItems.flatMap((item) => [
       Product.updateOne(
         { _id: item._id, "sizeStock.size": item.selectedSize },
         { $inc: { "sizeStock.$.stock": item.qty } }
-      )
-    )
+      ),
+      Product.updateOne(
+        { _id: item._id },
+        { $inc: { "variants.$[variant].stock": item.qty } },
+        { arrayFilters: [{ "variant.size": item.selectedSize, "variant.active": { $ne: false } }] }
+      ),
+    ])
   );
 };
 
@@ -122,6 +129,11 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       if (result.modifiedCount !== 1) {
         throw Object.assign(new Error(`${item.name} (${item.selectedSize}) just went out of stock`), { status: 409 });
       }
+      await Product.updateOne(
+        { _id: item._id },
+        { $inc: { "variants.$[variant].stock": -item.qty } },
+        { arrayFilters: [{ "variant.size": item.selectedSize, "variant.active": { $ne: false } }] }
+      );
       reservedItems.push(item);
     }
 
@@ -175,12 +187,17 @@ export const sendOrderNotifications = async (order) => {
 export const restoreOrderStock = async (order) => {
   if (order.inventoryRestored) return;
   await Promise.all(
-    order.products.map((item) =>
+    order.products.flatMap((item) => [
       Product.updateOne(
         { _id: item._id, "sizeStock.size": item.selectedSize },
         { $inc: { "sizeStock.$.stock": Number(item.qty) } }
-      )
-    )
+      ),
+      Product.updateOne(
+        { _id: item._id },
+        { $inc: { "variants.$[variant].stock": Number(item.qty) } },
+        { arrayFilters: [{ "variant.size": item.selectedSize, "variant.active": { $ne: false } }] }
+      ),
+    ])
   );
   order.inventoryRestored = true;
 };

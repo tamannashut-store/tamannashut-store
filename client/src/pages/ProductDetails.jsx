@@ -51,6 +51,8 @@ function ProductDetails() {
 
   const images = product.images?.length ? product.images : [{ url: "/placeholder.png", public_id: "placeholder" }];
   const selectedSizeData = product.sizeStock?.find((item) => item.size === selectedSize);
+  const selectedVariant = product.variants?.find((item) => item.size === selectedSize && item.active !== false);
+  const selectedPrice = Number(selectedVariant?.price ?? product.price);
   const cartQty = cartItems
     .filter((item) => item._id === product._id && item.selectedSize === selectedSize)
     .reduce((sum, item) => sum + item.qty, 0);
@@ -78,7 +80,7 @@ function ProductDetails() {
   const addSelectedToCart = () => {
     if (!selectedSize) return toast.error("Please select a size");
     if (availableStock <= 0) return toast.error("This size is out of stock");
-    addToCart({ ...product, selectedSize });
+    addToCart({ ...product, price: selectedPrice, selectedSize, selectedSku: selectedVariant?.sku || "" });
     toast.success("Added to your bag");
   };
 
@@ -153,7 +155,7 @@ function ProductDetails() {
                 <span className="rounded-lg bg-green-700 px-2.5 py-1 text-sm font-semibold text-white">★ {Number(product.averageRating || 0).toFixed(1)}</span>
                 <a href="#reviews" className="text-sm text-gray-500 underline">{product.reviews?.length || 0} reviews</a>
               </div>
-              <p className="mt-6 text-4xl font-bold text-brand-primary">₹{Number(product.price).toLocaleString("en-IN")}</p>
+              <div className="mt-6 flex flex-wrap items-end gap-3"><p className="text-4xl font-bold text-brand-primary">₹{selectedPrice.toLocaleString("en-IN")}</p>{Number(product.mrp) > selectedPrice && <><p className="pb-1 text-lg text-gray-400 line-through">₹{Number(product.mrp).toLocaleString("en-IN")}</p><span className="mb-1 rounded-full bg-green-50 px-2.5 py-1 text-sm font-semibold text-green-700">{Math.round((1 - selectedPrice / Number(product.mrp)) * 100)}% off</span></>}</div>
               <p className="mt-2 text-sm text-gray-500">Inclusive of all taxes</p>
 
               <div className="mt-8 border-t pt-7">
@@ -185,6 +187,7 @@ function ProductDetails() {
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-semibold">Product details</h2>
               <p className="mt-5 whitespace-pre-line leading-8 text-gray-600">{product.description || "Beautifully designed kidswear focused on comfort and style."}</p>
+              <dl className="mt-7 grid gap-4 border-t pt-6 sm:grid-cols-3">{product.color && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Colour</dt><dd className="mt-1 font-medium">{product.color}</dd></div>}{product.fabric && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Fabric</dt><dd className="mt-1 font-medium">{product.fabric}</dd></div>}{product.ageGroup && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Age group</dt><dd className="mt-1 font-medium">{product.ageGroup}</dd></div>}</dl>
             </div>
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-semibold">Care and assurance</h2>

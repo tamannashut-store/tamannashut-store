@@ -4,20 +4,35 @@ import upload from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 import { admin, protect } from "../middleware/authMiddleware.js";
+import InventoryLog from "../models/InventoryLog.js";
 
 const router = express.Router();
 const parseProductFields = (body) => {
   const name = String(body.name || "").trim();
   const price = Number(body.price);
+  const mrp = Number(body.mrp || body.price);
   const description = String(body.description || "").trim().slice(0, 5000);
   const category = String(body.category || "").trim().toLowerCase().replace(/\s+/g, "-");
   const sizeStock = JSON.parse(body.sizeStock || "[]");
+  const baseSku = String(body.baseSku || "").trim().toUpperCase().slice(0, 60);
+  const color = String(body.color || "").trim().slice(0, 80);
+  const fabric = String(body.fabric || "").trim().slice(0, 120);
+  const ageGroup = String(body.ageGroup || "").trim().slice(0, 80);
+  const status = ["draft", "active", "archived"].includes(body.status) ? body.status : "active";
+  const lowStockThreshold = Math.max(Number(body.lowStockThreshold) || 0, 0);
+  const tags = JSON.parse(body.tags || "[]")
+    .map((tag) => String(tag).trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, 20);
 
   if (!name || name.length > 200) {
     throw Object.assign(new Error("Product name is required and must be under 200 characters"), { status: 400 });
   }
   if (!Number.isFinite(price) || price < 0) {
     throw Object.assign(new Error("Enter a valid product price"), { status: 400 });
+  }
+  if (!Number.isFinite(mrp) || mrp < price) {
+    throw Object.assign(new Error("MRP must be equal to or greater than the selling price"), { status: 400 });
   }
   if (!["girls", "boys", "new-arrivals"].includes(category)) {
     throw Object.assign(new Error("Select a valid product category"), { status: 400 });
@@ -35,7 +50,40 @@ const parseProductFields = (body) => {
     return { size, stock };
   });
 
-  return { name, price, description, category, sizeStock: normalizedStock };
+  const submittedVariants = body.variants ? JSON.parse(body.variants) : [];
+  const normalizedVariants = (submittedVariants.length ? submittedVariants : normalizedStock.map((item) => ({
+    sku: `${baseSku || name.replace(/[^a-z0-9]/gi, "-")}-${item.size}`,
+    size: item.size,
+    color,
+    stock: item.stock,
+    price,
+    active: true,
+  }))).map((variant) => {
+    const sku = String(variant.sku || "").trim().toUpperCase().slice(0, 80);
+    const size = String(variant.size || "").trim().slice(0, 30);
+    const variantStock = Number(variant.stock);
+    const variantPrice = variant.price === "" || variant.price == null ? price : Number(variant.price);
+    if (!sku || !size || !Number.isInteger(variantStock) || variantStock < 0 || !Number.isFinite(variantPrice) || variantPrice < 0) {
+      throw Object.assign(new Error("Every variant requires a SKU, size, valid price and non-negative stock"), { status: 400 });
+    }
+    return {
+      sku,
+      size,
+      color: String(variant.color || color).trim().slice(0, 80),
+      stock: variantStock,
+      price: variantPrice,
+      active: variant.active !== false,
+    };
+  });
+  if (new Set(normalizedVariants.map((variant) => variant.sku)).size !== normalizedVariants.length) {
+    throw Object.assign(new Error("Variant SKUs must be unique within a product"), { status: 400 });
+  }
+  const syncedSizeStock = normalizedVariants.map((variant) => ({ size: variant.size, stock: variant.stock }));
+
+  return {
+    name, price, mrp, baseSku, description, category, color, fabric, ageGroup,
+    tags, status, lowStockThreshold, variants: normalizedVariants, sizeStock: syncedSizeStock,
+  };
 };
 
 const uploadToCloudinary = (fileBuffer) => {
@@ -120,6 +168,7 @@ router.get("/", async (req, res) => {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 48);
     const filter = {};
+    filter.status = { $nin: ["draft", "archived"] };
 
     const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const search = String(req.query.search || "").trim().slice(0, 100);
@@ -187,6 +236,50 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+router.get("/admin/list", protect, admin, async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
+    const filter = {};
+    const search = String(req.query.search || "").trim().slice(0, 100);
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const regex = new RegExp(escaped, "i");
+      filter.$or = [{ name: regex }, { baseSku: regex }, { "variants.sku": regex }];
+    }
+    if (["draft", "active", "archived"].includes(req.query.status)) filter.status = req.query.status;
+    const products = await Product.find(filter).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+    const total = await Product.countDocuments(filter);
+    return res.json({ products, totalProducts: total, currentPage: page, totalPages: Math.max(Math.ceil(total / limit), 1) });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch("/admin/bulk-status", protect, admin, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids.slice(0, 100) : [];
+    const status = req.body.status;
+    if (!ids.length || !["draft", "active", "archived"].includes(status)) {
+      return res.status(400).json({ message: "Select products and a valid status" });
+    }
+    const result = await Product.updateMany({ _id: { $in: ids } }, { $set: { status } });
+    return res.json({ success: true, modifiedCount: result.modifiedCount });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/admin/:id/inventory-history", protect, admin, async (req, res) => {
+  try {
+    const logs = await InventoryLog.find({ productId: req.params.id }).sort({ createdAt: -1 }).limit(100).lean();
+    return res.json(logs);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).lean();
@@ -227,12 +320,24 @@ router.put(
       }
 
 
+      const previousVariants = product.variants?.length
+        ? product.variants.map((variant) => ({ sku: variant.sku, size: variant.size, stock: variant.stock }))
+        : product.sizeStock.map((item) => ({ sku: `${product.baseSku || product._id}-${item.size}`, size: item.size, stock: item.stock }));
       const fields = parseProductFields(req.body);
       product.name = fields.name;
       product.price = fields.price;
       product.description = fields.description;
       product.category = fields.category;
       product.sizeStock = fields.sizeStock;
+      product.mrp = fields.mrp;
+      product.baseSku = fields.baseSku;
+      product.color = fields.color;
+      product.fabric = fields.fabric;
+      product.ageGroup = fields.ageGroup;
+      product.tags = fields.tags;
+      product.status = fields.status;
+      product.lowStockThreshold = fields.lowStockThreshold;
+      product.variants = fields.variants;
 
 
       const originalImages = product.images.map((image) => ({
@@ -304,6 +409,24 @@ router.put(
 
       const updatedProduct =
         await product.save();
+
+      const previousBySku = new Map(previousVariants.map((variant) => [variant.sku, variant]));
+      const inventoryChanges = fields.variants
+        .filter((variant) => Number(previousBySku.get(variant.sku)?.stock ?? 0) !== variant.stock)
+        .map((variant) => {
+          const previousStock = Number(previousBySku.get(variant.sku)?.stock ?? 0);
+          return {
+            productId: product._id,
+            sku: variant.sku,
+            size: variant.size,
+            previousStock,
+            newStock: variant.stock,
+            change: variant.stock - previousStock,
+            reason: String(req.body.inventoryReason || "Product listing updated").slice(0, 200),
+            changedBy: req.user._id,
+          };
+        });
+      if (inventoryChanges.length) await InventoryLog.insertMany(inventoryChanges);
 
       const retainedIds = new Set(nextImages.map((image) => image.public_id));
       const removedImages = originalImages.filter(

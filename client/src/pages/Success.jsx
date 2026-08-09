@@ -1,15 +1,15 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 
 function Success() {
 
   return (
 
-    <div className="min-h-screen flex items-center justify-center bg-pink-50 px-6">
+    <div className="min-h-screen flex items-center justify-center bg-brand-background px-6">
 
       <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-md w-full">
 
         <div className="text-6xl mb-5">
-          🎉
+          ✓
         </div>
 
         <h1 className="text-4xl font-bold text-green-600 mb-4">
@@ -22,7 +22,7 @@ function Success() {
 
         <Link to="/shop">
 
-          <button className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded-full transition">
+          <button className="bg-brand-primary hover:bg-brand-primary-dark text-white px-8 py-3 rounded-full transition">
 
             Continue Shopping
 

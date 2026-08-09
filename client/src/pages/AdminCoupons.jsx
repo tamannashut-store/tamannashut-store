@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import axios from "axios";
 
 function AdminCoupons() {
@@ -72,7 +72,7 @@ function AdminCoupons() {
         />
 
         <button
-          className="bg-pink-500 text-white px-5 py-3 rounded-xl"
+          className="bg-brand-primary text-white px-5 py-3 rounded-xl"
         >
           Create Coupon
         </button>

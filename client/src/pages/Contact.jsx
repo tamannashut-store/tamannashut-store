@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+﻿import { Helmet } from "react-helmet-async";
 import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -93,11 +93,11 @@ function Contact() {
             </h2>
 
             <p className="mb-3">
-              📧 support@tamannashut.com
+              support@tamannashut.com
             </p>
 
             <p className="mb-3">
-              📞 +91 9874328578
+              +91 9874328578
             </p>
           </div>
 
@@ -136,7 +136,7 @@ function Contact() {
             <button
               type="submit"
               disabled={loading}
-              className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-3 rounded-xl"
+              className="bg-brand-primary hover:bg-brand-primary-dark text-white px-8 py-3 rounded-xl"
             >
               {loading ? "Sending..." : "Send Message"}
             </button>

@@ -1,4 +1,4 @@
-import { useContext } from "react";
+﻿import { useContext } from "react";
 import { WishlistContext } from "../context/WishlistContext";
 import { Link } from "react-router-dom";
 
@@ -32,7 +32,7 @@ function Wishlist() {
 
       <h1 className="text-5xl font-bold mb-12">
 
-        My Wishlist ❤️
+        My wishlist
 
       </h1>
 
@@ -55,7 +55,7 @@ function Wishlist() {
               {product.name}
             </h2>
 
-            <p className="text-pink-500 font-bold mt-3 text-xl">
+            <p className="text-brand-primary font-bold mt-3 text-xl">
               ₹{product.price}
             </p>
 
@@ -63,7 +63,7 @@ function Wishlist() {
 
               <Link
                 to={`/product/${product._id}`}
-                className="flex-1 bg-pink-500 hover:bg-pink-600 text-white py-3 rounded-2xl text-center font-semibold"
+                className="flex-1 bg-brand-primary hover:bg-brand-primary-dark text-white py-3 rounded-2xl text-center font-semibold"
               >
                 View
               </Link>
@@ -90,3 +90,4 @@ function Wishlist() {
 }
 
 export default Wishlist;
+
