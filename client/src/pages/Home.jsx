@@ -223,7 +223,7 @@ function Home() {
             {/* RIGHT */}
 
             <div className="relative">
-
+<p>heroProducts: {heroProducts.length} products</p>
               <Swiper
                 modules={[Autoplay, Pagination, Navigation]}
                 navigation
