@@ -17,6 +17,7 @@ function ProductDetails() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedSize, setSelectedSize] = useState("");
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [rating, setRating] =
     useState(5);
 
@@ -34,6 +35,7 @@ function ProductDetails() {
       );
 
       setProduct(data);
+      setSelectedImageIndex(0);
 
     } catch (error) {
       console.log(error);
@@ -136,11 +138,7 @@ function ProductDetails() {
             "@context": "https://schema.org",
             "@type": "Product",
             name: product.name,
-            image: [
-              product.image?.startsWith("http")
-                ? product.image
-                : `${import.meta.env.VITE_API_URL}${product.image}`,
-            ],
+            image: product.images?.map((image) => image.url) || [],
             description: product.description,
 
             brand: {
@@ -213,11 +211,7 @@ function ProductDetails() {
 
         <meta
           property="og:image"
-          content={
-            product.image?.startsWith("http")
-              ? product.image
-              : `${import.meta.env.VITE_API_URL}${product.image}`
-          }
+          content={product.images?.[0]?.url || "/placeholder.png"}
         />
 
         <meta
@@ -235,12 +229,36 @@ function ProductDetails() {
       </Helmet>
       <div className="max-w-7xl mx-auto px-6 py-20">
         <div className="grid md:grid-cols-2 gap-14 items-start">
+          <div className="min-w-0">
             <ImageMagnifier
-              src={product.images?.[0]?.url ||
-                    "/placeholder.png"}
-              alt={`${product.name} - Tamanna's Hut Kids Fashion`}
-              className="w-full rounded-3xl shadow-2xl"
+              src={product.images?.[selectedImageIndex]?.url || "/placeholder.png"}
+              alt={`${product.name} - Tamanna's Hut view ${selectedImageIndex + 1}`}
             />
+
+            {product.images?.length > 1 && (
+              <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+                {product.images.map((image, index) => (
+                  <button
+                    type="button"
+                    key={image.public_id || index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    aria-label={`Show image ${index + 1}`}
+                    className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition ${
+                      selectedImageIndex === index
+                        ? "border-brand-primary ring-2 ring-brand-primary/20"
+                        : "border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    <img
+                      src={image.url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div>
             <p className="uppercase tracking-[5px] text-pink-500 mb-4">

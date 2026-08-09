@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import ProductImageSlider from "../components/ProductImageSlider";
 
 function Shop() {
 
@@ -40,10 +41,14 @@ function Shop() {
 
   const filteredProducts = products.filter((p) => {
 
+    const normalizedCategory = (p.category || "")
+      .toLowerCase()
+      .replace(/\s+/g, "-");
+    const normalizedSelection = selectedCategory
+      .toLowerCase()
+      .replace(/\s+/g, "-");
     const matchesCategory =
-      selectedCategory === "All"
-        ? true
-        : p.category === selectedCategory;
+      selectedCategory === "All" || normalizedCategory === normalizedSelection;
 
     const matchesSearch =
       (p.name || "")
@@ -109,15 +114,7 @@ function Shop() {
               className="bg-white rounded-3xl shadow-lg overflow-hidden hover:shadow-2xl transition group"
             >
 
-              <img
-                src={
-                  product.image?.startsWith("http")
-                    ? product.image
-                    : `${import.meta.env.VITE_API_URL}${product.image}`
-                }
-                alt={`${product.name} - Tamanna's Hut Kids Fashion`}
-                className="h-80 w-full object-cover group-hover:scale-105 transition duration-300"
-              />
+              <ProductImageSlider product={product} className="h-80" />
 
               <div className="p-6">
 

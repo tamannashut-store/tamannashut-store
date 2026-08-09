@@ -14,6 +14,7 @@ import { Autoplay, Pagination, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import ProductImageSlider from "../components/ProductImageSlider";
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -408,11 +409,7 @@ duration-300
 
               {loading ? Array.from({ length: 8 }).map((_, index) => <SkeletonProduct key={index} />) : products.map((product) => (
                 <div key={product._id} className="bg-white rounded-[28px] overflow-hidden border border-[#efe8dd] hover:shadow-xl transition relative">
-                  <LazyLoadImage effect="blur" src={
-                    product.images?.[0]?.url ||
-                    "/placeholder.png"
-                  }
-                    alt={`${product.name} - Tamanna's Hut Kids Fashion`} className="h-72 w-full object-cover" />
+                  <ProductImageSlider product={product} className="h-72" />
                   <div className="p-5">
                     <h3 className="font-semibold text-lg">
                       {product.name}

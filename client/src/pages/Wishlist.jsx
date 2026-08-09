@@ -45,12 +45,8 @@ function Wishlist() {
             className="bg-white shadow-xl rounded-3xl p-5"
           >
 
-            <img
-               src={
-                product.image?.startsWith("http")
-                  ? product.image
-                  : `${import.meta.env.VITE_API_URL}${product.image}`
-              }
+              <img
+              src={product.images?.[0]?.url || "/placeholder.png"}
               alt={`${product.name} - Tamanna's Hut Kids Fashion`}
               className="w-full h-72 object-cover rounded-2xl"
             />

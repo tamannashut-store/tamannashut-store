@@ -17,9 +17,7 @@ xmlns:g="http://base.google.com/ns/1.0">
 
     products.forEach((product) => {
 
-      const imageUrl = product.image?.startsWith("http")
-        ? product.image
-        : `https://tamannashut-store.onrender.com${product.image}`;
+      const imageUrl = product.images?.[0]?.url || "";
 
       xml += `
 <item>

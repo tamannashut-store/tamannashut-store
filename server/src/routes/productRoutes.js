@@ -130,7 +130,7 @@ router.put(
   "/:id",
   upload.array("images", 10),
   async (req, res) => {
-
+    let uploadedImages = [];
     try {
 
       const product = await Product.findById(
@@ -157,32 +157,83 @@ router.put(
       );
 
 
-      // MULTIPLE IMAGE UPDATE
+      const originalImages = product.images.map((image) => ({
+        url: image.url,
+        public_id: image.public_id,
+      }));
 
-      if (req.files && req.files.length > 0) {
-
-        const uploadPromises = req.files.map(
-          (file) => uploadToCloudinary(file.buffer)
+      let retainedImages = originalImages;
+      if (req.body.existingImages !== undefined) {
+        const requestedImages = JSON.parse(req.body.existingImages || "[]");
+        const originalById = new Map(
+          originalImages.map((image) => [image.public_id, image])
         );
 
-
-        const results = await Promise.all(
-          uploadPromises
-        );
-
-
-        product.images = results.map(
-          (result) => ({
-            url: result.secure_url,
-            public_id: result.public_id
-          })
-        );
-
+        retainedImages = requestedImages.map((image) => {
+          const original = originalById.get(image.public_id);
+          if (!original) throw new Error("Invalid existing image selection");
+          return original;
+        });
       }
+
+      if (req.files?.length) {
+        const results = await Promise.all(
+          req.files.map((file) => uploadToCloudinary(file.buffer))
+        );
+        uploadedImages = results.map((result) => ({
+          url: result.secure_url,
+          public_id: result.public_id,
+        }));
+      }
+
+      let nextImages = [...retainedImages, ...uploadedImages];
+      if (req.body.imageOrder) {
+        const imageOrder = JSON.parse(req.body.imageOrder);
+        const retainedById = new Map(
+          retainedImages.map((image) => [image.public_id, image])
+        );
+
+        nextImages = imageOrder.map((item) => {
+          if (item.type === "existing") {
+            const image = retainedById.get(item.public_id);
+            if (!image) throw new Error("Invalid image order");
+            return image;
+          }
+
+          if (item.type === "new") {
+            const image = uploadedImages[Number(item.fileIndex)];
+            if (!image) throw new Error("Invalid new image order");
+            return image;
+          }
+
+          throw new Error("Invalid image order");
+        });
+      }
+
+      if (nextImages.length === 0) {
+        const imageError = new Error("At least one product image is required");
+        imageError.status = 400;
+        throw imageError;
+      }
+      if (nextImages.length > 10) {
+        const imageError = new Error("Maximum 10 images allowed");
+        imageError.status = 400;
+        throw imageError;
+      }
+
+      product.images = nextImages;
 
 
       const updatedProduct =
         await product.save();
+
+      const retainedIds = new Set(nextImages.map((image) => image.public_id));
+      const removedImages = originalImages.filter(
+        (image) => !retainedIds.has(image.public_id)
+      );
+      await Promise.allSettled(
+        removedImages.map((image) => cloudinary.uploader.destroy(image.public_id))
+      );
 
 
       return res.json(updatedProduct);
@@ -190,9 +241,15 @@ router.put(
 
     } catch (error) {
 
+      if (uploadedImages.length > 0) {
+        await Promise.allSettled(
+          uploadedImages.map((image) => cloudinary.uploader.destroy(image.public_id))
+        );
+      }
+
       console.log(error);
 
-      return res.status(500).json({
+      return res.status(error.status || 500).json({
         message: error.message,
       });
 

@@ -52,7 +52,7 @@ function App() {
         <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-        <Route path="/admin/edit/:id" element={<EditProduct />} />
+        <Route path="/admin/edit/:id" element={<AdminRoute><EditProduct /></AdminRoute>} />
         <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />

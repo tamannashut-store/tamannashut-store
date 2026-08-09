@@ -19,6 +19,7 @@ function Admin() {
     ]);
     const navigate = useNavigate();
     const [previewImages, setPreviewImages] = useState([]);
+    const previewImagesRef = useRef([]);
     const [loading, setLoading] = useState(false);
     const fileRef = useRef(null);
 
@@ -36,17 +37,33 @@ function Admin() {
     useEffect(() => {
         fetchProducts();
     }, []);
-    useEffect(() => {
+    useEffect(() => () => {
+        previewImagesRef.current.forEach((url) => URL.revokeObjectURL(url));
+    }, []);
 
-        return () => {
+    const makeCover = (selectedIndex) => {
+        setImages((current) => {
+            const updated = [...current];
+            const [selected] = updated.splice(selectedIndex, 1);
+            updated.unshift(selected);
+            return updated;
+        });
+        setPreviewImages((current) => {
+            const updated = [...current];
+            const [selected] = updated.splice(selectedIndex, 1);
+            updated.unshift(selected);
+            previewImagesRef.current = updated;
+            return updated;
+        });
+    };
 
-            previewImages.forEach((url) => {
-                URL.revokeObjectURL(url);
-            });
-
-        };
-
-    }, [previewImages]);
+    const removeImage = (selectedIndex) => {
+        const removedUrl = previewImages[selectedIndex];
+        if (removedUrl) URL.revokeObjectURL(removedUrl);
+        setImages((current) => current.filter((_, index) => index !== selectedIndex));
+        setPreviewImages((current) => current.filter((_, index) => index !== selectedIndex));
+        previewImagesRef.current = previewImagesRef.current.filter((_, index) => index !== selectedIndex);
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -91,6 +108,8 @@ function Admin() {
             setPrice("");
             setDescription("");
             setImages([]);
+            previewImagesRef.current.forEach((url) => URL.revokeObjectURL(url));
+            previewImagesRef.current = [];
             setPreviewImages([]);
             if (fileRef.current) {
                 fileRef.current.value = "";
@@ -243,26 +262,50 @@ function Admin() {
                                 return;
                             }
 
+                            previewImagesRef.current.forEach((url) => URL.revokeObjectURL(url));
                             setImages(files);
 
                             const previews = files.map(file =>
                                 URL.createObjectURL(file)
                             );
 
+                            previewImagesRef.current = previews;
                             setPreviewImages(previews);
 
                         }}
                     />
-                    <div className="flex gap-4 mt-4 flex-wrap">
+                    <p className="mt-2 text-sm text-gray-500">
+                        The first image is the cover shown across the store. Choose clear front, back and detail photos.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 mt-4 sm:grid-cols-3 md:grid-cols-5">
 
                         {
                             previewImages.map((img, index) => (
 
-                                <img
-                                    key={index}
-                                    src={img}
-                                    className="w-24 h-24 rounded-xl object-cover"
-                                />
+                                <div key={img} className="rounded-2xl border bg-gray-50 p-2">
+                                    <div className="relative">
+                                        <img
+                                            src={img}
+                                            alt={`Product preview ${index + 1}`}
+                                            className="aspect-square w-full rounded-xl object-cover"
+                                        />
+                                        {index === 0 && (
+                                            <span className="absolute left-2 top-2 rounded-full bg-brand-primary px-2 py-1 text-xs text-white">
+                                                Cover
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="mt-2 flex flex-col gap-1 text-xs">
+                                        {index > 0 && (
+                                            <button type="button" onClick={() => makeCover(index)} className="rounded-lg border bg-white px-2 py-1">
+                                                Make cover
+                                            </button>
+                                        )}
+                                        <button type="button" onClick={() => removeImage(index)} className="rounded-lg px-2 py-1 text-red-600">
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
 
                             ))
                         }
