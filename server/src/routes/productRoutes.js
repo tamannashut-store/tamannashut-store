@@ -122,7 +122,7 @@ const uploadToCloudinary = (fileBuffer) => {
 //   }
 // });
 
-router.post("/", protect, admin, upload.array("images", 10), async (req, res) => {
+router.post("/", protect, admin, upload.array("images", 30), async (req, res) => {
   try {
     const fields = parseProductFields(req.body);
     let images = [];
@@ -310,7 +310,7 @@ router.put(
   "/:id",
   protect,
   admin,
-  upload.array("images", 10),
+  upload.array("images", 30),
   async (req, res) => {
     let uploadedImages = [];
     try {
@@ -413,8 +413,8 @@ router.put(
         imageError.status = 400;
         throw imageError;
       }
-      if (nextImages.length > 10) {
-        const imageError = new Error("Maximum 10 images allowed");
+      if (nextImages.length > 30) {
+        const imageError = new Error("Maximum 30 images allowed");
         imageError.status = 400;
         throw imageError;
       }

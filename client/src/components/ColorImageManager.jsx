@@ -1,0 +1,14 @@
+import ImageVariantAssignment from "./ImageVariantAssignment";
+
+export default function ColorImageManager({ colors, variants, images, onUpload, onAssign, onMove, onRemove }) {
+  const uploadGroups = [{ value: "", label: "Shared images" }, ...colors.map((color) => ({ value: color, label: color }))];
+
+  return <section className="surface-card p-5 md:p-6">
+    <div><h2 className="text-xl font-semibold">Product photos by colour</h2><p className="mt-1 text-sm text-slate-500">Upload colours separately. New uploads are added to the existing photos.</p></div>
+    <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {uploadGroups.map((group) => <label key={group.value || "shared"} className="cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-4 text-center transition hover:border-brand-primary hover:bg-emerald-50/40"><span className="block text-2xl text-brand-primary">+</span><span className="mt-1 block truncate text-sm font-semibold">{group.label}</span><span className="mt-1 block text-xs text-slate-500">Add photos</span><input type="file" multiple accept="image/*" onChange={(event) => onUpload(event, group.value)} className="hidden" /></label>)}
+    </div>
+    {!images.length ? <div className="mt-6 rounded-xl bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">Choose a colour box above to start adding photos.</div> : <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">{images.map((image, index) => <article key={image.id || image.url} className={`min-w-0 rounded-xl border-2 bg-white p-2 ${index === 0 ? "border-brand-primary" : "border-slate-200"}`}><div className="relative"><img src={image.url} alt="" className="aspect-square w-full rounded-lg object-cover"/>{index === 0 && <span className="absolute left-1.5 top-1.5 rounded bg-brand-primary px-1.5 py-0.5 text-[10px] font-semibold text-white">Cover</span>}</div><ImageVariantAssignment color={image.color || ""} size={image.size || ""} colors={colors} variants={variants} onChange={(assignment) => onAssign(index, assignment)} /><div className="mt-2 grid grid-cols-3 gap-1"><button type="button" disabled={index === 0} onClick={() => onMove(index, index - 1)} className="rounded bg-slate-100 py-1 text-xs disabled:opacity-30" aria-label="Move image left">←</button><button type="button" disabled={index === images.length - 1} onClick={() => onMove(index, index + 1)} className="rounded bg-slate-100 py-1 text-xs disabled:opacity-30" aria-label="Move image right">→</button><button type="button" onClick={() => onRemove(index)} className="rounded bg-red-50 py-1 text-xs text-red-600" aria-label="Remove image">×</button></div></article>)}</div>}
+    <p className="mt-4 text-xs text-slate-500">The first photo is the cover. Use the arrows to change image order.</p>
+  </section>;
+}
