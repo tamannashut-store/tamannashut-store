@@ -1,436 +1,136 @@
 import express from "express";
 import Order from "../models/Order.js";
-import Product from "../models/Product.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { orderEmailTemplate } from "../utils/emailTemplates.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
-import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 import { generateInvoice } from "../utils/generateInvoice.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
+import {
+  calculateCart,
+  createOrderWithReservedStock,
+  restoreOrderStock,
+  sendOrderNotifications,
+} from "../services/orderService.js";
 
 const router = express.Router();
+const allowedStatuses = new Set(["Pending", "Processing", "Shipped", "Delivered", "Cancelled"]);
 
-
-// CREATE ORDER
-
-router.post("/", async (req, res) => {
-
+router.post("/", protect, async (req, res) => {
   try {
-
-    const order = new Order(req.body);
-
-    await order.save();
-    await sendEmail(
-      req.body.email,
-      "Order Confirmed - Tamanna's Hut",
-      `
-        ${orderEmailTemplate(order)}
-        <hr />
-        ${invoiceTemplate(order)}
-      `
-    );
-    await sendEmail(
-      process.env.ADMIN_EMAIL,
-      `🛍 New Order Received - ${order._id}`,
-      `
-      <h2>New Order Received</h2>
-    
-      <p><strong>Order ID:</strong> ${order._id}</p>
-      <p><strong>Customer:</strong> ${order.customerName}</p>
-      <p><strong>Email:</strong> ${order.email}</p>
-      <p><strong>Phone:</strong> ${order.phone}</p>
-      <p><strong>Total:</strong> ₹${order.totalAmount}</p>
-      <p><strong>Status:</strong> ${order.status}</p>
-    
-      <h3>Products</h3>
-    
-      <ul>
-        ${order.products.map(
-        (p) => `
-              <li>
-                ${p.name}
-                | Size: ${p.selectedSize}
-                | Qty: ${p.qty}
-                | ₹${p.price}
-              </li>
-            `
-      )
-        .join("")}
-      </ul>
-      `
-    );
-    const phone = req.body.phone.startsWith("+")
-      ? req.body.phone
-      : `+91${req.body.phone}`;
-
-    await sendWhatsApp(
-      phone,
-      `🛍 Order Confirmed!\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`
-    );
-    // REDUCE STOCK
-
-    for (const item of req.body.products) {
-
-      const product =
-        await Product.findById(item._id);
-
-      if (product) {
-
-        const sizeData = product.sizeStock?.find(
-          s => s.size === item.selectedSize
-        );
-
-        if (!sizeData) {
-
-          console.log(
-            "SIZE STOCK NOT FOUND:",
-            product.name,
-            item.selectedSize
-          );
-
-          return res.status(400).json({
-            success: false,
-            message: `Stock not configured for ${product.name} (${item.selectedSize})`
-          });
-
-        }
-
-        if (sizeData) {
-
-          if (sizeData.stock < item.qty) {
-
-            return res.status(400).json({
-              success: false,
-              message: `${product.name} (${item.selectedSize}) is out of stock`
-            });
-
-          }
-
-          sizeData.stock -= item.qty;
-
-          await product.save();
-        }
-      }
+    if (req.body.paymentMethod && req.body.paymentMethod !== "COD") {
+      return res.status(400).json({ message: "Online orders must be completed through payment verification" });
     }
-
-    return res.json({
-      success: true,
-      message: "Order saved",
-      order,
+    const cart = await calculateCart(req.body.products, req.body.couponCode);
+    const result = await createOrderWithReservedStock({
+      user: req.user,
+      customer: req.body.customer,
+      cart,
+      payment: { method: "COD", status: "Pending" },
+      idempotencyKey: req.body.idempotencyKey,
     });
-
+    if (result.created) await sendOrderNotifications(result.order);
+    return res.status(result.created ? 201 : 200).json({ success: true, order: result.order });
   } catch (error) {
-
-    console.error("ORDER ERROR:");
-    console.error(error);
-    console.error(error.stack);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    return res.status(error.status || 500).json({ success: false, message: error.message });
   }
 });
 
 router.get("/invoice/:id", protect, async (req, res) => {
-
   try {
-    const order =
-      await Order.findById(
-        req.params.id
-      );
-
-    if (!order) {
-      return res.status(404).json({
-        message: "Order not found",
-      });
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!req.user.isAdmin && String(order.userId) !== String(req.user._id)) {
+      return res.status(403).json({ message: "Access denied" });
     }
-    if (
-      !req.user.isAdmin &&
-      order.userId.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({
-        message: "Access denied",
-      });
-    }
-
     generateInvoice(order, res);
-
   } catch (error) {
-
-    return res.status(500).json({
-      message: error.message,
-    });
-
+    return res.status(500).json({ message: error.message });
   }
-}
-);
+});
 
-router.post(
-  "/resend-invoice/:id",
-  protect,
-  admin,
-  async (req, res) => {
-
-    try {
-
-      const order =
-        await Order.findById(req.params.id);
-
-      if (!order) {
-        return res.status(404).json({
-          message: "Order not found",
-        });
-      }
-
-      await sendEmail(
-        order.email,
-        "Invoice - Tamanna's Hut",
-        `
-          ${orderEmailTemplate(order)}
-          <hr/>
-          ${invoiceTemplate(order)}
-        `
-      );
-
-      res.json({
-        success: true,
-        message: "Invoice sent",
-      });
-
-    } catch (error) {
-
-      res.status(500).json({
-        message: error.message,
-      });
-
-    }
-  }
-);
-// GET ALL ORDERS
-
-router.get("/", protect, admin, async (req, res) => {
-
+router.post("/resend-invoice/:id", protect, admin, async (req, res) => {
   try {
-
-    const orders = await Order.find().sort({
-      createdAt: -1,
-    });
-
-    return res.json(orders);
-
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    await sendEmail(order.email, "Invoice - Tamanna's Hut", `${orderEmailTemplate(order)}<hr/>${invoiceTemplate(order)}`);
+    return res.json({ success: true, message: "Invoice sent" });
   } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
 
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+router.get("/", protect, admin, async (_req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    return res.json(orders);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 });
 
 router.put("/cancel/:id", protect, async (req, res) => {
-
   try {
-
-    const order = await Order.findById(
-      req.params.id
-    );
-    if (!order) {
-
-      return res.status(404).json({
-        message: "Order not found",
-      });
-
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!req.user.isAdmin && String(order.userId) !== String(req.user._id)) {
+      return res.status(403).json({ message: "Access denied" });
     }
-    if (
-      !req.user.isAdmin &&
-      order.userId.toString() !== req.user._id.toString()
-    ) {
-      return res.status(403).json({
-        message: "Access denied",
-      });
-    }
-
-
     if (order.status !== "Pending") {
-
-      return res.status(400).json({
-        message:
-          "Order cannot be cancelled",
-      });
-
+      return res.status(400).json({ message: "Only pending orders can be cancelled" });
     }
-
-    for (const item of order.products) {
-
-      const product =
-        await Product.findById(item._id);
-
-      if (product) {
-
-        const sizeData =
-          product.sizeStock.find(
-            s =>
-              s.size ===
-              item.selectedSize
-          );
-
-        if (sizeData) {
-
-          sizeData.stock += item.qty;
-
-        }
-
-        await product.save();
-
-      }
-
-    }
-
+    await restoreOrderStock(order);
     order.status = "Cancelled";
-
+    order.statusHistory.push({ status: "Cancelled", note: String(req.body.reason || "Cancelled by customer").slice(0, 300) });
     await order.save();
-
-    return res.json({
-      success: true,
-      message:
-        "Order Cancelled",
-    });
-
+    return res.json({ success: true, message: "Order cancelled", order });
   } catch (error) {
-
-    return res.status(500).json({
-      message: error.message,
-    });
-
+    return res.status(500).json({ message: error.message });
   }
-
 });
-// UPDATE ORDER STATUS
 
 router.put("/:id", protect, admin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (!order) {
-      return res.status(404).json({
-        message: "Order not found",
-      });
+    const nextStatus = req.body.status || order.status;
+    if (!allowedStatuses.has(nextStatus)) return res.status(400).json({ message: "Invalid order status" });
+    if (order.status === "Cancelled" && nextStatus !== "Cancelled") {
+      return res.status(400).json({ message: "A cancelled order cannot be reopened" });
     }
+    if (nextStatus === "Cancelled" && order.status !== "Cancelled") await restoreOrderStock(order);
 
-    // Restore stock when cancelled
-    if (
-      req.body.status === "Cancelled" &&
-      order.status !== "Cancelled"
-    ) {
-      for (const item of order.products) {
-
-        const product =
-          await Product.findById(item._id);
-
-        if (product) {
-
-          const sizeIndex =
-            product.sizeStock.findIndex(
-              s =>
-                s.size ===
-                item.selectedSize
-            );
-
-          if (sizeIndex !== -1) {
-            product.sizeStock[
-              sizeIndex
-            ].stock += item.qty;
-
-            await product.save();
-          }
-        }
-      }
-    }
-
-    order.status = req.body.status;
+    const trackingInput = req.body.trackingNumber || req.body.tracking || {};
     order.tracking = {
-      trackingId:
-        req.body.trackingNumber?.trackingId ||
-        order.tracking?.trackingId,
-
-      courier:
-        req.body.trackingNumber?.courier ||
-        order.tracking?.courier,
+      trackingId: String(trackingInput.trackingId || order.tracking?.trackingId || "").slice(0, 150),
+      courier: String(trackingInput.courier || order.tracking?.courier || "").slice(0, 150),
     };
-
+    if (nextStatus !== order.status) {
+      order.status = nextStatus;
+      order.statusHistory.push({ status: nextStatus, note: String(req.body.note || "Status updated by admin").slice(0, 300) });
+    }
     const updatedOrder = await order.save();
-    await sendEmail(
-      order.email,
-      `Order Update - Tamanna's Hut`,
-      `
-      <h2>Order Status Updated</h2>
-    
-      <p>Hello ${order.customerName || order.name || "Customer"},</p>
-    
-      <p>Your order status has been updated.</p>
-    
-      <p>
-        <strong>Order ID:</strong>
-        ${order._id}
-      </p>
-    
-      <p>
-        <strong>New Status:</strong>
-        ${order.status}
-      </p>
-    
-      ${order.tracking
-        ? `
-          <p>
-            <strong>Tracking Number:</strong>
-            ${order.tracking?.trackingId || ""}
-          </p>
-        `
-        : ""
-      }
-    
-      <br>
-    
-      <p>
-        Thank you for shopping with Tamanna's Hut 💖
-      </p>
-      `
-    );
 
+    await Promise.allSettled([
+      sendEmail(
+        order.email,
+        "Order Update - Tamanna's Hut",
+        `<h2>Order status updated</h2><p>Hello ${order.customerName || "Customer"},</p><p>Order <strong>${order._id}</strong> is now <strong>${order.status}</strong>.</p>${order.tracking?.trackingId ? `<p>Tracking: ${order.tracking.trackingId}</p>` : ""}`
+      ),
+    ]);
     return res.json(updatedOrder);
-
   } catch (error) {
-    return res.status(500).json({
-      message: error.message,
-    });
+    return res.status(500).json({ message: error.message });
   }
 });
-
-
-// MY ORDERS
 
 router.get("/my-orders", protect, async (req, res) => {
-
   try {
-
-    const orders = await Order.find({
-      userId: req.user._id,
-    }).sort({
-      createdAt: -1,
-    });
-
+    const orders = await Order.find({ userId: req.user._id }).sort({ createdAt: -1 });
     return res.json(orders);
-
   } catch (error) {
-
-    return res.status(500).json({
-      message: error.message,
-    });
-
+    return res.status(500).json({ message: error.message });
   }
-
 });
-
 
 export default router;

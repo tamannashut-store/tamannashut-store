@@ -5,6 +5,7 @@ export default function ImageMagnifier({
   alt,
   zoom = 2.8,
   lensSize = 180,
+  className = "",
 }) {
   const imageRef = useRef(null);
   const lensRef = useRef(null);
@@ -12,12 +13,14 @@ export default function ImageMagnifier({
   const zoomImageRef = useRef(null);
 
   const show = () => {
+    if (!lensRef.current || !zoomRef.current) return;
     lensRef.current.style.opacity = "1";
     zoomRef.current.style.opacity = "1";
     zoomRef.current.style.visibility = "visible";
   };
 
   const hide = () => {
+    if (!lensRef.current || !zoomRef.current) return;
     lensRef.current.style.opacity = "0";
     zoomRef.current.style.opacity = "0";
     zoomRef.current.style.visibility = "hidden";
@@ -59,9 +62,9 @@ export default function ImageMagnifier({
   };
 
   return (
-    <div className="flex gap-10 items-start">
+    <div className={`relative w-full ${className}`}>
       <div
-        className="relative select-none"
+        className="relative w-full select-none overflow-hidden rounded-3xl bg-gray-100"
         onMouseEnter={show}
         onMouseLeave={hide}
         onMouseMove={move}
@@ -71,7 +74,7 @@ export default function ImageMagnifier({
           src={src}
           alt={alt}
           draggable={false}
-          className="w-full max-w-[520px] rounded-xl block"
+          className="block aspect-[4/5] w-full object-cover"
         />
 
         <div
@@ -100,14 +103,18 @@ export default function ImageMagnifier({
       <div
         ref={zoomRef}
         style={{
-          width: 560,
+          width: 520,
           height: 560,
           opacity: 0,
           visibility: "hidden",
         }}
         className="
+          absolute
+          left-[calc(100%+24px)]
+          top-0
+          z-40
           hidden
-          lg:flex
+          xl:flex
           overflow-hidden
           rounded-xl
           border

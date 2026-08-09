@@ -120,6 +120,7 @@ function CartProvider({ children }) {
         ...cartItems,
         {
           ...product,
+          image: product.images?.[0]?.url || product.image || "",
           qty: 1,
         },
       ];
