@@ -8,6 +8,12 @@ import { toast } from "react-hot-toast";
 import SkeletonProduct from "../components/SkeletonProduct";
 import { LazyLoadImage } from "react-lazy-load-image-component";
 import "react-lazy-load-image-component/src/effects/blur.css";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Pagination, Navigation } from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
 
 function Home() {
   const [products, setProducts] = useState([]);
@@ -216,9 +222,58 @@ function Home() {
 
             {/* RIGHT */}
 
-            <div>
+            <div className="relative">
 
-              <img src={banner1} alt="Tamanna's Hut" className="w-full h-[650px] object-cover rounded-[40px]" />
+              <Swiper
+                modules={[Autoplay, Pagination, Navigation]}
+                navigation
+                pagination={{ clickable: true }}
+                autoplay={{
+                  delay: 4000,
+                  disableOnInteraction: false,
+                }}
+                loop={heroProducts.length > 1}
+                className="w-full h-[650px] rounded-[40px] overflow-hidden"
+              >
+
+                {heroProducts.map((product) => (
+
+                  <SwiperSlide key={product._id}>
+
+                    <Link
+                      to={`/product/${product._id}`}
+                      className="block relative w-full h-full group"
+                    >
+
+                      <img
+                        src={product.images?.[0]?.url}
+                        alt={`${product.name} - Tamanna's Hut`}
+                        className="w-full h-full object-cover transition duration-700 group-hover:scale-105"
+                      />
+
+                      <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black/70 to-transparent">
+
+                        <p className="text-white text-sm uppercase tracking-[3px]">
+                          Featured Collection
+                        </p>
+
+                        <h2 className="text-white text-3xl font-serif mt-2">
+                          {product.name}
+                        </h2>
+
+                        <p className="text-white text-xl font-semibold mt-2">
+                          ₹{product.price}
+                        </p>
+
+                      </div>
+
+                    </Link>
+
+                  </SwiperSlide>
+
+                ))}
+
+              </Swiper>
 
             </div>
 
@@ -287,19 +342,9 @@ duration-300
                 </div>
               </div>
 
-              <div className="
-bg-white
-rounded-[30px]
-overflow-hidden
-border
-border-[#efe8dd]
-hover:-translate-y-2
-transition
-duration-300
-">
+              <div className="bg-white rounded-[30px] overflow-hidden border border-[#efe8dd] hover:-translate-y-2 transition duration-300">
                 <LazyLoadImage effect="blur"
-                  src="https://images.unsplash.com/photo-1519345182560-3f2917c472ef"
-                  alt=""
+                  src="https://images.unsplash.com/photo-1519345182560-3f2917c472ef" alt=""
                   className="h-[400px] w-full object-cover group-hover:scale-110 transition duration-500"
                 />
                 <div className="p-6">

@@ -38,6 +38,7 @@
     "react-loading-skeleton": "^3.5.0",
     "resend": "^6.12.4",
     "streamifier": "^0.1.1",
+    "swiper": "^14.1.0",
     "twilio": "^6.0.2"
   },
   "devDependencies": {
