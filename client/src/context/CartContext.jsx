@@ -3,8 +3,10 @@ import {
   createContext,
   useState,
   useEffect,
+  useRef,
 } from "react";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 export const CartContext = createContext();
 
@@ -21,6 +23,22 @@ function CartProvider({ children }) {
   
   const [cartItems, setCartItems] = useState([]);
   const [hydrated, setHydrated] = useState(false);
+  const syncQueue = useRef(Promise.resolve());
+
+  const persistAccountCart = (items) => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user?.token) return;
+    const payload = items.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty }));
+    syncQueue.current = syncQueue.current
+      .catch(() => undefined)
+      .then(() => axios.put(`${import.meta.env.VITE_API_URL}/api/cart`, { items: payload }, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      }))
+      .catch((error) => {
+        console.error("Cart could not be saved", error);
+        toast.error("Your cart could not sync. Please check your connection.");
+      });
+  };
 
   // LOAD CART
   useEffect(() => {
@@ -58,6 +76,7 @@ function CartProvider({ children }) {
           if (error.response?.status !== 401) console.error("Cart sync failed", error);
           const cachedCart = localStorage.getItem(newCartKey);
           setCartItems(cachedCart ? JSON.parse(cachedCart) : []);
+          setHydrated(true);
         }
       } else {
         const savedCart = localStorage.getItem("guest_cart");
@@ -92,12 +111,7 @@ function CartProvider({ children }) {
       return undefined;
     }
     localStorage.setItem(cartKey, JSON.stringify(cartItems));
-    const timer = setTimeout(() => {
-      axios.put(`${import.meta.env.VITE_API_URL}/api/cart`, {
-        items: cartItems.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty })),
-      }).catch((error) => console.error("Cart could not be saved", error));
-    }, 350);
-    return () => clearTimeout(timer);
+    return undefined;
   }, [cartItems, cartKey, hydrated]);
 
   // ADD TO CART
@@ -151,6 +165,7 @@ function CartProvider({ children }) {
     }
 
     setCartItems(updatedCart);
+    persistAccountCart(updatedCart);
   };
 
   // INCREASE QTY
@@ -188,6 +203,7 @@ function CartProvider({ children }) {
       });
 
     setCartItems(updatedCart);
+    persistAccountCart(updatedCart);
   };
 
   // DECREASE QTY
@@ -216,6 +232,7 @@ function CartProvider({ children }) {
       );
 
     setCartItems(updatedCart);
+    persistAccountCart(updatedCart);
   };
 
   // REMOVE ITEM
@@ -235,12 +252,14 @@ function CartProvider({ children }) {
       );
 
     setCartItems(updatedCart);
+    persistAccountCart(updatedCart);
   };
 
   // CLEAR CART
   const clearCart = () => {
 
     setCartItems([]);
+    persistAccountCart([]);
   
     localStorage.removeItem(
       cartKey
