@@ -29,7 +29,9 @@ const expandCart = async (cart) => {
     const product = byId.get(String(item.productId));
     if (!product) return [];
     const variant = product.variants?.find((entry) => item.selectedSku ? entry.sku === item.selectedSku : entry.size === item.selectedSize);
-    const image = product.images?.find((entry) => variant?.color && entry.color?.toLowerCase() === variant.color.toLowerCase()) || product.images?.[0];
+    const image = product.images?.find((entry) => variant?.color && entry.color?.toLowerCase() === variant.color.toLowerCase() && entry.size === variant.size)
+      || product.images?.find((entry) => variant?.color && entry.color?.toLowerCase() === variant.color.toLowerCase() && !entry.size)
+      || product.images?.[0];
     return [{ ...product, price: Number(variant?.price ?? product.price), selectedSize: item.selectedSize, selectedSku: variant?.sku || item.selectedSku || "", selectedColor: variant?.color || "", image: image?.url || "", qty: item.qty }];
   });
 };

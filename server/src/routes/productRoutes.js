@@ -138,10 +138,12 @@ router.post("/", protect, admin, upload.array("images", 10), async (req, res) =>
         const results = await Promise.all(uploadPromises);
 
         const imageColors = JSON.parse(req.body.imageColors || "[]");
+        const imageSizes = JSON.parse(req.body.imageSizes || "[]");
         images = results.map((result, index) => ({
           url: result.secure_url,
           public_id: result.public_id,
           color: String(imageColors[index] || "").trim().slice(0, 80),
+          size: String(imageSizes[index] || "").trim().slice(0, 30),
         }));
 
       } catch (err) {
@@ -351,6 +353,7 @@ router.put(
         url: image.url,
         public_id: image.public_id,
         color: image.color || "",
+        size: image.size || "",
       }));
 
       let retainedImages = originalImages;
@@ -363,7 +366,7 @@ router.put(
         retainedImages = requestedImages.map((image) => {
           const original = originalById.get(image.public_id);
           if (!original) throw new Error("Invalid existing image selection");
-          return { ...original, color: String(image.color ?? original.color ?? "").trim().slice(0, 80) };
+          return { ...original, color: String(image.color ?? original.color ?? "").trim().slice(0, 80), size: String(image.size ?? original.size ?? "").trim().slice(0, 30) };
         });
       }
 
@@ -372,10 +375,12 @@ router.put(
           req.files.map((file) => uploadToCloudinary(file.buffer))
         );
         const newImageColors = JSON.parse(req.body.newImageColors || "[]");
+        const newImageSizes = JSON.parse(req.body.newImageSizes || "[]");
         uploadedImages = results.map((result, index) => ({
           url: result.secure_url,
           public_id: result.public_id,
           color: String(newImageColors[index] || "").trim().slice(0, 80),
+          size: String(newImageSizes[index] || "").trim().slice(0, 30),
         }));
       }
 

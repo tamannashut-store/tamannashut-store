@@ -54,7 +54,7 @@ function ProductDetails() {
 
   const allImages = product.images?.length ? product.images : [{ url: "/placeholder.png", public_id: "placeholder", color: "" }];
   const colorOptions = [...new Set((product.variants || []).filter((item) => item.active !== false).map((item) => item.color).filter(Boolean))];
-  const colorImages = selectedColor ? allImages.filter((image) => !image.color || image.color.toLowerCase() === selectedColor.toLowerCase()) : allImages;
+  const colorImages = selectedColor ? allImages.filter((image) => (!image.color || image.color.toLowerCase() === selectedColor.toLowerCase()) && (!image.size || !selectedSize || image.size === selectedSize)) : allImages;
   const images = colorImages.length ? colorImages : allImages;
   const availableVariants = (product.variants || []).filter((item) => item.active !== false && (!selectedColor || !item.color || item.color.toLowerCase() === selectedColor.toLowerCase()));
   const sizeOptions = availableVariants.length ? availableVariants : product.sizeStock || [];
@@ -148,7 +148,7 @@ function ProductDetails() {
                   ))}
                 </div>
                 <div className="order-1 min-w-0 sm:order-2">
-                  <ImageMagnifier src={images[selectedImageIndex]?.url} alt={`${product.name} view ${selectedImageIndex + 1}`} />
+                  <ImageMagnifier src={(images[selectedImageIndex] || images[0])?.url} alt={`${product.name} view ${selectedImageIndex + 1}`} />
                 </div>
               </div>
             </section>

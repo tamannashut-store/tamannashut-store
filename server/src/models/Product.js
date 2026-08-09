@@ -18,6 +18,7 @@ const productSchema = new mongoose.Schema(
           required: true,
         },
         color: { type: String, trim: true, default: "" },
+        size: { type: String, trim: true, default: "" },
       },
     ],
     category: String,

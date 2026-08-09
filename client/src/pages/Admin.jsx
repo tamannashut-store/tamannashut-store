@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import ColorVariantEditor from "../components/ColorVariantEditor";
 import ListingWizardNav, { WizardActions } from "../components/ListingWizardNav";
+import ImageVariantAssignment from "../components/ImageVariantAssignment";
 
 const initialVariants = [];
 
@@ -23,6 +24,7 @@ function Admin() {
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [imageColors, setImageColors] = useState([]);
+  const [imageSizes, setImageSizes] = useState([]);
   const [createStep, setCreateStep] = useState(0);
 
   const fetchProducts = useCallback(async (page = 1) => {
@@ -57,12 +59,14 @@ function Admin() {
     setImages(files);
     setPreviews(urls);
     setImageColors(files.map(() => form.color || ""));
+    setImageSizes(files.map(() => ""));
   };
 
   const makeCover = (index) => {
     setImages((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); return next; });
     setPreviews((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); previewUrls.current = next; return next; });
     setImageColors((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); return next; });
+    setImageSizes((current) => { const next = [...current]; next.unshift(next.splice(index, 1)[0]); return next; });
   };
 
   const resetCreate = () => {
@@ -73,6 +77,7 @@ function Admin() {
     setImages([]);
     setPreviews([]);
     setImageColors([]);
+    setImageSizes([]);
     setCreateStep(0);
     if (fileRef.current) fileRef.current.value = "";
   };
@@ -94,6 +99,7 @@ function Admin() {
       data.append("variants", JSON.stringify(variants));
       data.append("sizeStock", JSON.stringify(variants.map(({ size, stock }) => ({ size, stock }))));
       data.append("imageColors", JSON.stringify(imageColors));
+      data.append("imageSizes", JSON.stringify(imageSizes));
       images.forEach((image) => data.append("images", image));
       await axios.post(`${import.meta.env.VITE_API_URL}/api/products`, data);
       toast.success("Product listing created");
@@ -160,6 +166,7 @@ function Admin() {
 
           {createStep === 2 && <div className="mx-auto max-w-5xl">
             <section className="surface-card p-6"><h2 className="text-xl font-semibold">Images by colour</h2><p className="mt-1 text-sm text-slate-500">Choose which colour each photo belongs to. Shared photos appear for every colour.</p><input ref={fileRef} type="file" multiple accept="image/*" onChange={selectImages} className="mt-4 w-full text-sm" /><div className="mt-4 grid grid-cols-2 gap-3">{previews.map((url, index) => <div key={url} className={`rounded-xl border-2 p-1 ${index === 0 ? "border-brand-primary" : "border-slate-200"}`}><button type="button" onClick={() => makeCover(index)} className="relative w-full overflow-hidden rounded-lg"><img src={url} alt="" className="aspect-square w-full object-cover" />{index === 0 && <span className="absolute left-1 top-1 rounded bg-brand-primary px-1.5 py-0.5 text-[10px] text-white">Cover</span>}</button><select value={imageColors[index] || ""} onChange={(event) => setImageColors((current) => current.map((value, itemIndex) => itemIndex === index ? event.target.value : value))} className="field-control mt-1 py-2 text-xs"><option value="">Shared / size chart</option>{variantColors.map((color) => <option key={color} value={color}>{color}</option>)}</select></div>)}</div></section>
+            <section className="surface-card mt-5 p-6"><h3 className="font-semibold">Colour and size assignment</h3><p className="mt-1 text-sm text-slate-500">Optionally connect each photo to an exact size. Leave size blank when the photo applies to every size in that colour.</p><div className="mt-4 space-y-3">{previews.map((url, index) => <div key={`assignment-${url}`} className="grid items-center gap-3 rounded-xl border p-3 sm:grid-cols-[56px_1fr]"><img src={url} alt="" className="h-14 w-14 rounded-lg object-cover"/><ImageVariantAssignment color={imageColors[index] || ""} size={imageSizes[index] || ""} colors={variantColors} variants={variants} onChange={(assignment) => { setImageColors((current) => current.map((value, itemIndex) => itemIndex === index ? assignment.color : value)); setImageSizes((current) => current.map((value, itemIndex) => itemIndex === index ? assignment.size : value)); }} /></div>)}</div></section>
           </div>}
           {createStep === 3 && <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_340px]">
             <section className="surface-card p-6"><p className="eyebrow">Ready to publish</p><h2 className="mt-2 text-2xl font-semibold">Review your listing</h2><div className="mt-6 flex gap-5">{previews[0] && <img src={previews[0]} alt="" className="h-32 w-28 rounded-xl object-cover" />}<div><h3 className="text-lg font-semibold">{form.name}</h3><p className="mt-1 text-slate-500">{form.category} · {variantColors.length} colours · {variants.length} SKUs</p><p className="mt-3 text-xl font-bold text-brand-primary">₹{Number(form.price || 0).toLocaleString("en-IN")}</p></div></div><div className="mt-6 grid grid-cols-3 gap-3 text-center"><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{variants.length}</strong><span className="text-xs text-slate-500">SKUs</span></div><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{images.length}</strong><span className="text-xs text-slate-500">Photos</span></div><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{variants.reduce((sum, item) => sum + Number(item.stock || 0), 0)}</strong><span className="text-xs text-slate-500">Units</span></div></div></section>
