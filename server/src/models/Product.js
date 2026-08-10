@@ -57,6 +57,7 @@ const productSchema = new mongoose.Schema(
         name: String,
         rating: Number,
         comment: String,
+        verifiedPurchase: { type: Boolean, default: false },
         createdAt: {
           type: Date,
           default: Date.now,

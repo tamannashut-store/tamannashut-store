@@ -13,7 +13,7 @@ function ShippingPolicy() {
 
         <link
           rel="canonical"
-          href="https://tamannashut.com/shipping-policy"
+          href="https://www.tamannashut.com/shipping-policy"
         />
       </Helmet>
 

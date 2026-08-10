@@ -11,7 +11,7 @@ function ReturnPolicy() {
         />
         <link
           rel="canonical"
-          href="https://tamannashut.com/return-policy"
+          href="https://www.tamannashut.com/return-policy"
         />
       </Helmet>
 
@@ -73,7 +73,7 @@ function ReturnPolicy() {
           <p>
             Email: support@tamannashut.com
             <br />
-            Website: https://tamannashut.com
+            Website: https://www.tamannashut.com
           </p>
         </div>
       </div>

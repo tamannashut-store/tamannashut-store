@@ -1,7 +1,6 @@
-import { createContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-
-export const WishlistContext = createContext();
+import WishlistContext from "./wishlistState";
 
 function WishlistProvider({ children }) {
 

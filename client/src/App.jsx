@@ -1,39 +1,25 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import StoreLayout from "./components/StoreLayout";
-import AdminLayout from "./components/AdminLayout";
 import AdminRoute from "./components/AdminRoute";
 import PrivateRoute from "./components/PrivateRoute";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import ProductDetails from "./pages/ProductDetails";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Shop from "./pages/Shop";
-import Success from "./pages/Success";
-import MyOrders from "./pages/MyOrders";
-import Wishlist from "./pages/Wishlist";
-import Profile from "./pages/Profile";
-import ChangePassword from "./pages/ChangePassword";
-import ReturnPolicy from "./pages/ReturnPolicy";
-import ShippingPolicy from "./pages/ShippingPolicy";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsConditions from "./pages/TermsConditions";
-import Contact from "./pages/Contact";
-import About from "./pages/About";
-import Admin from "./pages/Admin";
-import AdminOrders from "./pages/AdminOrders";
-import EditProduct from "./pages/EditProduct";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminCoupons from "./pages/AdminCoupons";
-import AdminContacts from "./pages/AdminContacts";
-import AdminLogin from "./pages/AdminLogin";
+
+const Home = lazy(() => import("./pages/Home")); const Login = lazy(() => import("./pages/Login")); const Register = lazy(() => import("./pages/Register"));
+const Dashboard = lazy(() => import("./pages/Dashboard")); const ProductDetails = lazy(() => import("./pages/ProductDetails")); const Cart = lazy(() => import("./pages/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout")); const Shop = lazy(() => import("./pages/Shop")); const Success = lazy(() => import("./pages/Success"));
+const MyOrders = lazy(() => import("./pages/MyOrders")); const Wishlist = lazy(() => import("./pages/Wishlist")); const Profile = lazy(() => import("./pages/Profile"));
+const ChangePassword = lazy(() => import("./pages/ChangePassword")); const ReturnPolicy = lazy(() => import("./pages/ReturnPolicy")); const ShippingPolicy = lazy(() => import("./pages/ShippingPolicy"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy")); const TermsConditions = lazy(() => import("./pages/TermsConditions")); const Contact = lazy(() => import("./pages/Contact"));
+const About = lazy(() => import("./pages/About")); const Admin = lazy(() => import("./pages/Admin")); const AdminOrders = lazy(() => import("./pages/AdminOrders"));
+const EditProduct = lazy(() => import("./pages/EditProduct")); const AdminDashboard = lazy(() => import("./pages/AdminDashboard")); const AdminCoupons = lazy(() => import("./pages/AdminCoupons"));
+const AdminContacts = lazy(() => import("./pages/AdminContacts")); const AdminLogin = lazy(() => import("./pages/AdminLogin")); const AdminLayout = lazy(() => import("./components/AdminLayout"));
+
+const PageLoader = () => <div className="grid min-h-[55vh] place-items-center bg-brand-background text-sm font-medium text-slate-500">Loading…</div>;
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense fallback={<PageLoader/>}><Routes>
         <Route element={<StoreLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -67,7 +53,7 @@ function App() {
         </Route>
         <Route path="/admin-coupons" element={<Navigate to="/admin/coupons" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      </Routes></Suspense>
     </BrowserRouter>
   );
 }

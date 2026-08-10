@@ -19,6 +19,10 @@ function ProductDetails() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewEligibility, setReviewEligibility] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("user"))?.token ? { loading: true, eligible: false, reason: "" } : { loading: false, eligible: false, reason: "Log in to review products you have purchased" }; }
+    catch { return { loading: false, eligible: false, reason: "Log in to review products you have purchased" }; }
+  });
 
   const fetchProduct = useCallback(async (signal) => {
     try {
@@ -41,6 +45,17 @@ function ProductDetails() {
     fetchProduct(controller.signal);
     return () => controller.abort();
   }, [fetchProduct]);
+
+  useEffect(() => {
+    let active = true;
+    let user;
+    try { user = JSON.parse(localStorage.getItem("user")); } catch { /* Invalid cached session is treated as signed out. */ }
+    if (!user?.token) return undefined;
+    axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}/review-eligibility`)
+      .then(({ data }) => { if (active) setReviewEligibility({ loading: false, eligible: Boolean(data.eligible), reason: data.reason || "" }); })
+      .catch((error) => { if (active) setReviewEligibility({ loading: false, eligible: false, reason: error.response?.data?.message || "Review eligibility could not be verified" }); });
+    return () => { active = false; };
+  }, [id]);
 
   if (loading) {
     return (
@@ -103,7 +118,7 @@ function ProductDetails() {
         <meta property="og:description" content={product.description} />
         <meta property="og:image" content={images[0].url} />
         <meta property="og:type" content="product" />
-        <link rel="canonical" href={`https://tamannashut.com/product/${id}`} />
+        <link rel="canonical" href={`https://www.tamannashut.com/product/${id}`} />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -114,7 +129,7 @@ function ProductDetails() {
             brand: { "@type": "Brand", name: "Tamanna's Hut" },
             offers: {
               "@type": "Offer",
-              url: `https://tamannashut.com/product/${id}`,
+              url: `https://www.tamannashut.com/product/${id}`,
               priceCurrency: "INR",
               price: product.price,
               availability: totalStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
@@ -215,7 +230,7 @@ function ProductDetails() {
                 <div className="mt-5 space-y-5">
                   {product.reviews?.length ? product.reviews.map((review) => (
                     <article key={review._id} className="border-b pb-5 last:border-0">
-                      <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">{review.name}</h3><span className="rounded bg-green-700 px-2 py-1 text-xs text-white">★ {review.rating}</span></div>
+                      <div className="flex flex-wrap items-center justify-between gap-3"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{review.name}</h3>{review.verifiedPurchase && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">Verified purchase</span>}</div><span className="rounded bg-green-700 px-2 py-1 text-xs text-white">★ {review.rating}</span></div>
                       <p className="mt-3 leading-7 text-gray-600">{review.comment}</p>
                     </article>
                   )) : <p className="text-gray-500">No reviews yet. Be the first to share your experience.</p>}
@@ -223,13 +238,13 @@ function ProductDetails() {
               </div>
               <div className="h-fit rounded-2xl bg-brand-background p-5">
                 <h3 className="text-lg font-semibold">Write a review</h3>
-                <label className="mt-4 block text-sm font-medium">Rating</label>
+                {!reviewEligibility.loading && !reviewEligibility.eligible ? <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><p className="font-semibold">Verified customers only</p><p className="mt-1">{reviewEligibility.reason}</p></div> : <><label className="mt-4 block text-sm font-medium">Rating</label>
                 <select value={rating} onChange={(event) => setRating(Number(event.target.value))} className="mt-2 w-full rounded-xl border bg-white p-3">
                   {[5, 4, 3, 2, 1].map((value) => <option key={value} value={value}>{"★".repeat(value)} ({value})</option>)}
                 </select>
                 <label className="mt-4 block text-sm font-medium">Your experience</label>
                 <textarea value={comment} onChange={(event) => setComment(event.target.value)} maxLength="1000" rows="5" placeholder="Tell other parents about fit, comfort and quality" className="mt-2 w-full rounded-xl border bg-white p-3" />
-                <button type="button" disabled={submittingReview} onClick={submitReview} className="mt-4 w-full rounded-xl bg-brand-primary py-3 font-medium text-white disabled:bg-gray-400">{submittingReview ? "Submitting…" : "Submit review"}</button>
+                <button type="button" disabled={submittingReview || reviewEligibility.loading} onClick={submitReview} className="mt-4 w-full rounded-xl bg-brand-primary py-3 font-medium text-white disabled:bg-gray-400">{submittingReview ? "Submitting…" : "Submit verified review"}</button></>}
               </div>
             </div>
           </section>

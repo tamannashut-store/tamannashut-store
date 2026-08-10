@@ -12,7 +12,7 @@ router.get("/google-feed.xml", async (req, res) => {
 xmlns:g="http://base.google.com/ns/1.0">
 <channel>
 <title><![CDATA[Tamanna's Hut]]></title>
-<link>https://tamannashut.com</link>
+<link>https://www.tamannashut.com</link>
 <description><![CDATA[Kids Fashion Store]]></description>`;
 
     products.forEach((product) => {
@@ -29,7 +29,7 @@ xmlns:g="http://base.google.com/ns/1.0">
 ${product.description || product.name || ""}
 ]]></g:description>
 
-<g:link>https://tamannashut.com/product/${product._id}</g:link>
+<g:link>https://www.tamannashut.com/product/${product._id}</g:link>
 
 <g:image_link>${imageUrl}</g:image_link>
 

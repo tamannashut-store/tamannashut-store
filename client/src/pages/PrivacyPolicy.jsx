@@ -13,7 +13,7 @@ function PrivacyPolicy() {
 
                 <link
                     rel="canonical"
-                    href="https://tamannashut.com/privacy-policy"
+                    href="https://www.tamannashut.com/privacy-policy"
                 />
             </Helmet>
 

@@ -130,6 +130,7 @@ orderSchema.index({ status: 1 });
 orderSchema.index({ "shipping.awbCode": 1 }, { sparse: true });
 orderSchema.index({ "shipping.shipmentId": 1 }, { sparse: true });
 orderSchema.index({ userId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
+orderSchema.index({ userId: 1, status: 1, "products._id": 1 });
 const Order = mongoose.model("Order", orderSchema);
 
 export default Order;

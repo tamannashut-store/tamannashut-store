@@ -9,7 +9,7 @@ router.get("/robots.txt", (req, res) => {
 User-agent: *
 Allow: /
 
-Sitemap: https://tamannashut.com/sitemap.xml
+Sitemap: https://www.tamannashut.com/sitemap.xml
   `);
 });
 

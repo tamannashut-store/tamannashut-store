@@ -4,7 +4,7 @@ import { Helmet } from "react-helmet-async";
 import { FiArrowRight, FiExternalLink, FiHeart, FiRefreshCw, FiShield, FiTruck } from "react-icons/fi";
 import { FaInstagram } from "react-icons/fa";
 import { getProducts } from "../api/productApi";
-import { WishlistContext } from "../context/WishlistContext";
+import WishlistContext from "../context/wishlistState";
 import ProductImageSlider from "../components/ProductImageSlider";
 import SkeletonProduct from "../components/SkeletonProduct";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -50,16 +50,18 @@ function ProductCard({ product, onWishlist }) {
 function Home() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const { addToWishlist } = useContext(WishlistContext);
 
   useEffect(() => {
     let active = true;
     getProducts({ limit: 12 })
       .then(({ data }) => { if (active) setProducts(Array.isArray(data) ? data : data.products || []); })
-      .catch(() => { if (active) setProducts([]); })
+      .catch(() => { if (active) { setProducts([]); setLoadError(true); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [reloadKey]);
 
   const categoryCards = useMemo(() => categories.map((category) => ({
     ...category,
@@ -72,7 +74,7 @@ function Home() {
       <Helmet>
         <title>Tamanna&apos;s Hut | Premium Kidswear</title>
         <meta name="description" content="Shop thoughtfully selected kidswear for girls and boys at Tamanna's Hut." />
-        <link rel="canonical" href="https://tamannashut.com/" />
+        <link rel="canonical" href="https://www.tamannashut.com/" />
       </Helmet>
 
       <main className="bg-[#f8f7f3]">
@@ -127,7 +129,7 @@ function Home() {
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {loading ? Array.from({ length: 8 }, (_, index) => <SkeletonProduct key={index} />) : products.slice(0, 8).map((product) => <ProductCard key={product._id} product={product} onWishlist={addToWishlist} />)}
           </div>
-          {!loading && products.length === 0 && <div className="surface-card mt-10 py-16 text-center"><h3 className="text-xl font-semibold">The catalogue is being prepared</h3><p className="mt-2 text-slate-500">New products will appear here as soon as they are published.</p></div>}
+          {!loading && products.length === 0 && <div className="surface-card mt-10 px-5 py-16 text-center"><h3 className="text-xl font-semibold">{loadError ? "The catalogue is taking longer than expected" : "The catalogue is being prepared"}</h3><p className="mt-2 text-slate-500">{loadError ? "Please retry while we reconnect to the store." : "New products will appear here as soon as they are published."}</p>{loadError && <button type="button" onClick={() => { setLoading(true); setLoadError(false); setReloadKey((value) => value + 1); }} className="btn-primary mt-5">Try again</button>}</div>}
         </section>
 
         <section className="bg-[#183d2b] text-white">
