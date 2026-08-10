@@ -107,15 +107,15 @@ function Profile() {
 
   return (
 
-    <div className="max-w-3xl mx-auto px-6 py-20">
+    <div className="mx-auto max-w-3xl px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
 
-      <h1 className="text-5xl font-bold mb-10">
+      <h1 className="mb-8 text-3xl font-bold sm:mb-10 sm:text-5xl">
         My Profile
       </h1>
 
       <form
         onSubmit={updateProfile}
-        className="bg-white shadow-xl rounded-3xl p-8 space-y-5"
+        className="space-y-5 rounded-3xl bg-white p-5 shadow-xl sm:p-8"
       >
 
         <div>

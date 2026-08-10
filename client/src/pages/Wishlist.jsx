@@ -13,9 +13,9 @@ function Wishlist() {
 
     return (
 
-      <div className="h-screen flex items-center justify-center">
+      <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-5 py-16 text-center">
 
-        <h1 className="text-4xl font-bold text-gray-400">
+        <h1 className="text-3xl font-bold text-gray-400 sm:text-4xl">
 
           Wishlist Is Empty
 
@@ -28,15 +28,15 @@ function Wishlist() {
 
   return (
 
-    <div className="max-w-7xl mx-auto px-6 py-20">
+    <div className="mx-auto max-w-7xl px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
 
-      <h1 className="text-5xl font-bold mb-12">
+      <h1 className="mb-8 text-3xl font-bold sm:mb-12 sm:text-5xl">
 
         My wishlist
 
       </h1>
 
-      <div className="grid md:grid-cols-3 gap-8">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
 
         {wishlistItems.map((product) => (
 
@@ -59,7 +59,7 @@ function Wishlist() {
               ₹{product.price}
             </p>
 
-            <div className="flex gap-3 mt-6">
+            <div className="mt-6 flex flex-col gap-3 min-[380px]:flex-row">
 
               <Link
                 to={`/product/${product._id}`}

@@ -13,7 +13,11 @@ import {
   restoreOrderStock,
   sendOrderNotifications,
 } from "../services/orderService.js";
-import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
+import { cancelShiprocketShipment, verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
+import { createRazorpayRefund } from "../services/refundService.js";
+import upload from "../middleware/upload.js";
+import cloudinary from "../config/cloudinary.js";
+import streamifier from "streamifier";
 
 const router = express.Router();
 const serializeOrder = (order) => { const value = order.toObject ? order.toObject() : order; return value.status === "Processing" ? { ...value, status: "Confirmed" } : value; };
@@ -94,8 +98,10 @@ router.put("/cancel/:id", protect, async (req, res) => {
     const nextStatus = order.status === "Pending" ? "Cancelled" : ["Processing", "Confirmed"].includes(order.status) ? "Cancellation Requested" : null;
     if (!nextStatus) return res.status(400).json({ message: "This order can no longer be cancelled online" });
     if (nextStatus === "Cancelled") await restoreOrderStock(order);
+    const cancellationReason = String(req.body.reason || "Requested by customer").trim().slice(0, 300);
     order.status = nextStatus;
-    order.statusHistory.push({ status: nextStatus, note: String(req.body.reason || "Requested by customer").slice(0, 300) });
+    order.cancellationRequest = { reason: cancellationReason, requestedAt: new Date(), requestedBy: req.user.isAdmin ? "Admin" : "Customer" };
+    order.statusHistory.push({ status: nextStatus, note: cancellationReason });
     await order.save();
     await Promise.allSettled([sendStatusUpdate(order)]);
     return res.json({ success: true, message: nextStatus === "Cancelled" ? "Order cancelled" : "Cancellation requested", order });
@@ -104,7 +110,12 @@ router.put("/cancel/:id", protect, async (req, res) => {
   }
 });
 
-router.post("/return/:id", protect, async (req, res) => {
+const uploadReturnEvidence = (file) => new Promise((resolve, reject) => {
+  const stream = cloudinary.uploader.upload_stream({ folder: "tamannas-hut-return-evidence", resource_type: "image" }, (error, result) => error ? reject(error) : resolve({ url: result.secure_url, public_id: result.public_id }));
+  streamifier.createReadStream(file.buffer).pipe(stream);
+});
+
+router.post("/return/:id", protect, upload.array("images", 3), async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
@@ -113,14 +124,50 @@ router.post("/return/:id", protect, async (req, res) => {
     const deliveredAt = [...order.statusHistory].reverse().find((item) => item.status === "Delivered")?.createdAt;
     if (deliveredAt && Date.now() - new Date(deliveredAt).getTime() > 7 * 86400000) return res.status(400).json({ message: "The 7-day return window has closed" });
     const reason = String(req.body.reason || "").trim().slice(0, 500);
-    if (!reason) return res.status(400).json({ message: "Please provide a return reason" });
+    if (reason.length < 10) return res.status(400).json({ message: "Please describe the return reason in at least 10 characters" });
     order.status = "Return Requested";
-    order.returnRequest = { reason, requestedAt: new Date() };
+    const evidence = req.files?.length ? await Promise.all(req.files.map(uploadReturnEvidence)) : [];
+    order.returnRequest = { reason, requestedAt: new Date(), reviewStatus: "Pending", evidence };
     order.statusHistory.push({ status: "Return Requested", note: reason });
     await order.save();
     await Promise.allSettled([sendStatusUpdate(order)]);
     return res.json({ success: true, order });
   } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
+router.post("/:id/refund", protect, admin, async (req, res) => {
+  const order = await Order.findById(req.params.id);
+  if (!order) return res.status(404).json({ message: "Order not found" });
+  try {
+    if (order.paymentMethod !== "Online" || !order.paymentId || order.paymentStatus !== "Paid") return res.status(400).json({ message: "Only captured online payments can be refunded here" });
+    if (!["Cancelled", "Returned", "RTO Delivered", "Refund Pending"].includes(order.status)) return res.status(400).json({ message: "Complete the cancellation or return before initiating a refund" });
+    if (["Pending", "Processed", "Refunded"].includes(order.refund?.status)) return res.status(409).json({ message: `Refund is already ${String(order.refund.status).toLowerCase()}` });
+    const amount = Number(req.body.amount);
+    const reason = String(req.body.reason || "Customer order refund").trim().slice(0, 300);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > Number(order.totalAmount)) return res.status(400).json({ message: "Refund amount must be greater than zero and no more than the order total" });
+    const previousOrderStatus = order.status === "Refund Pending" ? order.refund?.previousOrderStatus || "Cancelled" : order.status;
+    // One stable key per order prevents concurrent admin requests from creating
+    // multiple refunds, even if the submitted amounts differ.
+    const idempotencyKey = order.refund?.idempotencyKey || `refund_${String(order._id)}`;
+    order.refund = { ...order.refund?.toObject?.(), status: "Pending", amount, reason, idempotencyKey, requestedAt: new Date(), previousOrderStatus, failedReason: "" };
+    if (order.status !== "Refund Pending") { order.status = "Refund Pending"; order.statusHistory.push({ status: "Refund Pending", note: "Refund initiated by admin" }); }
+    await order.save();
+    try {
+      const refund = await createRazorpayRefund({ paymentId: order.paymentId, amount, reason, orderId: order._id, idempotencyKey });
+      order.refund.status = refund.status === "processed" ? "Processed" : "Pending";
+      order.refund.reference = refund.id || "";
+      order.refund.arn = refund.acquirer_data?.arn || refund.acquirer_data?.rrn || "";
+      if (refund.status === "processed") { order.paymentStatus = "Refunded"; order.status = "Refunded"; order.refund.processedAt = new Date(); order.statusHistory.push({ status: "Refunded", note: "Refund processed by Razorpay" }); }
+      await order.save();
+      await Promise.allSettled([sendStatusUpdate(order)]);
+      return res.json({ success: true, order });
+    } catch (error) {
+      order.refund.failedReason = String(error.message || "Refund request failed").slice(0, 300);
+      if (error.status === 400) { order.refund.status = "Failed"; order.refund.idempotencyKey = ""; order.status = previousOrderStatus; order.statusHistory.push({ status: previousOrderStatus, note: "Refund attempt failed; no refund was created" }); }
+      await order.save();
+      return res.status(error.status || 500).json({ message: error.message });
+    }
+  } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
 });
 
 router.put("/:id", protect, admin, async (req, res) => {
@@ -132,7 +179,13 @@ router.put("/:id", protect, admin, async (req, res) => {
     const previousTrackingId = order.tracking?.trackingId || "";
     const nextStatus = req.body.status || order.status;
     if (!ORDER_STATUSES.includes(nextStatus)) return res.status(400).json({ message: "Invalid order status" });
+    if (nextStatus === "Refunded" && nextStatus !== order.status) return res.status(400).json({ message: "Refunded status can only be confirmed by Razorpay" });
     if (!canTransitionOrder(order.status, nextStatus)) return res.status(400).json({ message: `Cannot move an order from ${order.status} to ${nextStatus}` });
+    if (nextStatus === "Cancelled" && order.shipping?.awbCode && order.shipping?.externalStatus !== "Shipment cancelled") {
+      if (order.shipping.pickupScheduled) return res.status(400).json({ message: "Cancel the active pickup in Shiprocket before cancelling this order" });
+      await cancelShiprocketShipment(order.shipping.awbCode);
+      order.shipping.externalStatus = "Shipment cancelled";
+    }
     if (restoresStockAt.has(nextStatus) && order.status !== nextStatus) await restoreOrderStock(order);
 
     const trackingInput = req.body.trackingNumber || req.body.tracking || {};
@@ -142,13 +195,12 @@ router.put("/:id", protect, admin, async (req, res) => {
     };
     const internalNote = String(req.body.internalNote || "").trim().slice(0, 500);
     if (internalNote) order.internalNotes.push({ note: internalNote, createdBy: req.user.email || String(req.user._id) });
-    if (req.body.refund) order.refund = {
-      status: String(req.body.refund.status || order.refund?.status || "").slice(0, 80),
-      amount: Math.max(0, Number(req.body.refund.amount ?? order.refund?.amount ?? 0)),
-      reference: String(req.body.refund.reference || order.refund?.reference || "").slice(0, 150),
-      reason: String(req.body.refund.reason || order.refund?.reason || "").slice(0, 300),
-    };
     if (nextStatus !== order.status) {
+      if (order.status === "Return Requested" && ["Return Approved", "Delivered"].includes(nextStatus)) {
+        order.returnRequest.reviewStatus = nextStatus === "Return Approved" ? "Approved" : "Rejected";
+        order.returnRequest.adminNote = String(req.body.note || (nextStatus === "Return Approved" ? "Return approved" : "Return request declined")).slice(0, 300);
+        order.returnRequest.reviewedAt = new Date();
+      }
       order.status = nextStatus;
       order.statusHistory.push({ status: nextStatus, note: String(req.body.note || "Status updated by admin").slice(0, 300) });
     }
@@ -157,7 +209,7 @@ router.put("/:id", protect, admin, async (req, res) => {
     if (previousStatus !== order.status || previousTrackingId !== order.tracking?.trackingId) await Promise.allSettled([sendStatusUpdate(order)]);
     return res.json({ ...updatedOrder.toObject(), allowedNextStatuses: getNextOrderStatuses(updatedOrder.status) });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(error.status || 500).json({ message: error.message });
   }
 });
 

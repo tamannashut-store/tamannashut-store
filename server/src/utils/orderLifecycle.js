@@ -19,7 +19,7 @@ const transitions = {
   "Refund Pending": ["Refunded"],
   "RTO Initiated": ["RTO Delivered"],
   "RTO Delivered": ["Refund Pending", "Cancelled"],
-  Cancelled: [], Refunded: [],
+  Cancelled: ["Refund Pending"], Refunded: [],
 };
 
 export const canTransitionOrder = (current, next) => current === next || (transitions[current] || []).includes(next);

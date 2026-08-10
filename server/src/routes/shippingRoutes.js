@@ -6,7 +6,7 @@ import { canTransitionOrder } from "../utils/orderLifecycle.js";
 import { restoreOrderStock } from "../services/orderService.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import {
-  assignShiprocketAwb, cancelShiprocketShipment, createShiprocketOrder,
+  assignShiprocketAwb, cancelShiprocketShipment, createShiprocketOrder, createShiprocketReturn,
   generateShiprocketLabel, getShiprocketCouriers, resolveShiprocketPostcode, scheduleShiprocketPickup, verifyShiprocketDeliveryPostcode,
 } from "../services/shiprocketService.js";
 
@@ -39,15 +39,16 @@ router.post("/events", async (req, res) => {
     const payload = req.body || {};
     const awb = String(payload.awb || payload.awb_code || "");
     const shipmentId = String(payload.shipment_id || "");
-    const order = await Order.findOne({ $or: [{ "shipping.awbCode": awb || "__none__" }, { "shipping.shipmentId": shipmentId || "__none__" }] });
+    const order = await Order.findOne({ $or: [{ "shipping.awbCode": awb || "__none__" }, { "shipping.shipmentId": shipmentId || "__none__" }, { "returnRequest.reverseAwb": awb || "__none__" }, { "returnRequest.reverseShipmentId": shipmentId || "__none__" }] });
     if (!order) return res.status(200).json({ received: true });
     const code = Number(payload.current_status_id ?? payload.shipment_status_id ?? payload.status_id);
-    const mapped = ({ 6: "Shipped", 7: "Delivered", 8: "Cancelled", 15: "RTO Initiated", 16: "RTO Delivered", 19: "Shipped" })[code];
+    const isReverse = (shipmentId && shipmentId === String(order.returnRequest?.reverseShipmentId || "")) || (awb && awb === String(order.returnRequest?.reverseAwb || ""));
+    const mapped = isReverse ? ({ 6: "Return Picked Up", 7: "Returned", 42: "Return Picked Up" })[code] : ({ 6: "Shipped", 7: "Delivered", 8: "Cancelled", 9: "RTO Initiated", 10: "RTO Delivered", 19: "Shipped" })[code];
     let transitioned = false;
     order.shipping.externalStatus = String(payload.current_status || payload.shipment_status || payload.status || code || "").slice(0, 120);
     order.shipping.lastEventAt = new Date();
     if (mapped && canTransitionOrder(order.status, mapped)) {
-      if (["Cancelled", "RTO Delivered"].includes(mapped)) await restoreOrderStock(order);
+      if (["Cancelled", "Returned", "RTO Delivered"].includes(mapped)) await restoreOrderStock(order);
       order.status = mapped;
       order.statusHistory.push({ status: mapped, note: `Courier update: ${order.shipping.externalStatus || mapped}` });
       transitioned = true;
@@ -81,5 +82,7 @@ router.post("/orders/:id/awb", async (req, res) => { try {
 router.post("/orders/:id/pickup", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.shipping?.awbCode) return res.status(400).json({ message: "Assign an AWB first" }); await scheduleShiprocketPickup(order.shipping.shipmentId); order.shipping.pickupScheduled = true; if (order.status === "Confirmed") { order.status = "Packed"; order.statusHistory.push({ status: "Packed", note: "Courier pickup scheduled" }); } await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/label", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.shipping?.awbCode) return res.status(400).json({ message: "Assign an AWB first" }); const data = await generateShiprocketLabel(order.shipping.shipmentId); if (!data.label_url) throw Object.assign(new Error(data.message || "Shiprocket did not return a shipping label"), { status: 502 }); order.shipping.labelUrl = String(data.label_url); await order.save(); return res.json({ order, labelUrl: order.shipping.labelUrl }); } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/cancel", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.shipping?.awbCode) return res.status(400).json({ message: "No AWB has been assigned" }); if (order.shipping.pickupScheduled) return res.status(400).json({ message: "Cancel the pickup from Shiprocket support or dashboard" }); await cancelShiprocketShipment(order.shipping.awbCode); order.shipping.externalStatus = "Shipment cancelled"; order.statusHistory.push({ status: order.status, note: "Shiprocket shipment cancelled; order status unchanged" }); await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
+router.post("/orders/:id/return/create", async (req, res) => { try { const order = await loadOrder(req.params.id); if (order.status !== "Return Approved") return res.status(400).json({ message: "Approve the return before creating reverse logistics" }); if (order.returnRequest?.reverseShipmentId) return res.json({ order, existing: true }); const parcel = parcelFrom(req.body, order.shipping); const data = await createShiprocketReturn(order, parcel); const response = data.response?.data || data; const shipmentId = response.shipment_id || data.shipment_id; if (!shipmentId) throw Object.assign(new Error(data.message || "Shiprocket did not create the reverse shipment"), { status: 502 }); order.returnRequest.reverseOrderId = String(response.order_id || data.order_id || ""); order.returnRequest.reverseShipmentId = String(shipmentId); order.returnRequest.reverseAwb = String(response.awb_code || data.awb_code || ""); order.statusHistory.push({ status: order.status, note: "Reverse shipment created in Shiprocket" }); await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
+router.post("/orders/:id/return/pickup", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.returnRequest?.reverseShipmentId) return res.status(400).json({ message: "Create the reverse shipment first" }); if (order.returnRequest.reversePickupScheduled) return res.json({ order, existing: true }); await scheduleShiprocketPickup(order.returnRequest.reverseShipmentId); order.returnRequest.reversePickupScheduled = true; order.statusHistory.push({ status: order.status, note: "Reverse pickup scheduled" }); await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
 
 export default router;

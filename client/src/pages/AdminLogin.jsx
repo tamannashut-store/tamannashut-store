@@ -54,14 +54,14 @@ function AdminLogin() {
 
     return (
 
-        <div className="min-h-screen flex items-center justify-center bg-brand-background">
+        <div className="flex min-h-screen items-center justify-center bg-brand-background p-4">
 
             <form
                 onSubmit={handleSubmit}
-                className="bg-white shadow-2xl rounded-3xl p-10 w-full max-w-md"
+                className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-10"
             >
 
-                <h1 className="text-4xl font-bold mb-8 text-center">
+                <h1 className="mb-8 text-center text-3xl font-bold sm:text-4xl">
                     Admin Login
                 </h1>
 

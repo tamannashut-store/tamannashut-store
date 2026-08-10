@@ -1,7 +1,7 @@
 function About() {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20">
-        <h1 className="text-4xl font-bold mb-8">
+      <div className="mx-auto max-w-5xl px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
+        <h1 className="mb-8 text-3xl font-bold sm:text-4xl">
           About Tamanna's Hut
         </h1>
   
