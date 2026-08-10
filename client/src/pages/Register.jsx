@@ -1,6 +1,6 @@
 ﻿import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 function Register() {
@@ -56,19 +56,6 @@ function Register() {
                 navigate("/profile");
             }
         } catch (error) {
-
-            console.log("FULL ERROR:", error);
-
-            console.log(
-                "Error Data:",
-                error?.response?.data
-            );
-
-            console.log(
-                "Error Status:",
-                error?.response?.status
-            );
-
             toast.error(
                 error?.response?.data?.message ||
                 error.message ||
@@ -83,8 +70,14 @@ function Register() {
                 <h1 className="text-4xl font-bold text-center">Register</h1>
                 <input type="text" name="name" placeholder="Name" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
                 <input type="email" name="email" placeholder="Email" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
-                <input type="password" name="password" placeholder="Password" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
+                <input type="password" name="password" placeholder="Password (minimum 8 characters)" minLength="8" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
                 <button type="submit" className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white py-4 rounded-full text-lg font-semibold">Register</button>
+                <p className="text-center text-sm text-slate-600">
+                    Already have an account?{" "}
+                    <Link to="/login" className="font-semibold text-brand-primary hover:underline">
+                        Sign in
+                    </Link>
+                </p>
             </form>
         </div>
     );

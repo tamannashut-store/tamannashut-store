@@ -66,8 +66,6 @@ function Login() {
             navigate("/");
 
         } catch (error) {
-            console.log("Error Data:", error.response?.data);
-            console.log("Error Status:", error.response?.status);
             toast.error(
                 error.response?.data?.message ||
                 "Login Failed"
@@ -105,6 +103,12 @@ function Login() {
                     className="w-full border p-4 rounded-2xl"
                     required
                 />
+
+                <div className="text-right">
+                    <Link to="/forgot-password" className="text-sm font-semibold text-brand-primary hover:underline">
+                        Forgot password?
+                    </Link>
+                </div>
 
                 <button
                     type="submit"
