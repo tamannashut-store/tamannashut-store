@@ -250,7 +250,7 @@ router.get("/", async (req, res) => {
 
     res.set(
       "Cache-Control",
-      "no-store"
+      "public, max-age=30, s-maxage=300, stale-while-revalidate=86400"
     );
 
     res.json({
