@@ -206,9 +206,9 @@ function Checkout() {
 
   if (cartItems.length === 0) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-24 text-center">
-        <div className="rounded-3xl border bg-white p-12 shadow-sm">
-          <h1 className="text-3xl font-semibold">Your cart is empty</h1>
+      <main className="mx-auto w-full max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-24">
+        <div className="rounded-3xl border bg-white p-6 shadow-sm sm:p-12">
+          <h1 className="text-2xl font-semibold sm:text-3xl">Your cart is empty</h1>
           <p className="mt-3 text-gray-500">Add something special before checking out.</p>
           <Link to="/shop" className="mt-7 inline-block rounded-xl bg-brand-primary px-6 py-3 text-white">Continue shopping</Link>
         </div>
@@ -217,18 +217,18 @@ function Checkout() {
   }
 
   return (
-    <main className="bg-brand-background py-12 md:py-16">
-      <form onSubmit={handleSubmit} className="mx-auto grid max-w-7xl gap-8 px-5 lg:grid-cols-[1fr_420px] lg:px-6">
-        <div>
+    <main className="w-full overflow-x-clip bg-brand-background py-8 sm:py-12 md:py-16">
+      <form onSubmit={handleSubmit} className="mx-auto grid w-full min-w-0 max-w-7xl gap-6 px-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-8 lg:px-6">
+        <div className="min-w-0">
           <div className="mb-8">
             <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">Secure checkout</p>
-            <h1 className="mt-2 text-4xl font-bold">Delivery and payment</h1>
+            <h1 className="mt-2 text-3xl font-bold sm:text-4xl">Delivery and payment</h1>
           </div>
 
-          <section className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">Delivery address</h2>
-              <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">Secure</span>
+          <section className="min-w-0 rounded-3xl border bg-white p-4 shadow-sm sm:p-6 md:p-8">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold sm:text-2xl">Delivery address</h2>
+              <span className="shrink-0 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">Secure</span>
             </div>
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               {[
@@ -240,9 +240,9 @@ function Checkout() {
                 ["state", "State", "text"],
                 ["country", "Country", "text"],
               ].map(([name, label, type]) => (
-                <label key={name}>
+                <label key={name} className="min-w-0">
                   <span className="mb-2 block text-sm font-medium">{label}</span>
-                  <input required name={name} type={type} value={formData[name]} onChange={updateField} minLength={name === "name" ? 2 : undefined} maxLength={name === "pincode" ? 6 : name === "phone" ? 13 : undefined} pattern={name === "pincode" ? "[0-9]{6}" : name === "phone" ? "[+]?[0-9]{10,13}" : undefined} inputMode={name === "pincode" ? "numeric" : name === "phone" ? "tel" : undefined} autoComplete={name === "name" ? "name" : name === "email" ? "email" : name === "phone" ? "tel" : name === "pincode" ? "postal-code" : name === "city" ? "address-level2" : name === "state" ? "address-level1" : name === "country" ? "country-name" : undefined} readOnly={["email", "city", "state", "country"].includes(name)} className="w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
+                  <input required name={name} type={type} value={formData[name]} onChange={updateField} minLength={name === "name" ? 2 : undefined} maxLength={name === "pincode" ? 6 : name === "phone" ? 13 : undefined} pattern={name === "pincode" ? "[0-9]{6}" : name === "phone" ? "[+]?[0-9]{10,13}" : undefined} inputMode={name === "pincode" ? "numeric" : name === "phone" ? "tel" : undefined} autoComplete={name === "name" ? "name" : name === "email" ? "email" : name === "phone" ? "tel" : name === "pincode" ? "postal-code" : name === "city" ? "address-level2" : name === "state" ? "address-level1" : name === "country" ? "country-name" : undefined} readOnly={["email", "city", "state", "country"].includes(name)} className="w-full min-w-0 max-w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
                 </label>
               ))}
               {addressChecking && <p className="text-sm text-brand-primary sm:col-span-2">Checking delivery location…</p>}
@@ -256,15 +256,15 @@ function Checkout() {
             </div>
           </section>
 
-          <section className="mt-7 rounded-3xl border bg-white p-6 shadow-sm md:p-8">
-            <h2 className="text-2xl font-semibold">Payment method</h2>
+          <section className="mt-6 min-w-0 rounded-3xl border bg-white p-4 shadow-sm sm:mt-7 sm:p-6 md:p-8">
+            <h2 className="text-xl font-semibold sm:text-2xl">Payment method</h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label className={`cursor-pointer rounded-2xl border-2 p-5 transition ${paymentMethod === "online" ? "border-brand-primary bg-green-50/50" : "border-gray-200"}`}>
+              <label className={`min-w-0 cursor-pointer rounded-2xl border-2 p-4 transition sm:p-5 ${paymentMethod === "online" ? "border-brand-primary bg-green-50/50" : "border-gray-200"}`}>
                 <input type="radio" name="paymentMethod" value="online" checked={paymentMethod === "online"} onChange={() => setPaymentMethod("online")} className="mr-3" />
                 <span className="font-semibold">Pay securely online</span>
                 <p className="mt-2 text-sm text-gray-500">UPI, cards, netbanking and wallets through Razorpay.</p>
               </label>
-              <label className={`cursor-pointer rounded-2xl border-2 p-5 transition ${paymentMethod === "cod" ? "border-brand-primary bg-green-50/50" : "border-gray-200"}`}>
+              <label className={`min-w-0 cursor-pointer rounded-2xl border-2 p-4 transition sm:p-5 ${paymentMethod === "cod" ? "border-brand-primary bg-green-50/50" : "border-gray-200"}`}>
                 <input type="radio" name="paymentMethod" value="cod" checked={paymentMethod === "cod"} onChange={() => setPaymentMethod("cod")} className="mr-3" />
                 <span className="font-semibold">Cash on delivery</span>
                 <p className="mt-2 text-sm text-gray-500">Pay when your order reaches you.</p>
@@ -273,8 +273,8 @@ function Checkout() {
           </section>
         </div>
 
-        <aside className="h-fit rounded-3xl border bg-white p-6 shadow-sm lg:sticky lg:top-6">
-          <h2 className="text-2xl font-semibold">Order summary</h2>
+        <aside className="h-fit min-w-0 max-w-full rounded-3xl border bg-white p-4 shadow-sm sm:p-6 lg:sticky lg:top-6">
+          <h2 className="text-xl font-semibold sm:text-2xl">Order summary</h2>
           <div className="mt-5 max-h-72 space-y-4 overflow-y-auto pr-1">
             {cartItems.map((item) => (
               <div key={`${item._id}-${item.selectedSize}`} className="flex gap-3">
@@ -290,7 +290,7 @@ function Checkout() {
 
           <div className="mt-6 border-t pt-5">
             <label className="text-sm font-medium">Coupon code</label>
-            <div className="mt-2 flex gap-2">
+            <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
               <input value={coupon} onChange={(event) => { setCoupon(event.target.value.toUpperCase()); setCouponPercent(0); }} placeholder="Enter code" className="min-w-0 flex-1 rounded-xl border px-3 py-2.5 uppercase" />
               <button type="button" onClick={applyCoupon} className="rounded-xl border border-brand-primary px-4 font-medium text-brand-primary">Apply</button>
             </div>
