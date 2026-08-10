@@ -7,6 +7,33 @@ import { Helmet } from "react-helmet-async";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import ImageMagnifier from "../components/ImageMagnifier";
+import { trackEvent } from "../utils/analytics";
+
+function DiscoveryProducts({ title, products }) {
+  if (!products.length) return null;
+  return (
+    <section className="mt-10">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <h2 className="text-2xl font-semibold md:text-3xl">{title}</h2>
+        <Link to="/shop" className="text-sm font-semibold text-brand-primary hover:underline">View all</Link>
+      </div>
+      <div className="grid auto-cols-[minmax(185px,72vw)] grid-flow-col gap-4 overflow-x-auto pb-3 sm:auto-cols-[minmax(210px,38vw)] lg:grid-flow-row lg:grid-cols-4 lg:overflow-visible">
+        {products.map((item) => (
+          <Link key={item._id} to={`/product/${item._id}`} className="group overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+            <div className="aspect-[4/5] overflow-hidden bg-gray-50">
+              <img src={item.images?.[0]?.url || "/placeholder.png"} alt={item.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+            </div>
+            <div className="p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-brand-primary">{item.category?.replace(/-/g, " ") || "Kidswear"}</p>
+              <h3 className="mt-2 line-clamp-2 min-h-12 font-semibold leading-6">{item.name}</h3>
+              <div className="mt-3 flex items-center gap-2"><span className="text-lg font-bold text-brand-primary">₹{Number(item.price || 0).toLocaleString("en-IN")}</span>{Number(item.mrp) > Number(item.price) && <span className="text-sm text-gray-400 line-through">₹{Number(item.mrp).toLocaleString("en-IN")}</span>}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function ProductDetails() {
   const { id } = useParams();
@@ -19,6 +46,8 @@ function ProductDetails() {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [reviewEligibility, setReviewEligibility] = useState(() => {
     try { return JSON.parse(localStorage.getItem("user"))?.token ? { loading: true, eligible: false, reason: "" } : { loading: false, eligible: false, reason: "Log in to review products you have purchased" }; }
     catch { return { loading: false, eligible: false, reason: "Log in to review products you have purchased" }; }
@@ -28,9 +57,19 @@ function ProductDetails() {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`, { signal });
       setProduct(data);
+      trackEvent("view_item", { currency: "INR", value: Number(data.price || 0), items: [{ item_id: data._id, item_name: data.name, item_category: data.category, price: Number(data.price || 0) }] });
       setSelectedColor(data.variants?.find((variant) => variant.active !== false)?.color || data.color || "");
       setSelectedSize("");
       setSelectedImageIndex(0);
+      try {
+        const stored = JSON.parse(localStorage.getItem("recently_viewed_products") || "[]");
+        const previous = Array.isArray(stored) ? stored.filter((item) => item?._id && item._id !== data._id) : [];
+        setRecentlyViewed(previous.slice(0, 8));
+        const compactProduct = { _id: data._id, name: data.name, price: data.price, mrp: data.mrp, category: data.category, images: data.images?.slice(0, 1) || [] };
+        localStorage.setItem("recently_viewed_products", JSON.stringify([compactProduct, ...previous].slice(0, 8)));
+      } catch {
+        setRecentlyViewed([]);
+      }
     } catch (error) {
       if (error.code !== "ERR_CANCELED") console.error(error);
     } finally {
@@ -56,6 +95,16 @@ function ProductDetails() {
       .catch((error) => { if (active) setReviewEligibility({ loading: false, eligible: false, reason: error.response?.data?.message || "Review eligibility could not be verified" }); });
     return () => { active = false; };
   }, [id]);
+
+  useEffect(() => {
+    if (!product?._id) return undefined;
+    const controller = new AbortController();
+    axios.get(`${import.meta.env.VITE_API_URL}/api/products/${product._id}/related`, { signal: controller.signal })
+      .then(({ data }) => setRelatedProducts(Array.isArray(data?.products) ? data.products : []))
+      .catch((error) => { if (error.code !== "ERR_CANCELED") setRelatedProducts([]); });
+
+    return () => controller.abort();
+  }, [product]);
 
   if (loading) {
     return (
@@ -106,6 +155,7 @@ function ProductDetails() {
     if (!selectedSize) return toast.error("Please select a size");
     if (availableStock <= 0) return toast.error("This size is out of stock");
     addToCart({ ...product, price: selectedPrice, selectedSize, selectedColor, selectedSku: selectedVariant?.sku || "", image: images[0]?.url });
+    trackEvent("add_to_cart", { currency: "INR", value: selectedPrice, items: [{ item_id: product._id, item_name: product.name, item_variant: selectedColor, item_category: product.category, price: selectedPrice, quantity: 1 }] });
     toast.success("Added to your bag");
   };
 
@@ -248,6 +298,9 @@ function ProductDetails() {
               </div>
             </div>
           </section>
+
+          <DiscoveryProducts title="You may also like" products={relatedProducts} />
+          <DiscoveryProducts title="Recently viewed" products={recentlyViewed} />
         </div>
       </main>
     </>

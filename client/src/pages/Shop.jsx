@@ -4,6 +4,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import ProductImageSlider from "../components/ProductImageSlider";
 import SkeletonProduct from "../components/SkeletonProduct";
+import { FiFilter, FiX } from "react-icons/fi";
+import { trackEvent } from "../utils/analytics";
 
 const categories = [
   { label: "All", value: "" },
@@ -21,11 +23,16 @@ function Shop() {
   const [error, setError] = useState("");
   const [availableSizes, setAvailableSizes] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
+  const [filterOptions, setFilterOptions] = useState({ colors: [], fabrics: [], ageGroups: [], price: { min: 0, max: 0 } });
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const category = searchParams.get("category") || "";
   const selectedSize = searchParams.get("size") || "";
   const sort = searchParams.get("sort") || "newest";
   const inStock = searchParams.get("inStock") === "true";
+  const color = searchParams.get("color") || "";
+  const fabric = searchParams.get("fabric") || "";
+  const ageGroup = searchParams.get("ageGroup") || "";
   const page = Math.max(Number(searchParams.get("page")) || 1, 1);
   const queryString = searchParams.toString();
 
@@ -47,6 +54,8 @@ function Shop() {
         const responseProducts = data.products || [];
         const responseSizes = data.availableSizes?.length ? data.availableSizes : [...new Set(responseProducts.flatMap((product) => [...(product.variants || []), ...(product.sizeStock || [])].map((item) => item.size).filter(Boolean)))];
         setAvailableSizes(responseSizes);
+        if (data.filterOptions) setFilterOptions(data.filterOptions);
+        if (params.search) trackEvent("view_search_results", { search_term: params.search, result_count: data.totalProducts ?? data.products?.length ?? 0 });
       } catch (requestError) {
         if (requestError.code !== "ERR_CANCELED") {
           console.error(requestError);
@@ -61,6 +70,8 @@ function Shop() {
     return () => controller.abort();
   }, [queryString, reloadKey]);
 
+  useEffect(() => { if (!filtersOpen) return undefined; const previous = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = previous; }; }, [filtersOpen]);
+
   const updateParams = (updates) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(updates).forEach(([key, value]) => {
@@ -69,6 +80,7 @@ function Shop() {
     });
     if (!("page" in updates)) next.delete("page");
     setSearchParams(next);
+    setFiltersOpen(false);
   };
 
   const submitSearch = (event) => {
@@ -121,11 +133,14 @@ function Shop() {
           </form>
         </div>
 
+        <button type="button" onClick={() => setFiltersOpen(true)} className="btn-secondary mt-6 w-full lg:hidden"><FiFilter/> Filters & sorting</button>
+
         <div className="mt-10 grid gap-8 lg:grid-cols-[260px_1fr]">
-          <aside className="h-fit rounded-3xl border bg-white p-5 shadow-sm lg:sticky lg:top-6">
+          {filtersOpen && <button type="button" aria-label="Close filters" onClick={() => setFiltersOpen(false)} className="fixed inset-0 z-[70] bg-slate-950/45 lg:hidden"/>}
+          <aside className={`${filtersOpen ? "fixed inset-y-0 left-0 z-[80] block w-[min(88vw,360px)] overflow-y-auto rounded-none" : "hidden"} h-fit border bg-white p-5 shadow-xl lg:sticky lg:top-24 lg:block lg:w-auto lg:rounded-3xl lg:shadow-sm`}>
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Filters</h2>
-              {queryString && <button onClick={clearFilters} className="text-sm text-brand-primary underline">Clear all</button>}
+              <div className="flex items-center gap-3">{queryString && <button onClick={clearFilters} className="text-sm text-brand-primary underline">Clear all</button>}<button type="button" onClick={() => setFiltersOpen(false)} aria-label="Close filters" className="grid h-10 w-10 place-items-center rounded-full border lg:hidden"><FiX/></button></div>
             </div>
 
             <div className="mt-6 border-t pt-5">
@@ -138,6 +153,12 @@ function Shop() {
                   </label>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 border-t pt-5">
+              <label className="text-sm font-medium">Colour<select value={color} onChange={(event) => updateParams({ color: event.target.value })} className="mt-2 w-full rounded-xl border p-3"><option value="">All colours</option>{filterOptions.colors.map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label className="text-sm font-medium">Fabric<select value={fabric} onChange={(event) => updateParams({ fabric: event.target.value })} className="mt-2 w-full rounded-xl border p-3"><option value="">All fabrics</option>{filterOptions.fabrics.map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label className="text-sm font-medium">Age group<select value={ageGroup} onChange={(event) => updateParams({ ageGroup: event.target.value })} className="mt-2 w-full rounded-xl border p-3"><option value="">All age groups</option>{filterOptions.ageGroups.map((item) => <option key={item}>{item}</option>)}</select></label>
             </div>
 
             <div className="mt-6 border-t pt-5">
@@ -155,6 +176,7 @@ function Shop() {
                 <input name="maxPrice" type="number" min="0" defaultValue={searchParams.get("maxPrice") || ""} placeholder="Max ₹" className="min-w-0 rounded-xl border p-2.5" />
               </div>
               <button className="mt-3 w-full rounded-xl border border-brand-primary py-2 text-brand-primary">Apply price</button>
+              {filterOptions.price?.max > 0 && <p className="mt-2 text-xs text-slate-400">Catalogue range: ₹{Number(filterOptions.price.min || 0).toLocaleString("en-IN")}–₹{Number(filterOptions.price.max || 0).toLocaleString("en-IN")}</p>}
             </form>
 
             <label className="mt-6 flex cursor-pointer items-center gap-3 border-t pt-5">

@@ -12,6 +12,7 @@ import { Autoplay, Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import { imageSrcSet, optimizedImage } from "../utils/image";
 
 const categories = [
   { key: "girls", label: "Girls", copy: "Dresses and sets for celebrations and everyday moments." },
@@ -104,7 +105,7 @@ function Home() {
             </div>
             <div className="min-w-0 overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_75%_25%,#dce9df_0,#8dab96_65%,#52705b_100%)]">
               {heroProducts.length ? <Swiper modules={[Autoplay, Navigation, Pagination]} navigation pagination={{ clickable: true }} autoplay={{ delay: 4200, disableOnInteraction: false }} loop={heroProducts.length > 1} className="commerce-slider hero-slider h-[480px] lg:h-[620px]">
-                {heroProducts.map((product) => <SwiperSlide key={product._id}><Link to={`/product/${product._id}`} className="relative block h-full"><img src={product.images?.[0]?.url} alt={product.name} className="h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10"><p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p><h2 className="mt-2 font-serif text-3xl md:text-4xl">{product.name}</h2><p className="mt-2 text-lg">From ₹{Number(product.price).toLocaleString("en-IN")}</p></div></Link></SwiperSlide>)}
+                {heroProducts.map((product, index) => <SwiperSlide key={product._id}><Link to={`/product/${product._id}`} className="relative block h-full"><img src={optimizedImage(product.images?.[0]?.url, 900)} srcSet={imageSrcSet(product.images?.[0]?.url)} sizes="(min-width: 1024px) 55vw, 100vw" alt={product.name} width="900" height="1125" loading={index === 0 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10"><p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p><h2 className="mt-2 font-serif text-3xl md:text-4xl">{product.name}</h2><p className="mt-2 text-lg">From ₹{Number(product.price).toLocaleString("en-IN")}</p></div></Link></SwiperSlide>)}
               </Swiper> : <Link to="/shop" className="flex h-[480px] items-end p-8 text-white lg:h-[620px]"><div><p className="text-xs font-semibold uppercase tracking-[0.22em]">Tamanna&apos;s Hut</p><h2 className="mt-3 font-serif text-4xl">Our collection is being prepared</h2></div></Link>}
             </div>
           </div>
@@ -118,7 +119,7 @@ function Home() {
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {categoryCards.map((category) => (
               <Link key={category.key} to={`/shop?category=${category.key}`} className="group relative min-h-[420px] overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#dbe8dd,#879e8d)]">
-                {category.image && <img src={category.image} alt={`${category.label} collection`} className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />}
+                {category.image && <img src={optimizedImage(category.image, 640)} srcSet={imageSrcSet(category.image, [360, 640, 900])} sizes="(min-width: 768px) 33vw, 100vw" alt={`${category.label} collection`} loading="lazy" decoding="async" width="640" height="800" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-7 text-white"><h3 className="font-serif text-3xl">{category.label}</h3><p className="mt-2 max-w-xs text-sm leading-6 text-white/80">{category.copy}</p></div>
               </Link>

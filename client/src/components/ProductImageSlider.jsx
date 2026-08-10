@@ -4,6 +4,7 @@ import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import { imageSrcSet, optimizedImage } from "../utils/image";
 
 function ProductImageSlider({ product, className = "h-72" }) {
   const images = product.images?.length
@@ -27,9 +28,14 @@ function ProductImageSlider({ product, className = "h-72" }) {
         {images.map((image, index) => (
           <SwiperSlide key={image.public_id || `${image.url}-${index}`}>
             <img
-              src={image.url}
+              src={optimizedImage(image.url, 520)}
+              srcSet={imageSrcSet(image.url, [260, 390, 520])}
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
               alt={`${product.name} view ${index + 1}`}
               loading="lazy"
+              decoding="async"
+              width="520"
+              height="650"
               className="h-full w-full object-cover"
             />
           </SwiperSlide>

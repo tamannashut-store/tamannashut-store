@@ -3,6 +3,7 @@ import { CartContext } from "../context/CartContext";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { trackEvent } from "../utils/analytics";
 
 const getCheckoutKey = () => {
   let key = sessionStorage.getItem("checkout_request_id");
@@ -113,6 +114,7 @@ function Checkout() {
   };
 
   const finishOrder = () => {
+    trackEvent("purchase", { currency: "INR", value: displayedTotal, transaction_id: getCheckoutKey(), items: cartItems.map((item) => ({ item_id: item._id, item_name: item.name, item_variant: item.selectedColor, price: Number(item.price), quantity: Number(item.qty) })) });
     sessionStorage.removeItem("checkout_request_id");
     clearCart();
     toast.success("Order placed successfully");

@@ -79,6 +79,7 @@ productSchema.index({ category: 1 });
 productSchema.index({ price: 1 });
 productSchema.index({ averageRating: -1 });
 productSchema.index({ "variants.sku": 1 });
+productSchema.index({ status: 1, color: 1, fabric: 1, ageGroup: 1 });
 
 const Product = mongoose.model("Product", productSchema);
 

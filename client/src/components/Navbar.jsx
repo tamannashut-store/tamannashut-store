@@ -4,6 +4,7 @@ import axios from "axios";
 import { FiChevronRight, FiHeart, FiLogOut, FiMenu, FiPackage, FiSearch, FiShoppingBag, FiUser, FiX } from "react-icons/fi";
 import logo from "../assets/logo.png";
 import { CartContext } from "../context/CartContext";
+import { trackEvent } from "../utils/analytics";
 
 const navItems = [["/shop?category=girls","Girls"],["/shop?category=boys","Boys"],["/shop?category=new-arrivals","New arrivals"],["/about","About"],["/contact","Contact"]];
 
@@ -12,12 +13,13 @@ function Navbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
   const { cartItems } = useContext(CartContext);
   const cartCount = cartItems.reduce((total, item) => total + Number(item.qty || 0), 0);
   const userData = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
 
-  const submitSearch = (event) => { event.preventDefault(); if (search.trim()) navigate(`/shop?search=${encodeURIComponent(search.trim())}`); setSearchOpen(false); setMenuOpen(false); };
+  const submitSearch = (event) => { event.preventDefault(); if (search.trim()) { trackEvent("search", { search_term: search.trim() }); navigate(`/shop?search=${encodeURIComponent(search.trim())}`); } setSearchOpen(false); setMenuOpen(false); };
   const logout = () => { localStorage.removeItem("user"); delete axios.defaults.headers.common.Authorization; window.dispatchEvent(new Event("cartUpdated")); setProfileOpen(false); navigate("/"); };
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -27,6 +29,9 @@ function Navbar() {
     window.addEventListener("keydown", closeOnEscape);
     return () => { document.body.style.overflow = previousOverflow; window.removeEventListener("keydown", closeOnEscape); };
   }, [menuOpen]);
+  useEffect(() => { const query = search.trim(); if (query.length < 2) return undefined; const controller = new AbortController(); const timer = setTimeout(() => { axios.get(`${import.meta.env.VITE_API_URL}/api/products/suggestions/search`, { params: { q: query }, signal: controller.signal }).then(({ data }) => setSuggestions(data.suggestions || [])).catch(() => {}); }, 250); return () => { clearTimeout(timer); controller.abort(); }; }, [search]);
+  const chooseSuggestion = (item) => { trackEvent("select_item", { item_list_name: "search_suggestions", items: [{ item_id: item.id, item_name: item.name, price: item.price }] }); setSearch(""); setSuggestions([]); setSearchOpen(false); setMenuOpen(false); navigate(`/product/${item.id}`); };
+  const suggestionList = search.trim().length >= 2 && suggestions.length > 0 && <div className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">{suggestions.map((item) => <button type="button" key={item.id} onClick={() => chooseSuggestion(item)} className="flex w-full items-center gap-3 border-b border-slate-100 p-3 text-left last:border-0 hover:bg-slate-50">{item.image ? <img src={item.image} alt="" className="h-12 w-10 rounded-lg object-cover"/> : <span className="h-12 w-10 rounded-lg bg-slate-100"/>}<span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-800">{item.name}</span><span className="text-xs capitalize text-slate-500">{String(item.category || "Kidswear").replace(/-/g, " ")} · ₹{Number(item.price).toLocaleString("en-IN")}</span></span></button>)}</div>;
 
   return <>
     <div className="bg-[#183d2b] text-white"><div className="mx-auto flex h-9 max-w-[1400px] items-center justify-center gap-5 px-4 text-[11px] font-medium sm:gap-10 sm:text-xs"><span>Free shipping above ₹999</span><span className="hidden sm:inline">Cash on delivery available</span><span>Easy returns</span></div></div>
@@ -42,13 +47,13 @@ function Navbar() {
           <button type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="Menu" className="grid h-10 w-10 place-items-center rounded-full text-[#183d2b] lg:hidden">{menuOpen ? <FiX size={24}/> : <FiMenu size={24}/>}</button>
         </div>
       </div>
-      {searchOpen && <div className="absolute inset-x-0 top-full border-b border-slate-200 bg-white p-4 shadow-lg"><form onSubmit={submitSearch} className="mx-auto flex max-w-2xl gap-2"><input autoFocus className="field-control" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search dresses, sets and more"/><button className="btn-primary">Search</button></form></div>}
+      {searchOpen && <div className="absolute inset-x-0 top-full border-b border-slate-200 bg-white p-4 shadow-lg"><form onSubmit={submitSearch} className="mx-auto flex max-w-2xl gap-2"><div className="relative min-w-0 flex-1"><input autoFocus className="field-control" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search dresses, sets and more"/>{suggestionList}</div><button className="btn-primary">Search</button></form></div>}
     </header>
     {menuOpen && <div className="fixed inset-0 z-[70] lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation menu">
       <button type="button" aria-label="Close menu" onClick={() => setMenuOpen(false)} className="absolute inset-0 h-full w-full cursor-default bg-slate-950/45 backdrop-blur-[2px]" />
       <aside className="absolute right-0 top-0 flex h-full w-[min(88vw,360px)] flex-col overflow-y-auto bg-[#fcfbf8] shadow-2xl">
         <div className="flex min-h-[78px] items-center justify-between border-b border-slate-200 px-5"><Link to="/" aria-label="Tamanna's Hut home"><img src={logo} alt="" className="h-12 w-auto" /></Link><button type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu" className="grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-[#183d2b]"><FiX size={23}/></button></div>
-        <form onSubmit={submitSearch} className="m-5 flex items-center rounded-xl border border-slate-200 bg-white px-3"><FiSearch className="shrink-0 text-slate-400"/><input value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search products" placeholder="Search products" className="min-w-0 flex-1 border-0 bg-transparent px-3 py-3.5 outline-none focus:shadow-none"/><button className="text-sm font-semibold text-[#183d2b]">Search</button></form>
+        <form onSubmit={submitSearch} className="relative m-5 flex items-center rounded-xl border border-slate-200 bg-white px-3"><FiSearch className="shrink-0 text-slate-400"/><input value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search products" placeholder="Search products" className="min-w-0 flex-1 border-0 bg-transparent px-3 py-3.5 outline-none focus:shadow-none"/><button className="text-sm font-semibold text-[#183d2b]">Search</button>{suggestionList}</form>
         <nav className="px-3" aria-label="Mobile navigation">{navItems.map(([to,label]) => <Link key={to} to={to} onClick={() => setMenuOpen(false)} className="flex min-h-13 items-center justify-between rounded-xl px-3 font-semibold text-slate-700 hover:bg-[#eef3ee] hover:text-[#183d2b]"><span>{label}</span><FiChevronRight className="text-slate-400"/></Link>)}</nav>
         <div className="mx-5 my-4 border-t border-slate-200"/>
         <nav className="space-y-1 px-3" aria-label="Account navigation"><Link to="/wishlist" onClick={() => setMenuOpen(false)} className="flex min-h-13 items-center gap-3 rounded-xl px-3 font-medium text-slate-700 hover:bg-[#eef3ee]"><FiHeart/> Wishlist</Link><Link to="/cart" onClick={() => setMenuOpen(false)} className="flex min-h-13 items-center gap-3 rounded-xl px-3 font-medium text-slate-700 hover:bg-[#eef3ee]"><FiShoppingBag/> Cart {cartCount > 0 && <span className="ml-auto rounded-full bg-[#b94545] px-2 py-0.5 text-xs font-bold text-white">{cartCount}</span>}</Link>{userData && <Link to="/my-orders" onClick={() => setMenuOpen(false)} className="flex min-h-13 items-center gap-3 rounded-xl px-3 font-medium text-slate-700 hover:bg-[#eef3ee]"><FiPackage/> My orders</Link>}</nav>

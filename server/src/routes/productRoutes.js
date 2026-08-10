@@ -188,6 +188,10 @@ router.get("/", async (req, res) => {
         { name: searchRegex },
         { description: searchRegex },
         { category: searchRegex },
+        { color: searchRegex },
+        { fabric: searchRegex },
+        { ageGroup: searchRegex },
+        { tags: searchRegex },
       ];
     }
 
@@ -201,10 +205,17 @@ router.get("/", async (req, res) => {
 
     const size = String(req.query.size || "").trim().slice(0, 20);
     if (size) {
-      filter.sizeStock = { $elemMatch: { size, stock: { $gt: 0 } } };
+      filter.$and = [...(filter.$and || []), { $or: [{ sizeStock: { $elemMatch: { size, stock: { $gt: 0 } } } }, { variants: { $elemMatch: { size, stock: { $gt: 0 }, active: { $ne: false } } } }] }];
     } else if (req.query.inStock === "true") {
-      filter.sizeStock = { $elemMatch: { stock: { $gt: 0 } } };
+      filter.$and = [...(filter.$and || []), { $or: [{ sizeStock: { $elemMatch: { stock: { $gt: 0 } } } }, { variants: { $elemMatch: { stock: { $gt: 0 }, active: { $ne: false } } } }] }];
     }
+
+    const color = String(req.query.color || "").trim().slice(0, 60);
+    if (color) {
+      const exactColor = new RegExp(`^${escapeRegex(color)}$`, "i");
+      filter.$and = [...(filter.$and || []), { $or: [{ color: exactColor }, { variants: { $elemMatch: { color: exactColor, active: { $ne: false } } } }] }];
+    }
+    [["fabric", "fabric"], ["ageGroup", "ageGroup"]].forEach(([queryKey, field]) => { const value = String(req.query[queryKey] || "").trim().slice(0, 60); if (value) filter[field] = new RegExp(`^${escapeRegex(value)}$`, "i"); });
 
     const minPrice = Number(req.query.minPrice);
     const maxPrice = Number(req.query.maxPrice);
@@ -225,11 +236,16 @@ router.get("/", async (req, res) => {
     const skip = (page - 1) * limit;
 
     const activeFilter = { status: { $nin: ["draft", "archived"] } };
-    const [products, total, variantSizes, legacySizes] = await Promise.all([
+    const [products, total, variantSizes, legacySizes, colors, variantColors, fabrics, ageGroups, priceRange] = await Promise.all([
       Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       Product.countDocuments(filter),
       Product.distinct("variants.size", activeFilter),
       Product.distinct("sizeStock.size", activeFilter),
+      Product.distinct("color", activeFilter),
+      Product.distinct("variants.color", activeFilter),
+      Product.distinct("fabric", activeFilter),
+      Product.distinct("ageGroup", activeFilter),
+      Product.aggregate([{ $match: activeFilter }, { $group: { _id: null, min: { $min: "$price" }, max: { $max: "$price" } } }]),
     ]);
 
     res.set(
@@ -244,11 +260,36 @@ router.get("/", async (req, res) => {
       totalProducts: total,
       pageSize: limit,
       availableSizes: [...new Set([...variantSizes, ...legacySizes].filter(Boolean))].sort((left, right) => left.localeCompare(right, undefined, { numeric: true })),
+      filterOptions: {
+        colors: [...new Set([...colors, ...variantColors].filter(Boolean))].sort(),
+        fabrics: fabrics.filter(Boolean).sort(),
+        ageGroups: ageGroups.filter(Boolean).sort(),
+        price: priceRange[0] || { min: 0, max: 0 },
+      },
     });
 
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+});
+
+router.get("/suggestions/search", async (req, res) => {
+  try {
+    const query = String(req.query.q || "").trim().slice(0, 60);
+    if (query.length < 2) return res.json({ suggestions: [] });
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const products = await Product.find({ status: { $nin: ["draft", "archived"] }, $or: [{ name: regex }, { tags: regex }, { category: regex }] }).select("name category images price").sort({ averageRating: -1, createdAt: -1 }).limit(6).lean();
+    return res.set("Cache-Control", "public, max-age=60").json({ suggestions: products.map((product) => ({ id: product._id, name: product.name, category: product.category, image: product.images?.[0]?.url || "", price: product.price })) });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
+router.get("/:id/related", async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).select("category tags").lean();
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    const related = await Product.find({ _id: { $ne: product._id }, status: { $nin: ["draft", "archived"] }, $or: [{ category: product.category }, { tags: { $in: product.tags || [] } }] }).sort({ averageRating: -1, createdAt: -1 }).limit(8).lean();
+    return res.json({ products: related });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 
 router.get("/admin/list", protect, admin, async (req, res) => {
