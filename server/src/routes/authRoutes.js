@@ -162,6 +162,9 @@ router.put("/profile/:id", protect, async (req, res) => {
         user.city =
             req.body.city || user.city;
 
+        user.state =
+            req.body.state || user.state || user.State;
+
         user.pincode =
             req.body.pincode || user.pincode;
 

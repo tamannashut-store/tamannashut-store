@@ -14,6 +14,7 @@ export const normalizeCustomer = (customer) => {
   const cleanCustomer = Object.fromEntries(
     requiredFields.map((field) => [field, String(customer?.[field] || "").trim().slice(0, field === "address" ? 500 : 150)])
   );
+  cleanCustomer.state = String(customer?.state || customer?.State || "").trim().slice(0, 150);
   if (requiredFields.some((field) => !cleanCustomer[field])) {
     throw Object.assign(new Error("Complete all delivery address fields"), { status: 400 });
   }
@@ -146,6 +147,7 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       phone: cleanCustomer.phone,
       address: cleanCustomer.address,
       city: cleanCustomer.city,
+      state: cleanCustomer.state,
       pincode: cleanCustomer.pincode,
       products: cart.products,
       subtotal: cart.subtotal,

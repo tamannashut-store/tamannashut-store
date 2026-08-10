@@ -4,9 +4,7 @@ import toast from "react-hot-toast";
 
 function Profile() {
 
-  const userData = JSON.parse(
-    localStorage.getItem("user")
-  );
+  const userId = JSON.parse(localStorage.getItem("user"))?.user?.id;
 
   const [loading, setLoading] =
     useState(false);
@@ -18,50 +16,36 @@ function Profile() {
       phone: "",
       address: "",
       city: "",
+      state: "",
       pincode: "",
     });
 
   useEffect(() => {
-
-    fetchProfile();
-
-  }, []);
-
-  const fetchProfile = async () => {
-
-    try {
-
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/auth/profile/${userData.user.id}`
-      );
-
-      setFormData({
-        name: data.name || "",
-        email: data.email || "",
-        phone: data.phone || "",
-        address: data.address || "",
-        city: data.city || "",
-        pincode: data.pincode || "",
-      });
-
-    } catch (error) {
-
-      console.log(error);
-
-      toast.error(
-        "Failed to load profile"
-      );
-    }
-  };
+    let active = true;
+    axios.get(`${import.meta.env.VITE_API_URL}/api/auth/profile/${userId}`)
+      .then(({ data }) => { if (active) setFormData({ name: data.name || "", email: data.email || "", phone: data.phone || "", address: data.address || "", city: data.city || "", state: data.state || data.State || "", pincode: data.pincode || "" }); })
+      .catch(() => { if (active) toast.error("Failed to load profile"); });
+    return () => { active = false; };
+  }, [userId]);
 
   const handleChange = (e) => {
 
     setFormData({
       ...formData,
-      [e.target.name]:
-        e.target.value,
+      [e.target.name]: e.target.value,
+      ...(e.target.name === "pincode" ? { city: "", state: "" } : {}),
     });
 
+  };
+
+  const resolvePincode = async (showSuccess = false) => {
+    if (!/^\d{6}$/.test(formData.pincode.trim())) { toast.error("Enter a valid 6-digit pincode"); return null; }
+    try {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/logistics/postcode/${formData.pincode.trim()}`);
+      setFormData((current) => ({ ...current, pincode: data.pincode, city: data.city, state: data.state }));
+      if (showSuccess) toast.success("Delivery location verified");
+      return data;
+    } catch (error) { toast.error(error.response?.data?.message || "This pincode could not be verified"); return null; }
   };
 
   const updateProfile =
@@ -73,10 +57,13 @@ function Profile() {
 
       try {
 
+        const locality = await resolvePincode();
+        if (!locality) return;
+
         const { data } =
           await axios.put(
-            `${import.meta.env.VITE_API_URL}/api/auth/profile/${userData.user.id}`,
-            formData
+            `${import.meta.env.VITE_API_URL}/api/auth/profile/${userId}`,
+            { ...formData, city: locality.city, state: locality.state, pincode: locality.pincode }
           );
 
         toast.success(
@@ -210,11 +197,17 @@ function Profile() {
             type="text"
             name="city"
             value={formData.city}
-            onChange={
-              handleChange
-            }
-            className="w-full border p-4 rounded-xl"
+            readOnly
+            className="w-full border p-4 rounded-xl bg-gray-50"
           />
+
+        </div>
+
+        <div>
+
+          <label className="block mb-2 font-semibold">State</label>
+
+          <input type="text" name="state" value={formData.state} readOnly className="w-full border p-4 rounded-xl bg-gray-50" />
 
         </div>
 
@@ -231,6 +224,9 @@ function Profile() {
             onChange={
               handleChange
             }
+            onBlur={() => resolvePincode(true)}
+            inputMode="numeric"
+            maxLength="6"
             className="w-full border p-4 rounded-xl"
           />
 

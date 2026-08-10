@@ -9,6 +9,7 @@ import {
   sendOrderNotifications,
 } from "../services/orderService.js";
 import PaymentAttempt from "../models/PaymentAttempt.js";
+import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
 
 const router = express.Router();
 const razorpay = new Razorpay({
@@ -18,7 +19,8 @@ const razorpay = new Razorpay({
 
 router.post("/create-order", protect, async (req, res) => {
   try {
-    const customer = normalizeCustomer(req.body.customer);
+    const locality = await verifyShiprocketDeliveryPostcode(req.body.customer?.pincode, false);
+    const customer = normalizeCustomer({ ...req.body.customer, city: locality.city, state: locality.state, pincode: locality.pincode });
     const cart = await calculateCart(req.body.products, req.body.couponCode);
     if (cart.totalAmount <= 0) return res.status(400).json({ message: "Order amount must be greater than zero" });
     const idempotencyKey = String(req.body.idempotencyKey || "").trim().slice(0, 100);

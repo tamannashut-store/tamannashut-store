@@ -13,6 +13,7 @@ import {
   restoreOrderStock,
   sendOrderNotifications,
 } from "../services/orderService.js";
+import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
 
 const router = express.Router();
 const serializeOrder = (order) => { const value = order.toObject ? order.toObject() : order; return value.status === "Processing" ? { ...value, status: "Confirmed" } : value; };
@@ -23,6 +24,8 @@ router.post("/", protect, async (req, res) => {
     if (req.body.paymentMethod && req.body.paymentMethod !== "COD") {
       return res.status(400).json({ message: "Online orders must be completed through payment verification" });
     }
+    const locality = await verifyShiprocketDeliveryPostcode(req.body.customer?.pincode, true);
+    req.body.customer = { ...req.body.customer, city: locality.city, state: locality.state, pincode: locality.pincode };
     const cart = await calculateCart(req.body.products, req.body.couponCode);
     const result = await createOrderWithReservedStock({
       user: req.user,

@@ -7,7 +7,7 @@ import { restoreOrderStock } from "../services/orderService.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import {
   assignShiprocketAwb, cancelShiprocketShipment, createShiprocketOrder,
-  generateShiprocketLabel, getShiprocketCouriers, scheduleShiprocketPickup,
+  generateShiprocketLabel, getShiprocketCouriers, resolveShiprocketPostcode, scheduleShiprocketPickup, verifyShiprocketDeliveryPostcode,
 } from "../services/shiprocketService.js";
 
 const router = express.Router();
@@ -23,7 +23,6 @@ const parcelFrom = (body, existing = {}) => {
     breadth: Number(body.breadth ?? existing.package?.breadth ?? 12),
     height: Number(body.height ?? existing.package?.height ?? 5),
   };
-  if (!value.destinationState) throw Object.assign(new Error("Enter the delivery state"), { status: 400 });
   if ([value.weight, value.length, value.breadth, value.height].some((item) => !Number.isFinite(item) || item <= 0)) throw Object.assign(new Error("Package dimensions and weight must be greater than zero"), { status: 400 });
   return value;
 };
@@ -59,12 +58,13 @@ router.post("/events", async (req, res) => {
   } catch { return res.status(200).json({ received: true }); }
 });
 
+router.get("/postcode/:pincode", protect, async (req, res) => { try { return res.json(await verifyShiprocketDeliveryPostcode(req.params.pincode, req.query.cod === "1")); } catch (error) { return fail(res, error); } });
 router.use(protect, admin);
 router.post("/orders/:id/couriers", async (req, res) => { try { const order = await loadOrder(req.params.id); const parcel = parcelFrom(req.body, order.shipping); const data = await getShiprocketCouriers(order, parcel); return res.json({ couriers: data.data?.available_courier_companies || [] }); } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/create", async (req, res) => { try {
   const order = await loadOrder(req.params.id); if (order.shipping?.externalOrderId) return res.json({ order, existing: true });
   if (!["Confirmed", "Packed"].includes(order.status)) return res.status(400).json({ message: "Confirm the order before creating its shipment" });
-  const parcel = parcelFrom(req.body, order.shipping); const data = await createShiprocketOrder(order, parcel);
+  const parcel = parcelFrom(req.body, order.shipping); const locality = await resolveShiprocketPostcode(order.pincode); parcel.destinationState = order.state || locality.state; order.city = locality.city; order.state = locality.state; const data = await createShiprocketOrder(order, parcel);
   if (!data.order_id || !data.shipment_id) throw Object.assign(new Error(data.message || "Shiprocket did not create the shipment"), { status: 502 });
   const currentShipping = order.shipping?.toObject ? order.shipping.toObject() : (order.shipping || {});
   order.shipping = { ...currentShipping, provider: "Shiprocket", externalOrderId: String(data.order_id || ""), shipmentId: String(data.shipment_id || ""), destinationState: parcel.destinationState, package: { weight: parcel.weight, length: parcel.length, breadth: parcel.breadth, height: parcel.height } };
@@ -80,6 +80,6 @@ router.post("/orders/:id/awb", async (req, res) => { try {
 } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/pickup", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.shipping?.awbCode) return res.status(400).json({ message: "Assign an AWB first" }); await scheduleShiprocketPickup(order.shipping.shipmentId); order.shipping.pickupScheduled = true; if (order.status === "Confirmed") { order.status = "Packed"; order.statusHistory.push({ status: "Packed", note: "Courier pickup scheduled" }); } await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/label", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.shipping?.awbCode) return res.status(400).json({ message: "Assign an AWB first" }); const data = await generateShiprocketLabel(order.shipping.shipmentId); if (!data.label_url) throw Object.assign(new Error(data.message || "Shiprocket did not return a shipping label"), { status: 502 }); order.shipping.labelUrl = String(data.label_url); await order.save(); return res.json({ order, labelUrl: order.shipping.labelUrl }); } catch (error) { return fail(res, error); } });
-router.post("/orders/:id/cancel", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.shipping?.awbCode) return res.status(400).json({ message: "No AWB has been assigned" }); await cancelShiprocketShipment(order.shipping.awbCode); order.shipping.externalStatus = "Cancellation requested"; await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
+router.post("/orders/:id/cancel", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.shipping?.awbCode) return res.status(400).json({ message: "No AWB has been assigned" }); if (order.shipping.pickupScheduled) return res.status(400).json({ message: "Cancel the pickup from Shiprocket support or dashboard" }); await cancelShiprocketShipment(order.shipping.awbCode); order.shipping.externalStatus = "Shipment cancelled"; order.statusHistory.push({ status: order.status, note: "Shiprocket shipment cancelled; order status unchanged" }); await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
 
 export default router;

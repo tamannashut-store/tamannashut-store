@@ -98,6 +98,27 @@ export const getShiprocketCouriers = (order, parcel) => {
   return request(`/courier/serviceability/?${params}`);
 };
 
+export const resolveShiprocketPostcode = async (postcode) => {
+  const pin = String(postcode || "").trim();
+  if (!/^\d{6}$/.test(pin)) throw Object.assign(new Error("Enter a valid 6-digit pincode"), { status: 400 });
+  const data = await request(`/open/postcode/details?postcode=${encodeURIComponent(pin)}`);
+  const rawDetails = data.postcode_details || data.data?.postcode_details || data.data || data;
+  const details = Array.isArray(rawDetails) ? rawDetails[0] || {} : rawDetails;
+  const city = String(details.city || details.district || details.post_office || "").trim();
+  const state = String(details.state || details.state_name || "").trim();
+  if (!city || !state) throw Object.assign(new Error("This pincode could not be verified for delivery"), { status: 400 });
+  return { pincode: pin, city, state };
+};
+
+export const verifyShiprocketDeliveryPostcode = async (postcode, cod = false) => {
+  const locality = await resolveShiprocketPostcode(postcode);
+  const params = new URLSearchParams({ pickup_postcode: String(process.env.SHIPROCKET_PICKUP_POSTCODE), delivery_postcode: locality.pincode, cod: cod ? "1" : "0", weight: "0.5", declared_value: "100", is_return: "0" });
+  const data = await request(`/courier/serviceability/?${params}`);
+  const couriers = data.data?.available_courier_companies || [];
+  if (!couriers.length) throw Object.assign(new Error("Delivery is currently unavailable for this pincode"), { status: 400 });
+  return { ...locality, serviceable: true };
+};
+
 export const assignShiprocketAwb = (shipmentId, courierId) => request("/courier/assign/awb", { method: "POST", body: { shipment_id: Number(shipmentId), courier_id: Number(courierId) } });
 export const scheduleShiprocketPickup = (shipmentId) => request("/courier/generate/pickup", { method: "POST", body: { shipment_id: [Number(shipmentId)] } });
 export const generateShiprocketLabel = (shipmentId) => request("/courier/generate/label", { method: "POST", body: { shipment_id: [Number(shipmentId)] } });

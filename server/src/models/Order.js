@@ -18,6 +18,8 @@ const orderSchema = new mongoose.Schema(
 
     city: String,
 
+    state: String,
+
     pincode: String,
 
     products: Array,
