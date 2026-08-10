@@ -139,7 +139,7 @@ function Shop() {
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[260px_1fr]">
           {filtersOpen && <button type="button" aria-label="Close filters" onClick={() => setFiltersOpen(false)} className="fixed inset-0 z-[70] bg-slate-950/45 lg:hidden"/>}
-          <aside className={`${filtersOpen ? "fixed inset-y-0 left-0 z-[80] block w-[min(88vw,360px)] overflow-y-auto rounded-none" : "hidden"} h-fit border bg-white p-5 shadow-xl lg:sticky lg:top-24 lg:block lg:w-auto lg:rounded-3xl lg:shadow-sm`}>
+          <aside className={`${filtersOpen ? "fixed inset-y-0 left-0 z-[80] block h-dvh w-[min(88vw,360px)] overflow-y-auto overscroll-contain rounded-none pb-[max(1.25rem,env(safe-area-inset-bottom))]" : "hidden"} border bg-white p-5 shadow-xl lg:sticky lg:top-24 lg:block lg:h-fit lg:max-h-[calc(100vh-7rem)] lg:w-auto lg:overflow-y-auto lg:overscroll-contain lg:rounded-3xl lg:shadow-sm`}>
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Filters</h2>
               <div className="flex items-center gap-3">{queryString && <button onClick={clearFilters} className="text-sm text-brand-primary underline">Clear all</button>}<button type="button" onClick={() => setFiltersOpen(false)} aria-label="Close filters" className="grid h-10 w-10 place-items-center rounded-full border lg:hidden"><FiX/></button></div>
