@@ -1,8 +1,10 @@
 import express from "express";
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { sendEmail } from "../utils/sendEmail.js";
 
 const router = express.Router();
 
@@ -112,6 +114,48 @@ router.post("/login", async (req, res) => {
         res.status(500).json({
             message: error.message,
         });
+    }
+});
+
+router.post("/forgot-password", async (req, res) => {
+    const response = { message: "If an account exists for that email, a password reset link has been sent" };
+    try {
+        const email = String(req.body.email || "").trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: "Enter a valid email address" });
+        const user = await User.findOne({ email }).select("+passwordResetToken +passwordResetExpires");
+        if (!user) return res.json(response);
+        const token = crypto.randomBytes(32).toString("hex");
+        user.passwordResetToken = crypto.createHash("sha256").update(token).digest("hex");
+        user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
+        await user.save();
+        const resetUrl = `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/reset-password/${token}`;
+        const delivery = await sendEmail(user.email, "Reset your Tamanna's Hut password", `<h2>Reset your password</h2><p>Use the secure link below within 30 minutes:</p><p><a href="${resetUrl}">Reset password</a></p><p>If you did not request this, you can ignore this email.</p>`);
+        if (!delivery?.sent) {
+            user.passwordResetToken = undefined;
+            user.passwordResetExpires = undefined;
+            await user.save();
+        }
+        return res.json(response);
+    } catch (error) {
+        console.error("PASSWORD RESET REQUEST ERROR:", String(error?.message || "Request failed").slice(0, 200));
+        return res.json(response);
+    }
+});
+
+router.post("/reset-password/:token", async (req, res) => {
+    try {
+        const password = String(req.body.password || "");
+        if (password.length < 8 || password.length > 128) return res.status(400).json({ message: "Password must be between 8 and 128 characters" });
+        const tokenHash = crypto.createHash("sha256").update(String(req.params.token || "")).digest("hex");
+        const user = await User.findOne({ passwordResetToken: tokenHash, passwordResetExpires: { $gt: new Date() } }).select("+passwordResetToken +passwordResetExpires");
+        if (!user) return res.status(400).json({ message: "This reset link is invalid or has expired" });
+        user.password = await bcrypt.hash(password, 10);
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save();
+        return res.json({ message: "Password reset successfully. You can now sign in" });
+    } catch (error) {
+        return res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Password could not be reset" : error.message });
     }
 });
 router.get("/profile/:id", protect, async (req, res) => {
@@ -230,6 +274,8 @@ router.put("/change-password/:id", protect, async (req, res) => {
                 newPassword,
                 10
             );
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
 
         await user.save();
 
