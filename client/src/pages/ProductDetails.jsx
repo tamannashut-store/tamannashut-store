@@ -17,9 +17,9 @@ function DiscoveryProducts({ title, products }) {
         <h2 className="text-2xl font-semibold md:text-3xl">{title}</h2>
         <Link to="/shop" className="text-sm font-semibold text-brand-primary hover:underline">View all</Link>
       </div>
-      <div className="grid auto-cols-[minmax(185px,72vw)] grid-flow-col gap-4 overflow-x-auto pb-3 sm:auto-cols-[minmax(210px,38vw)] lg:grid-flow-row lg:grid-cols-4 lg:overflow-visible">
+      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-4 pr-8 scroll-smooth lg:grid lg:grid-cols-4 lg:overflow-visible lg:pr-0">
         {products.map((item) => (
-          <Link key={item._id} to={`/product/${item._id}`} className="group overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+          <Link key={item._id} to={`/product/${item._id}`} className="group w-[78vw] max-w-[280px] shrink-0 snap-start overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:w-[42vw] lg:w-auto lg:max-w-none">
             <div className="aspect-[4/5] overflow-hidden bg-gray-50">
               <img src={item.images?.[0]?.url || "/placeholder.png"} alt={item.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
             </div>
