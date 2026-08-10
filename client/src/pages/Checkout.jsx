@@ -14,7 +14,7 @@ const getCheckoutKey = () => {
   return key;
 };
 
-const productImage = (item) => item.images?.[0]?.url || item.image || "/placeholder.png";
+const productImage = (item) => item.image || item.images?.[0]?.url || "/placeholder.png";
 
 const loadRazorpay = () => {
   if (window.Razorpay) return Promise.resolve();
@@ -85,6 +85,7 @@ function Checkout() {
   const checkoutProducts = cartItems.map((item) => ({
     _id: item._id,
     selectedSize: item.selectedSize,
+    selectedSku: item.selectedSku || "",
     qty: item.qty,
   }));
 

@@ -9,6 +9,20 @@ import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
+export const selectProductImage = (product, variant, selectedSize) => {
+  const images = Array.isArray(product?.images) ? product.images : [];
+  const color = String(variant?.color || "").trim().toLowerCase();
+  const size = String(selectedSize || variant?.size || "").trim().toLowerCase();
+  const sameColor = (image) => color && String(image.color || "").trim().toLowerCase() === color;
+  const sameSize = (image) => size && String(image.size || "").trim().toLowerCase() === size;
+  return images.find((image) => sameColor(image) && sameSize(image))
+    || images.find((image) => sameColor(image) && !String(image.size || "").trim())
+    || images.find(sameColor)
+    || images.find((image) => !String(image.color || "").trim() && sameSize(image))
+    || images.find((image) => !String(image.color || "").trim() && !String(image.size || "").trim())
+    || images[0];
+};
+
 export const normalizeCustomer = (customer) => {
   const requiredFields = ["name", "email", "phone", "address", "city", "pincode"];
   const cleanCustomer = Object.fromEntries(
@@ -60,6 +74,7 @@ export const calculateCart = async (items, couponCode = "") => {
       throw Object.assign(new Error(`${product.name} (${item.selectedSize}) has insufficient stock`), { status: 409 });
     }
     const price = money(variant?.price ?? product.price);
+    const image = selectProductImage(product, variant, item.selectedSize);
     return {
       _id: product._id,
       name: product.name,
@@ -68,7 +83,7 @@ export const calculateCart = async (items, couponCode = "") => {
       selectedSize: item.selectedSize,
       selectedColor: variant?.color || "",
       sku: variant?.sku || "",
-      image: product.images?.[0]?.url || "",
+      image: image?.url || "",
       lineTotal: money(price * item.qty),
     };
   });
