@@ -3,6 +3,8 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import Order from "../models/Order.js";
+import Product from "../models/Product.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
 
@@ -123,7 +125,7 @@ router.post("/forgot-password", async (req, res) => {
         const email = String(req.body.email || "").trim().toLowerCase();
         if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: "Enter a valid email address" });
         const user = await User.findOne({ email }).select("+passwordResetToken +passwordResetExpires");
-        if (!user) return res.json(response);
+        if (!user) return res.status(404).json({ message: "No account was found with this email address", code: "ACCOUNT_NOT_FOUND" });
         const token = crypto.randomBytes(32).toString("hex");
         user.passwordResetToken = crypto.createHash("sha256").update(token).digest("hex");
         user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
@@ -230,6 +232,24 @@ router.put("/profile/:id", protect, async (req, res) => {
 
     }
 
+});
+
+router.delete("/profile/:id", protect, async (req, res) => {
+    try {
+        if (String(req.user._id) !== req.params.id) return res.status(403).json({ message: "Access denied" });
+        const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: "User not found" });
+        if (user.isAdmin) return res.status(400).json({ message: "The seller administrator account cannot be deleted here" });
+        const password = String(req.body.password || "");
+        if (!password || !(await bcrypt.compare(password, user.password))) return res.status(400).json({ message: "Enter your current password to delete the account" });
+        const activeStatuses = ["Pending", "Processing", "Confirmed", "Packed", "Shipped", "Cancellation Requested", "Return Requested", "Return Approved", "Return Picked Up", "Refund Pending", "RTO Initiated"];
+        if (await Order.exists({ userId: user._id, status: { $in: activeStatuses } })) return res.status(409).json({ message: "Your account has an active order, return or refund. Complete it before deleting your account" });
+        await Product.updateMany({ "reviews.userId": String(user._id) }, { $set: { "reviews.$[review].name": "Deleted customer", "reviews.$[review].userId": "" } }, { arrayFilters: [{ "review.userId": String(user._id) }] });
+        await User.deleteOne({ _id: user._id });
+        return res.json({ message: "Your account has been deleted" });
+    } catch (error) {
+        return res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Account could not be deleted" : error.message });
+    }
 });
 
 router.put("/change-password/:id", protect, async (req, res) => {

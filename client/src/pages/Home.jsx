@@ -52,6 +52,7 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [instagramPosts, setInstagramPosts] = useState([]);
   const { addToWishlist } = useContext(WishlistContext);
 
   useEffect(() => {
@@ -62,6 +63,15 @@ function Home() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [reloadKey]);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${import.meta.env.VITE_API_URL}/api/social/instagram`)
+      .then((response) => response.ok ? response.json() : { posts: [] })
+      .then((data) => { if (active) setInstagramPosts(Array.isArray(data.posts) ? data.posts : []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const categoryCards = useMemo(() => categories.map((category) => ({
     ...category,
@@ -139,9 +149,8 @@ function Home() {
           </div>
         </section>
         <section className="border-t border-slate-200 bg-white">
-          <div className="mx-auto flex max-w-[1400px] flex-col justify-between gap-6 px-5 py-12 md:flex-row md:items-center md:px-8">
-            <div className="flex items-center gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-600 via-rose-500 to-amber-400 text-2xl text-white"><FaInstagram /></span><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Follow our real collection</p><h2 className="mt-1 text-2xl font-semibold text-slate-950">@tamannashut on Instagram</h2><p className="mt-1 text-sm text-slate-500">See new launches, styling ideas and product updates directly from our official account.</p></div></div>
-            <a href="https://www.instagram.com/tamannashut" target="_blank" rel="noreferrer" className="btn-secondary shrink-0">Open Instagram <FiExternalLink /></a>
+          <div className="mx-auto max-w-[1400px] px-5 py-16 md:px-8"><div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div className="flex items-center gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-fuchsia-600 via-rose-500 to-amber-400 text-2xl text-white"><FaInstagram /></span><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">From our Instagram</p><h2 className="mt-1 font-serif text-3xl text-slate-950">@tamannashut</h2><p className="mt-1 text-sm text-slate-500">New launches, styling ideas and real product updates.</p></div></div><a href="https://www.instagram.com/tamannashut" target="_blank" rel="noreferrer" className="btn-secondary shrink-0">View profile <FiExternalLink /></a></div>
+            {instagramPosts.length > 0 ? <Swiper modules={[Navigation, Pagination]} navigation pagination={{ clickable: true }} spaceBetween={16} slidesPerView={1.25} breakpoints={{ 520: { slidesPerView: 2.2 }, 768: { slidesPerView: 3.2 }, 1100: { slidesPerView: 4.2 } }} className="commerce-slider instagram-slider mt-9 pb-10">{instagramPosts.map((post) => <SwiperSlide key={post.id}><a href={post.permalink} target="_blank" rel="noreferrer" className="group block overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="aspect-square overflow-hidden bg-slate-100"><img src={post.mediaUrl} alt={post.caption || "Tamanna's Hut Instagram post"} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/></div><div className="p-4"><p className="line-clamp-2 min-h-10 text-sm leading-5 text-slate-600">{post.caption || "View this post on Instagram"}</p><span className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-brand-primary"><FaInstagram/> View post</span></div></a></SwiperSlide>)}</Swiper> : <div className="mt-9 rounded-2xl border border-dashed border-slate-300 bg-[#f8f7f3] px-6 py-10 text-center"><p className="font-semibold text-slate-800">Our Instagram gallery is being connected</p><p className="mt-2 text-sm text-slate-500">Until then, visit our official profile for the latest posts.</p><a href="https://www.instagram.com/tamannashut" target="_blank" rel="noreferrer" className="btn-secondary mt-5">Open Instagram <FiExternalLink /></a></div>}
           </div>
         </section>
       </main>
