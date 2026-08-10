@@ -11,48 +11,36 @@ router.get("/sitemap.xml", async (req, res) => {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
 <url>
-<loc>https://tamannashut.com/</loc>
+<loc>https://www.tamannashut.com/</loc>
 </url>
 
 <url>
-<loc>https://tamannashut.com/shop</loc>
+<loc>https://www.tamannashut.com/shop</loc>
 </url>
 <url>
-<loc>https://tamannashut.com/login</loc>
+<loc>https://www.tamannashut.com/about</loc>
 </url>
 <url>
-<loc>https://tamannashut.com/register</loc>
+<loc>https://www.tamannashut.com/contact</loc>
 </url>
 <url>
-<loc>https://tamannashut.com/cart</loc>
+<loc>https://www.tamannashut.com/privacy-policy</loc>
 </url>
 <url>
-<loc>https://tamannashut.com/wishlist</loc>
+<loc>https://www.tamannashut.com/terms-conditions</loc>
 </url>
 <url>
-<loc>https://tamannashut.com/about</loc>
+<loc>https://www.tamannashut.com/return-policy</loc>
 </url>
 <url>
-<loc>https://tamannashut.com/contact</loc>
-</url>
-<url>
-<loc>https://tamannashut.com/privacy-policy</loc>
-</url>
-<url>
-<loc>https://tamannashut.com/terms-conditions</loc>
-</url>
-<url>
-<loc>https://tamannashut.com/return-policy</loc>
-</url>
-<url>
-<loc>https://tamannashut.com/shipping-policy</loc>
+<loc>https://www.tamannashut.com/shipping-policy</loc>
 </url>
 `;
 
         products.forEach((product) => {
             xml += `
 <url>
-<loc>https://tamannashut.com/product/${product._id}</loc>
+<loc>https://www.tamannashut.com/product/${product._id}</loc>
 <lastmod>${product.updatedAt.toISOString()}</lastmod>
 </url>
 `;

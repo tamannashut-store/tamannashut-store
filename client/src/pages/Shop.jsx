@@ -12,8 +12,6 @@ const categories = [
   { label: "New Arrivals", value: "new-arrivals" },
 ];
 
-const sizes = ["0-3M", "3-6M", "6-9M", "9-12M"];
-
 function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
@@ -21,6 +19,8 @@ function Shop() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [availableSizes, setAvailableSizes] = useState([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const category = searchParams.get("category") || "";
   const selectedSize = searchParams.get("size") || "";
@@ -44,6 +44,9 @@ function Shop() {
         setProducts(data.products || []);
         setTotalProducts(data.totalProducts ?? data.products?.length ?? 0);
         setTotalPages(Math.max(data.totalPages || 1, 1));
+        const responseProducts = data.products || [];
+        const responseSizes = data.availableSizes?.length ? data.availableSizes : [...new Set(responseProducts.flatMap((product) => [...(product.variants || []), ...(product.sizeStock || [])].map((item) => item.size).filter(Boolean)))];
+        setAvailableSizes(responseSizes);
       } catch (requestError) {
         if (requestError.code !== "ERR_CANCELED") {
           console.error(requestError);
@@ -56,7 +59,7 @@ function Shop() {
 
     fetchProducts();
     return () => controller.abort();
-  }, [queryString]);
+  }, [queryString, reloadKey]);
 
   const updateParams = (updates) => {
     const next = new URLSearchParams(searchParams);
@@ -95,7 +98,7 @@ function Shop() {
       <Helmet>
         <title>Shop Kids Clothing | Tamanna&apos;s Hut</title>
         <meta name="description" content="Browse baby dresses, kids wear, girls fashion and boys clothing." />
-        <link rel="canonical" href="https://tamannashut.com/shop" />
+        <link rel="canonical" href="https://www.tamannashut.com/shop" />
       </Helmet>
 
       <main className="mx-auto max-w-7xl px-6 py-16">
@@ -141,7 +144,7 @@ function Shop() {
               <h3 className="font-medium">Available size</h3>
               <select value={selectedSize} onChange={(event) => updateParams({ size: event.target.value })} className="mt-3 w-full rounded-xl border p-3">
                 <option value="">All sizes</option>
-                {sizes.map((size) => <option key={size} value={size}>{size}</option>)}
+                {availableSizes.map((size) => <option key={size} value={size}>{size}</option>)}
               </select>
             </div>
 
@@ -174,7 +177,7 @@ function Shop() {
               </label>
             </div>
 
-            {error && <div className="mb-6 rounded-2xl bg-red-50 p-4 text-red-700">{error}</div>}
+            {error && <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-red-50 p-4 text-red-700"><span>{error}</span><button type="button" onClick={() => setReloadKey((value) => value + 1)} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold">Try again</button></div>}
 
             <div className="grid gap-7 sm:grid-cols-2 xl:grid-cols-3">
               {loading

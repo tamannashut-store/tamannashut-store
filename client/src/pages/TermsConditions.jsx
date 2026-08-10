@@ -13,7 +13,7 @@ function TermsConditions() {
 
         <link
           rel="canonical"
-          href="https://tamannashut.com/terms-and-conditions"
+          href="https://www.tamannashut.com/terms-conditions"
         />
       </Helmet>
 

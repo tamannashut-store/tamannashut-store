@@ -5,6 +5,7 @@ import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 import { admin, protect } from "../middleware/authMiddleware.js";
 import InventoryLog from "../models/InventoryLog.js";
+import Order from "../models/Order.js";
 
 const router = express.Router();
 const parseProductFields = (body) => {
@@ -223,9 +224,12 @@ router.get("/", async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const [products, total] = await Promise.all([
+    const activeFilter = { status: { $nin: ["draft", "archived"] } };
+    const [products, total, variantSizes, legacySizes] = await Promise.all([
       Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       Product.countDocuments(filter),
+      Product.distinct("variants.size", activeFilter),
+      Product.distinct("sizeStock.size", activeFilter),
     ]);
 
     res.set(
@@ -239,6 +243,7 @@ router.get("/", async (req, res) => {
       currentPage: page,
       totalProducts: total,
       pageSize: limit,
+      availableSizes: [...new Set([...variantSizes, ...legacySizes].filter(Boolean))].sort((left, right) => left.localeCompare(right, undefined, { numeric: true })),
     });
 
   } catch (error) {
@@ -520,6 +525,19 @@ router.delete("/:id", protect, admin, async (req, res) => {
   }
 
 });
+const postDeliveryStatuses = ["Delivered", "Return Requested", "Return Approved", "Return Picked Up", "Returned", "Refund Pending", "Refunded"];
+const hasDeliveredPurchase = (userId, productId) => Order.exists({ userId, status: { $in: postDeliveryStatuses }, "products._id": productId });
+
+router.get("/:id/review-eligibility", protect, async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id).select("reviews.userId");
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    if (product.reviews.some((review) => review.userId === String(req.user._id))) return res.json({ eligible: false, reason: "You have already reviewed this product" });
+    const verifiedPurchase = await hasDeliveredPurchase(req.user._id, product._id);
+    return res.json({ eligible: Boolean(verifiedPurchase), reason: verifiedPurchase ? "" : "Reviews are available after your order is delivered" });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
 router.post("/:id/review", protect, async (req, res) => {
 
   try {
@@ -544,6 +562,9 @@ router.post("/:id/review", protect, async (req, res) => {
       return res.status(409).json({ message: "You have already reviewed this product" });
     }
 
+    const verifiedPurchase = await hasDeliveredPurchase(req.user._id, product._id);
+    if (!verifiedPurchase) return res.status(403).json({ message: "Only customers with a delivered order can review this product" });
+
     const rating = Number(req.body.rating);
     const comment = String(req.body.comment || "").trim().slice(0, 1000);
     if (!Number.isInteger(rating) || rating < 1 || rating > 5 || !comment) {
@@ -555,6 +576,7 @@ router.post("/:id/review", protect, async (req, res) => {
       name: req.user.name,
       rating,
       comment,
+      verifiedPurchase: true,
     });
 
     product.averageRating =

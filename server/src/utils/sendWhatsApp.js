@@ -2,28 +2,25 @@ import dotenv from "dotenv";
 dotenv.config();
 import twilio from "twilio";
 
-const client = twilio(
-  process.env.TWILIO_SID,
-  process.env.TWILIO_AUTH
-);
-console.log("SID:", process.env.TWILIO_SID);
-console.log("AUTH:", process.env.TWILIO_AUTH);
-// send whatsapp message
 export const sendWhatsApp = async (to, message) => {
+  if (!process.env.TWILIO_SID || !process.env.TWILIO_AUTH) {
+    return { skipped: true, reason: "WhatsApp is not configured" };
+  }
   try {
+    const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
     const formattedNumber = to.startsWith("+")
       ? to
       : `+91${to}`;
 
-    const result = await client.messages.create({
+    await client.messages.create({
       from: "whatsapp:+14155238886",
       to: `whatsapp:${formattedNumber}`,
       body: message,
     });
 
-    console.log("SID:", result.sid);
-    console.log("STATUS:", result.status);
+    return { sent: true };
   } catch (err) {
-    console.log("WHATSAPP ERROR:", err);
+    console.error("WHATSAPP ERROR:", String(err?.message || "Message delivery failed").slice(0, 200));
+    return { sent: false };
   }
 };

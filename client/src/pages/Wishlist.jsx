@@ -1,5 +1,5 @@
 ﻿import { useContext } from "react";
-import { WishlistContext } from "../context/WishlistContext";
+import WishlistContext from "../context/wishlistState";
 import { Link } from "react-router-dom";
 
 function Wishlist() {
