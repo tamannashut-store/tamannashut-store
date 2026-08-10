@@ -1,255 +1,27 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-
-function Profile() {
-
-  const userId = JSON.parse(localStorage.getItem("user"))?.user?.id;
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [formData, setFormData] =
-    useState({
-      name: "",
-      email: "",
-      phone: "",
-      address: "",
-      city: "",
-      state: "",
-      pincode: "",
-    });
-
-  useEffect(() => {
-    let active = true;
-    axios.get(`${import.meta.env.VITE_API_URL}/api/auth/profile/${userId}`)
-      .then(({ data }) => { if (active) setFormData({ name: data.name || "", email: data.email || "", phone: data.phone || "", address: data.address || "", city: data.city || "", state: data.state || data.State || "", pincode: data.pincode || "" }); })
-      .catch(() => { if (active) toast.error("Failed to load profile"); });
-    return () => { active = false; };
-  }, [userId]);
-
-  const handleChange = (e) => {
-
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-      ...(e.target.name === "pincode" ? { city: "", state: "" } : {}),
-    });
-
-  };
-
-  const resolvePincode = async (showSuccess = false) => {
-    if (!/^\d{6}$/.test(formData.pincode.trim())) { toast.error("Enter a valid 6-digit pincode"); return null; }
-    try {
-      const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/logistics/postcode/${formData.pincode.trim()}`);
-      setFormData((current) => ({ ...current, pincode: data.pincode, city: data.city, state: data.state }));
-      if (showSuccess) toast.success("Delivery location verified");
-      return data;
-    } catch (error) { toast.error(error.response?.data?.message || "This pincode could not be verified"); return null; }
-  };
-
-  const updateProfile =
-    async (e) => {
-
-      e.preventDefault();
-
-      setLoading(true);
-
-      try {
-
-        const locality = await resolvePincode();
-        if (!locality) return;
-
-        const { data } =
-          await axios.put(
-            `${import.meta.env.VITE_API_URL}/api/auth/profile/${userId}`,
-            { ...formData, city: locality.city, state: locality.state, pincode: locality.pincode }
-          );
-
-        toast.success(
-          "Profile Updated"
-        );
-
-        // Update localStorage
-
-        const currentUser =
-          JSON.parse(
-            localStorage.getItem(
-              "user"
-            )
-          );
-
-        currentUser.user.name =
-          data.name;
-
-        localStorage.setItem(
-          "user",
-          JSON.stringify(
-            currentUser
-          )
-        );
-
-      } catch (error) {
-
-        console.log(error);
-
-        toast.error(
-          "Update Failed"
-        );
-
-      } finally {
-
-        setLoading(false);
-
-      }
-
-    };
-
-  return (
-
-    <div className="mx-auto max-w-3xl px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
-
-      <h1 className="mb-8 text-3xl font-bold sm:mb-10 sm:text-5xl">
-        My Profile
-      </h1>
-
-      <form
-        onSubmit={updateProfile}
-        className="space-y-5 rounded-3xl bg-white p-5 shadow-xl sm:p-8"
-      >
-
-        <div>
-
-          <label className="block mb-2 font-semibold">
-            Full Name
-          </label>
-
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={
-              handleChange
-            }
-            className="w-full border p-4 rounded-xl"
-          />
-
-        </div>
-
-        <div>
-
-          <label className="block mb-2 font-semibold">
-            Email
-          </label>
-
-          <input
-            type="email"
-            value={formData.email}
-            disabled
-            className="w-full border p-4 rounded-xl bg-gray-100"
-          />
-
-        </div>
-
-        <div>
-
-          <label className="block mb-2 font-semibold">
-            Phone
-          </label>
-
-          <input
-            type="text"
-            name="phone"
-            value={formData.phone}
-            onChange={
-              handleChange
-            }
-            className="w-full border p-4 rounded-xl"
-          />
-
-        </div>
-
-        <div>
-
-          <label className="block mb-2 font-semibold">
-            Address
-          </label>
-
-          <textarea
-            name="address"
-            value={formData.address}
-            onChange={
-              handleChange
-            }
-            rows="4"
-            className="w-full border p-4 rounded-xl"
-          />
-
-        </div>
-
-        <div>
-
-          <label className="block mb-2 font-semibold">
-            City
-          </label>
-
-          <input
-            type="text"
-            name="city"
-            value={formData.city}
-            readOnly
-            className="w-full border p-4 rounded-xl bg-gray-50"
-          />
-
-        </div>
-
-        <div>
-
-          <label className="block mb-2 font-semibold">State</label>
-
-          <input type="text" name="state" value={formData.state} readOnly className="w-full border p-4 rounded-xl bg-gray-50" />
-
-        </div>
-
-        <div>
-
-          <label className="block mb-2 font-semibold">
-            Pincode
-          </label>
-
-          <input
-            type="text"
-            name="pincode"
-            value={formData.pincode}
-            onChange={
-              handleChange
-            }
-            onBlur={() => resolvePincode(true)}
-            inputMode="numeric"
-            maxLength="6"
-            className="w-full border p-4 rounded-xl"
-          />
-
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white py-4 rounded-full font-semibold"
-        >
-
-          {loading
-            ? "Updating..."
-            : "Save Profile"}
-
-        </button>
-
-      </form>
-
-    </div>
-
-  );
-
+import { FiAlertTriangle, FiCheckCircle, FiKey, FiMapPin, FiPackage, FiTrash2, FiUser } from "react-icons/fi";
+
+const initialProfile = { name: "", email: "", phone: "", address: "", city: "", state: "", pincode: "" };
+
+export default function Profile() {
+  const session = (() => { try { return JSON.parse(localStorage.getItem("user")); } catch { return null; } })();
+  const userId = session?.user?.id;
+  const [formData, setFormData] = useState(initialProfile); const [loading, setLoading] = useState(false); const [pageLoading, setPageLoading] = useState(true);
+  const [showDelete, setShowDelete] = useState(false); const [deletePassword, setDeletePassword] = useState(""); const [deleteConfirmation, setDeleteConfirmation] = useState(""); const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => { let active = true; axios.get(`${import.meta.env.VITE_API_URL}/api/auth/profile/${userId}`).then(({ data }) => { if (active) setFormData({ name: data.name || "", email: data.email || "", phone: data.phone || "", address: data.address || "", city: data.city || "", state: data.state || data.State || "", pincode: data.pincode || "" }); }).catch(() => { if (active) toast.error("Failed to load profile"); }).finally(() => { if (active) setPageLoading(false); }); return () => { active = false; }; }, [userId]);
+  const handleChange = (event) => setFormData((current) => ({ ...current, [event.target.name]: event.target.value, ...(event.target.name === "pincode" ? { city: "", state: "" } : {}) }));
+  const resolvePincode = async (showSuccess = false) => { if (!/^\d{6}$/.test(formData.pincode.trim())) { if (showSuccess) toast.error("Enter a valid 6-digit pincode"); return null; } try { const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/logistics/postcode/${formData.pincode.trim()}`); setFormData((current) => ({ ...current, pincode: data.pincode, city: data.city, state: data.state })); if (showSuccess) toast.success("Delivery location verified"); return data; } catch (error) { toast.error(error.response?.data?.message || "This pincode could not be verified"); return null; } };
+  const updateProfile = async (event) => { event.preventDefault(); setLoading(true); try { const locality = await resolvePincode(); if (!locality) return; const { data } = await axios.put(`${import.meta.env.VITE_API_URL}/api/auth/profile/${userId}`, { ...formData, city: locality.city, state: locality.state, pincode: locality.pincode }); const currentUser = JSON.parse(localStorage.getItem("user")); currentUser.user.name = data.name; localStorage.setItem("user", JSON.stringify(currentUser)); toast.success("Profile updated"); } catch (error) { toast.error(error.response?.data?.message || "Update failed"); } finally { setLoading(false); } };
+  const deleteAccount = async () => { if (deleteConfirmation !== "DELETE") return toast.error("Type DELETE to confirm"); if (!deletePassword) return toast.error("Enter your current password"); setDeleting(true); try { await axios.delete(`${import.meta.env.VITE_API_URL}/api/auth/profile/${userId}`, { data: { password: deletePassword } }); localStorage.removeItem("user"); localStorage.removeItem("guest_cart"); localStorage.removeItem("wishlist"); sessionStorage.removeItem("pending_guest_cart"); delete axios.defaults.headers.common.Authorization; window.location.replace("/"); } catch (error) { toast.error(error.response?.data?.message || "Account could not be deleted"); setDeleting(false); } };
+
+  if (pageLoading) return <div className="grid min-h-[55vh] place-items-center text-sm text-slate-500">Loading your profile…</div>;
+  return <main className="bg-[#f7f6f2]"><div className="mx-auto max-w-6xl px-5 py-12 sm:px-6 lg:py-16"><div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="eyebrow">Your account</p><h1 className="mt-3 font-serif text-4xl text-slate-950 sm:text-5xl">Profile & delivery</h1><p className="mt-3 max-w-xl text-slate-600">Keep your contact and delivery information accurate for faster checkout.</p></div><div className="flex gap-2"><Link to="/my-orders" className="btn-secondary"><FiPackage/> Orders</Link><Link to="/change-password" className="btn-secondary"><FiKey/> Password</Link></div></div>
+    <div className="grid gap-6 lg:grid-cols-[280px_1fr]"><aside className="h-fit rounded-3xl border border-slate-200 bg-[#183d2b] p-6 text-white shadow-lg"><div className="grid h-16 w-16 place-items-center rounded-2xl bg-white/10 text-2xl"><FiUser/></div><h2 className="mt-5 text-xl font-semibold">{formData.name || "Customer"}</h2><p className="mt-1 break-all text-sm text-white/65">{formData.email}</p><div className="mt-6 space-y-3 border-t border-white/15 pt-5 text-sm text-white/75"><p className="flex items-center gap-2"><FiCheckCircle/> Secure customer account</p><p className="flex items-center gap-2"><FiMapPin/> {formData.pincode ? `${formData.city || "Delivery area"} · ${formData.pincode}` : "Add delivery address"}</p></div></aside>
+      <div className="space-y-6"><form onSubmit={updateProfile} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"><div className="border-b border-slate-100 pb-5"><h2 className="text-xl font-semibold">Contact information</h2><p className="mt-1 text-sm text-slate-500">Used for delivery updates and order support.</p></div><div className="mt-6 grid gap-5 sm:grid-cols-2"><label className="field-label">Full name<input name="name" value={formData.name} onChange={handleChange} className="field-control mt-2" maxLength="80" required/></label><label className="field-label">Email<input value={formData.email} disabled className="field-control mt-2 bg-slate-50 text-slate-500"/></label><label className="field-label sm:col-span-2">Phone number<input name="phone" value={formData.phone} onChange={handleChange} className="field-control mt-2" inputMode="tel" maxLength="15" required/></label></div><div className="mt-8 border-b border-slate-100 pb-5"><h2 className="text-xl font-semibold">Default delivery address</h2><p className="mt-1 text-sm text-slate-500">This information is prefilled securely during checkout.</p></div><div className="mt-6 grid gap-5 sm:grid-cols-2"><label className="field-label sm:col-span-2">Complete address<textarea name="address" value={formData.address} onChange={handleChange} rows="4" className="field-control mt-2" maxLength="300" required/></label><label className="field-label">Pincode<input name="pincode" value={formData.pincode} onChange={handleChange} onBlur={() => resolvePincode(true)} inputMode="numeric" maxLength="6" className="field-control mt-2" required/></label><div className="hidden sm:block"/><label className="field-label">City<input value={formData.city} readOnly className="field-control mt-2 bg-slate-50"/></label><label className="field-label">State<input value={formData.state} readOnly className="field-control mt-2 bg-slate-50"/></label></div><div className="mt-8 flex justify-end"><button disabled={loading} className="btn-primary min-w-40 disabled:opacity-60">{loading ? "Saving…" : "Save changes"}</button></div></form>
+        <section className="rounded-3xl border border-red-200 bg-white p-5 sm:p-8"><div className="flex items-start gap-4"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-red-50 text-red-700"><FiAlertTriangle/></span><div className="flex-1"><h2 className="font-semibold text-slate-950">Delete account</h2><p className="mt-1 text-sm leading-6 text-slate-500">Permanently removes your login and saved profile. Completed order records remain for invoices, legal compliance and support. Accounts with active orders, returns or refunds cannot be deleted.</p>{!showDelete ? <button type="button" onClick={() => setShowDelete(true)} className="mt-4 text-sm font-semibold text-red-700 hover:underline">Start account deletion</button> : <div className="mt-5 grid gap-3 rounded-2xl bg-red-50 p-4"><input type="password" value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} placeholder="Current password" className="field-control"/><input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} placeholder="Type DELETE to confirm" className="field-control"/><div className="flex flex-wrap gap-2"><button type="button" disabled={deleting} onClick={deleteAccount} className="inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"><FiTrash2/> {deleting ? "Deleting…" : "Permanently delete"}</button><button type="button" onClick={() => { setShowDelete(false); setDeletePassword(""); setDeleteConfirmation(""); }} className="btn-secondary">Cancel</button></div></div>}</div></div></section>
+      </div></div></div></main>;
 }
-
-export default Profile;
