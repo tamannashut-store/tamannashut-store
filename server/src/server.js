@@ -46,6 +46,7 @@ import cartRoutes from "./routes/cartRoutes.js";
 import { razorpayWebhook } from "./routes/razorpayWebhook.js";
 import shippingRoutes from "./routes/shippingRoutes.js";
 import socialRoutes from "./routes/socialRoutes.js";
+import crypto from "crypto";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -54,6 +55,7 @@ app.use(
   cors({
     origin: [
       "https://www.tamannashut.com",
+      "https://tamannashut.com",
       "http://localhost:5173",
     ],
     credentials: true,
@@ -62,6 +64,11 @@ app.use(
 
 app.use(helmet());
 app.use(compression());
+app.use((req, res, next) => {
+  req.requestId = req.get("x-request-id") || crypto.randomUUID();
+  res.set("x-request-id", req.requestId);
+  next();
+});
 app.post("/api/payment/webhook", express.raw({ type: "application/json", limit: "256kb" }), razorpayWebhook);
 app.use(express.json({ limit: "1mb" }));
 const limiter = rateLimit({

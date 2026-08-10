@@ -6,6 +6,7 @@ import streamifier from "streamifier";
 import { admin, protect } from "../middleware/authMiddleware.js";
 import InventoryLog from "../models/InventoryLog.js";
 import Order from "../models/Order.js";
+import { recordAudit } from "../utils/recordAudit.js";
 
 const router = express.Router();
 const approvedReviews = (reviews = []) => reviews.filter((review) => !review.status || review.status === "approved");
@@ -375,6 +376,7 @@ router.patch("/admin/:productId/reviews/:reviewId", protect, admin, async (req, 
     review.moderatedBy = req.user.email || String(req.user._id);
     refreshReviewSummary(product);
     await product.save();
+    await recordAudit({ user: req.user, action: `review.${status}`, entityType: "product_review", entityId: review._id, summary: `${status === "approved" ? "Published" : "Rejected"} review for ${product.name}`, metadata: { productId: String(product._id), rating: review.rating } });
     return res.json({ success: true, review, averageRating: product.averageRating, approvedReviewCount: product.approvedReviewCount });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });

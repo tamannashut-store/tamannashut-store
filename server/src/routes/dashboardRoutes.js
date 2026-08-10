@@ -2,11 +2,37 @@ import express from "express";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import AuditLog from "../models/AuditLog.js";
 import { admin, protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 const money = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 const dayKey = (value) => new Date(value).toISOString().slice(0, 10);
+
+router.get("/operations", protect, admin, async (_req, res) => {
+  try {
+    const [recentActivity, failedRefunds, pendingRefunds] = await Promise.all([
+      AuditLog.find().sort({ createdAt: -1 }).limit(50).select("actorEmail action entityType entityId summary metadata createdAt").lean(),
+      Order.countDocuments({ "refund.status": "Failed" }),
+      Order.countDocuments({ "refund.status": "Pending" }),
+    ]);
+    const configured = (...names) => names.every((name) => Boolean(String(process.env[name] || "").trim()));
+    return res.json({
+      services: [
+        { key: "database", label: "MongoDB", ready: true, required: true },
+        { key: "payments", label: "Razorpay payments", ready: configured("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"), required: true },
+        { key: "shipping", label: "Shiprocket", ready: configured("SHIPROCKET_EMAIL", "SHIPROCKET_PASSWORD", "SHIPROCKET_PICKUP_LOCATION", "SHIPROCKET_PICKUP_POSTCODE", "SHIPROCKET_WEBHOOK_SECRET"), required: true },
+        { key: "images", label: "Cloudinary", ready: configured("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"), required: true },
+        { key: "email", label: "Order email", ready: configured("RESEND_API_KEY", "EMAIL_FROM"), required: true },
+        { key: "whatsapp", label: "Twilio WhatsApp", ready: configured("TWILIO_SID", "TWILIO_AUTH"), required: false },
+        { key: "instagram", label: "Instagram feed", ready: configured("INSTAGRAM_ACCESS_TOKEN"), required: false },
+      ],
+      alerts: { failedRefunds, pendingRefunds },
+      recentActivity,
+      checkedAt: new Date(),
+    });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
 
 router.get("/analytics", protect, admin, async (req, res) => {
   try {

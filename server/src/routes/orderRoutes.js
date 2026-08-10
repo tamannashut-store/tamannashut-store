@@ -18,6 +18,7 @@ import { createRazorpayRefund } from "../services/refundService.js";
 import upload from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
+import { recordAudit } from "../utils/recordAudit.js";
 
 const router = express.Router();
 const serializeOrder = (order) => { const value = order.toObject ? order.toObject() : order; return value.status === "Processing" ? { ...value, status: "Confirmed" } : value; };
@@ -159,6 +160,7 @@ router.post("/:id/refund", protect, admin, async (req, res) => {
       order.refund.arn = refund.acquirer_data?.arn || refund.acquirer_data?.rrn || "";
       if (refund.status === "processed") { order.paymentStatus = "Refunded"; order.status = "Refunded"; order.refund.processedAt = new Date(); order.statusHistory.push({ status: "Refunded", note: "Refund processed by Razorpay" }); }
       await order.save();
+      await recordAudit({ user: req.user, action: "order.refund_requested", entityType: "order", entityId: order._id, summary: `Refund ${amount} requested`, metadata: { amount, reference: order.refund.reference || "" } });
       await Promise.allSettled([sendStatusUpdate(order)]);
       return res.json({ success: true, order });
     } catch (error) {
@@ -205,6 +207,9 @@ router.put("/:id", protect, admin, async (req, res) => {
       order.statusHistory.push({ status: nextStatus, note: String(req.body.note || "Status updated by admin").slice(0, 300) });
     }
     const updatedOrder = await order.save();
+
+    if (previousStatus !== order.status) await recordAudit({ user: req.user, action: "order.status_changed", entityType: "order", entityId: order._id, summary: `${previousStatus} to ${order.status}`, metadata: { from: previousStatus, to: order.status } });
+    if (previousTrackingId !== order.tracking?.trackingId) await recordAudit({ user: req.user, action: "order.tracking_changed", entityType: "order", entityId: order._id, summary: "Tracking information updated", metadata: { courier: order.tracking?.courier || "" } });
 
     if (previousStatus !== order.status || previousTrackingId !== order.tracking?.trackingId) await Promise.allSettled([sendStatusUpdate(order)]);
     return res.json({ ...updatedOrder.toObject(), allowedNextStatuses: getNextOrderStatuses(updatedOrder.status) });
