@@ -1,6 +1,6 @@
 ﻿import { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 function Login() {
@@ -112,6 +112,13 @@ function Login() {
                 >
                     Login
                 </button>
+
+                <p className="text-center text-sm text-slate-600">
+                    New to Tamanna&apos;s Hut?{" "}
+                    <Link to="/register" className="font-semibold text-brand-primary hover:underline">
+                        Create an account
+                    </Link>
+                </p>
 
             </form>
 
