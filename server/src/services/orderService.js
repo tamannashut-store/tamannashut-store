@@ -18,6 +18,9 @@ export const normalizeCustomer = (customer) => {
   if (requiredFields.some((field) => !cleanCustomer[field])) {
     throw Object.assign(new Error("Complete all delivery address fields"), { status: 400 });
   }
+  if (cleanCustomer.name.length < 2 || cleanCustomer.address.length < 10) {
+    throw Object.assign(new Error("Enter the recipient's full name and a complete delivery address"), { status: 400 });
+  }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanCustomer.email)) {
     throw Object.assign(new Error("Enter a valid email address"), { status: 400 });
   }
