@@ -8,6 +8,7 @@ function WhatsAppButton() {
       href="https://wa.me/919874328578"
       target="_blank"
       rel="noreferrer"
+      aria-label="Chat with Tamanna's Hut on WhatsApp"
       className="fixed bottom-6 right-6 z-50"
     >
 

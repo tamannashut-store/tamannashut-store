@@ -38,7 +38,7 @@ function ProductCard({ product, onWishlist }) {
         <h3 className="mt-2 line-clamp-2 min-h-12 text-lg font-semibold text-slate-900">{product.name}</h3>
         <div className="mt-3 flex items-baseline gap-2">
           <span className="text-xl font-bold text-[#183d2b]">₹{price.toLocaleString("en-IN")}</span>
-          {mrp > price && <span className="text-sm text-slate-400 line-through">₹{mrp.toLocaleString("en-IN")}</span>}
+          {mrp > price && <span className="text-sm text-slate-600 line-through">₹{mrp.toLocaleString("en-IN")}</span>}
         </div>
         <Link to={`/product/${product._id}`} className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-semibold text-[#183d2b]">
           View details <FiArrowRight />
@@ -67,7 +67,7 @@ function Home() {
 
   useEffect(() => {
     let active = true;
-    fetch(`${import.meta.env.VITE_API_URL}/api/social/instagram`)
+    fetch(`${import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL}/api/social/instagram`)
       .then((response) => response.ok ? response.json() : { posts: [] })
       .then((data) => { if (active) setInstagramPosts(Array.isArray(data.posts) ? data.posts : []); })
       .catch(() => {});

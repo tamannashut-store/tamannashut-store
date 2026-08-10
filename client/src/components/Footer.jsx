@@ -18,7 +18,7 @@ function Footer() {
       <div><h3 className="font-semibold">Customer care</h3><div className="mt-4 space-y-2 text-sm text-white/65"><Link className="block hover:text-white" to="/contact">Contact us</Link><Link className="block hover:text-white" to="/return-policy">Returns</Link><Link className="block hover:text-white" to="/shipping-policy">Shipping</Link><Link className="block hover:text-white" to="/privacy-policy">Privacy</Link><Link className="block hover:text-white" to="/terms-conditions">Terms</Link></div></div>
       <div><h3 className="font-semibold">Find us online</h3><div className="mt-4 space-y-2">{external.slice(2).map(([label,url,Icon]) => <a key={label} href={url} target="_blank" rel="noreferrer" className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2.5 text-sm text-white/70 hover:bg-white/10 hover:text-white"><span className="flex items-center gap-2"><Icon />{label}</span><FiExternalLink /></a>)}</div><div className="mt-5 text-sm text-white/65"><a href="mailto:support@tamannashut.com" className="block hover:text-white">support@tamannashut.com</a><a href="tel:+919874328578" className="mt-2 block hover:text-white">+91 98743 28578</a></div></div>
     </div>
-    <div className="border-t border-white/10 px-6 py-5 text-center text-xs text-white/45">© 2026 Tamanna&apos;s Hut. All rights reserved.</div>
+    <div className="border-t border-white/10 px-6 py-5 text-center text-xs text-white/70">© 2026 Tamanna&apos;s Hut. All rights reserved.</div>
   </footer>;
 }
 export default Footer;

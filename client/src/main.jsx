@@ -7,7 +7,6 @@ import CartProvider from "./context/CartContext";
 import WishlistProvider from "./context/WishlistContext";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "react-hot-toast";
-import "@fontsource/roboto";
 
 const storedUser = JSON.parse(localStorage.getItem("user"));
 if (storedUser?.token) {
