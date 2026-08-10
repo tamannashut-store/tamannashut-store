@@ -44,6 +44,7 @@ import robotsRoutes from "./routes/robotsRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import { razorpayWebhook } from "./routes/razorpayWebhook.js";
+import shippingRoutes from "./routes/shippingRoutes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -88,6 +89,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/logistics", shippingRoutes);
 app.use("/", sitemapRoutes);
 app.use("/", googleFeedRoutes);
 app.use("/", robotsRoutes);

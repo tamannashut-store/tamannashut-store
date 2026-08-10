@@ -80,6 +80,25 @@ const orderSchema = new mongoose.Schema(
         default: ""
       }
     },
+    shipping: {
+      provider: { type: String, default: "" },
+      externalOrderId: { type: String, default: "" },
+      shipmentId: { type: String, default: "" },
+      awbCode: { type: String, default: "" },
+      courierId: { type: Number, default: null },
+      courierName: { type: String, default: "" },
+      externalStatus: { type: String, default: "" },
+      labelUrl: { type: String, default: "" },
+      pickupScheduled: { type: Boolean, default: false },
+      destinationState: { type: String, default: "" },
+      package: {
+        weight: { type: Number, default: 0.5 },
+        length: { type: Number, default: 15 },
+        breadth: { type: Number, default: 12 },
+        height: { type: Number, default: 5 },
+      },
+      lastEventAt: Date,
+    },
   },
   {
     timestamps: true,
@@ -87,6 +106,8 @@ const orderSchema = new mongoose.Schema(
 );
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ status: 1 });
+orderSchema.index({ "shipping.awbCode": 1 }, { sparse: true });
+orderSchema.index({ "shipping.shipmentId": 1 }, { sparse: true });
 orderSchema.index({ userId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
 const Order = mongoose.model("Order", orderSchema);
 
