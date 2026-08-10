@@ -119,6 +119,27 @@ export const verifyShiprocketDeliveryPostcode = async (postcode, cod = false) =>
   return { ...locality, serviceable: true };
 };
 
+const getConfiguredPickupAddress = async () => {
+  const data = await request("/settings/company/pickup");
+  const locations = data.data?.shipping_address || data.shipping_address || [];
+  const configured = String(process.env.SHIPROCKET_PICKUP_LOCATION || "").trim().toLowerCase();
+  const location = locations.find((item) => String(item.pickup_location || item.name || "").trim().toLowerCase() === configured);
+  if (!location) throw Object.assign(new Error("Configured Shiprocket pickup location could not be found"), { status: 502 });
+  return location;
+};
+
+export const createShiprocketReturn = async (order, parcel) => {
+  const seller = await getConfiguredPickupAddress();
+  return request("/shipments/create/return-shipment", { method: "POST", body: {
+    order_id: `R${orderReference(order)}`,
+    order_date: orderDate(new Date()),
+    pickup_customer_name: String(order.customerName || "Customer").slice(0, 50), pickup_last_name: "", pickup_address: String(order.address || "").slice(0, 80), pickup_address_2: String(order.address || "").slice(80, 160), pickup_city: order.city, pickup_state: order.state || order.shipping?.destinationState, pickup_country: "India", pickup_pincode: Number(order.pincode), pickup_email: order.email, pickup_phone: cleanPhone(order.phone), pickup_isd_code: "91",
+    shipping_customer_name: seller.name || "Tamanna's Hut", shipping_last_name: "", shipping_address: seller.address, shipping_address_2: seller.address_2 || "", shipping_city: seller.city, shipping_state: seller.state, shipping_country: seller.country || "India", shipping_pincode: Number(seller.pin_code || seller.pincode), shipping_email: seller.email || process.env.SHIPROCKET_EMAIL, shipping_phone: cleanPhone(seller.phone), shipping_isd_code: "91",
+    order_items: order.products.map((item) => ({ sku: String(item.sku || item._id).slice(0, 50), name: String(item.name || "Product").slice(0, 100), units: Number(item.qty), selling_price: Number(item.price), discount: 0, qc_enable: false })),
+    payment_method: "Prepaid", total_discount: 0, sub_total: Number(order.totalAmount), length: parcel.length, breadth: parcel.breadth, height: parcel.height, weight: parcel.weight, request_pickup: false,
+  } });
+};
+
 export const assignShiprocketAwb = (shipmentId, courierId) => request("/courier/assign/awb", { method: "POST", body: { shipment_id: Number(shipmentId), courier_id: Number(courierId) } });
 export const scheduleShiprocketPickup = (shipmentId) => request("/courier/generate/pickup", { method: "POST", body: { shipment_id: [Number(shipmentId)] } });
 export const generateShiprocketLabel = (shipmentId) => request("/courier/generate/label", { method: "POST", body: { shipment_id: [Number(shipmentId)] } });

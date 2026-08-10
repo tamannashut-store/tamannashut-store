@@ -79,22 +79,20 @@ function Contact() {
         />
       </Helmet>
 
-      <div className="max-w-5xl mx-auto px-6 py-20">
+      <div className="mx-auto max-w-5xl px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
 
-        <h1 className="text-5xl font-bold mb-10">
+        <h1 className="mb-8 text-3xl font-bold sm:mb-10 sm:text-5xl">
           Contact Us
         </h1>
 
-        <div className="grid md:grid-cols-2 gap-10">
+        <div className="grid gap-8 md:grid-cols-2 md:gap-10">
 
           <div>
             <h2 className="text-2xl font-semibold mb-4">
               Tamanna's Hut
             </h2>
 
-            <p className="mb-3">
-              support@tamannashut.com
-            </p>
+            <p className="mb-3 break-all"><a href="mailto:support@tamannashut.com" className="hover:underline">support@tamannashut.com</a></p>
 
             <p className="mb-3">
               <a href="tel:+919874328578" className="hover:underline">+91 98743 28578</a>
@@ -136,7 +134,7 @@ function Contact() {
             <button
               type="submit"
               disabled={loading}
-              className="bg-brand-primary hover:bg-brand-primary-dark text-white px-8 py-3 rounded-xl"
+              className="w-full rounded-xl bg-brand-primary px-8 py-3 text-white hover:bg-brand-primary-dark sm:w-auto"
             >
               {loading ? "Sending..." : "Send Message"}
             </button>

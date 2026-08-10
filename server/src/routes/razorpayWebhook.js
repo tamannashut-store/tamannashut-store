@@ -33,12 +33,20 @@ export const razorpayWebhook = async (req, res) => {
       }
     } else if (event.event === "payment.failed" && payment?.order_id) {
       await PaymentAttempt.updateOne({ razorpayOrderId: payment.order_id }, { $set: { status: "failed", paymentId: payment.id || "", failureReason: payment.error_description || payment.error_reason || "Payment failed" } });
-    } else if (event.event === "refund.processed" && refund?.payment_id) {
+    } else if (["refund.created", "refund.processed", "refund.failed"].includes(event.event) && refund?.payment_id) {
       const order = await Order.findOne({ paymentId: refund.payment_id });
       if (order) {
-        order.paymentStatus = "Refunded";
-        order.refund = { status: "Refunded", amount: Number(refund.amount || 0) / 100, reference: refund.id || "", reason: refund.notes?.reason || "" };
-        if (order.status === "Refund Pending") { order.status = "Refunded"; order.statusHistory.push({ status: "Refunded", note: "Refund confirmed by Razorpay" }); }
+        order.refund.amount = Number(refund.amount || 0) / 100;
+        order.refund.reference = refund.id || order.refund.reference || "";
+        order.refund.reason = refund.notes?.reason || order.refund.reason || "";
+        order.refund.arn = refund.acquirer_data?.arn || refund.acquirer_data?.rrn || order.refund.arn || "";
+        if (event.event === "refund.processed") {
+          order.paymentStatus = "Refunded"; order.refund.status = "Processed"; order.refund.processedAt = new Date();
+          if (order.status === "Refund Pending") { order.status = "Refunded"; order.statusHistory.push({ status: "Refunded", note: "Refund confirmed by Razorpay" }); }
+        } else if (event.event === "refund.failed") {
+          order.refund.status = "Failed"; order.refund.failedReason = refund.error_description || "Razorpay could not process the refund";
+          if (order.status === "Refund Pending") { order.status = order.refund.previousOrderStatus || "Cancelled"; order.statusHistory.push({ status: order.status, note: "Refund failed; admin action required" }); }
+        } else { order.refund.status = "Pending"; }
         await order.save();
       }
     }
