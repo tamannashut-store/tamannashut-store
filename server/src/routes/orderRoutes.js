@@ -172,6 +172,39 @@ router.post("/:id/refund", protect, admin, async (req, res) => {
   } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
 });
 
+router.post("/:id/refund/complete-cod", protect, admin, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (order.paymentMethod !== "COD") return res.status(400).json({ message: "Only COD refunds can be completed manually. Online refunds are confirmed by Razorpay." });
+    if (order.status === "Refunded" && order.refund?.status === "Processed") return res.json({ success: true, order });
+    if (order.status !== "Refund Pending") return res.status(400).json({ message: "Move the order to Refund Pending before recording the COD refund" });
+
+    const methods = ["UPI", "Bank transfer", "Cash", "Other"];
+    const method = String(req.body.method || "").trim();
+    const reference = String(req.body.reference || "").trim().slice(0, 150);
+    const reason = String(req.body.reason || "COD order refund completed").trim().slice(0, 300);
+    const amount = Number(req.body.amount);
+    if (!methods.includes(method)) return res.status(400).json({ message: "Select a valid refund method" });
+    if (!Number.isFinite(amount) || amount <= 0 || amount > Number(order.totalAmount)) return res.status(400).json({ message: "Refund amount must be greater than zero and no more than the order total" });
+    if (method !== "Cash" && reference.length < 3) return res.status(400).json({ message: "Enter the UPI or bank transaction reference" });
+
+    const priorLifecycleStatus = [...(order.statusHistory || [])].reverse().find((entry) => entry.status !== "Refund Pending")?.status || "Cancelled";
+    order.refund = {
+      ...order.refund?.toObject?.(), status: "Processed", method, amount, reference,
+      reason, requestedAt: order.refund?.requestedAt || new Date(), processedAt: new Date(),
+      previousOrderStatus: order.refund?.previousOrderStatus || priorLifecycleStatus, failedReason: "",
+    };
+    order.paymentStatus = "Refunded";
+    order.status = "Refunded";
+    order.statusHistory.push({ status: "Refunded", note: `COD refund completed via ${method}${reference ? ` (reference ${reference})` : ""}` });
+    await order.save();
+    await recordAudit({ user: req.user, action: "order.cod_refund_completed", entityType: "order", entityId: order._id, summary: `COD refund ${amount} completed`, metadata: { amount, method, reference } });
+    await Promise.allSettled([sendStatusUpdate(order)]);
+    return res.json({ success: true, order });
+  } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
+});
+
 router.put("/:id", protect, admin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);

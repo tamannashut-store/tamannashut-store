@@ -64,6 +64,7 @@ const orderSchema = new mongoose.Schema(
     internalNotes: [{ note: String, createdBy: String, createdAt: { type: Date, default: Date.now } }],
     refund: {
       status: { type: String, default: "" },
+      method: { type: String, default: "" },
       amount: { type: Number, default: 0 },
       reference: { type: String, default: "" },
       reason: { type: String, default: "" },
