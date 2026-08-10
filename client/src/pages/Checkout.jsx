@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { CartContext } from "../context/CartContext";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -26,6 +26,7 @@ function Checkout() {
     address: "",
     city: "",
     state: "",
+    country: "India",
     pincode: "",
   });
   const [paymentMethod, setPaymentMethod] = useState("online");
@@ -33,6 +34,7 @@ function Checkout() {
   const [couponPercent, setCouponPercent] = useState(0);
   const [loading, setLoading] = useState(false);
   const [addressChecking, setAddressChecking] = useState(false);
+  const [addressStatus, setAddressStatus] = useState("idle");
 
   useEffect(() => {
     if (!user) {
@@ -51,6 +53,7 @@ function Checkout() {
           address: data.address || "",
           city: data.city || "",
           state: data.state || data.State || "",
+          country: "India",
           pincode: data.pincode || "",
         });
       })
@@ -71,21 +74,30 @@ function Checkout() {
 
   const updateField = (event) => {
     const { name, value } = event.target;
+    if (name === "pincode") setAddressStatus("idle");
     setFormData((current) => ({ ...current, [name]: value, ...(name === "pincode" ? { city: "", state: "" } : {}) }));
   };
 
-  const resolvePincode = async (showSuccess = false) => {
+  const resolvePincode = useCallback(async (showSuccess = false) => {
     const pincode = formData.pincode.trim();
     if (!/^\d{6}$/.test(pincode)) { toast.error("Enter a valid 6-digit pincode"); return null; }
     setAddressChecking(true);
+    setAddressStatus("checking");
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/logistics/postcode/${pincode}`, { params: { cod: paymentMethod === "cod" ? 1 : 0 } });
       setFormData((current) => ({ ...current, pincode: data.pincode, city: data.city, state: data.state }));
+      setAddressStatus("verified");
       if (showSuccess) toast.success("Delivery location verified");
       return data;
-    } catch (error) { toast.error(error.response?.data?.message || "This pincode could not be verified for delivery"); return null; }
+    } catch (error) { setAddressStatus("error"); toast.error(error.response?.data?.message || "This pincode could not be verified for delivery"); return null; }
     finally { setAddressChecking(false); }
-  };
+  }, [formData.pincode, paymentMethod]);
+
+  useEffect(() => {
+    if (!/^\d{6}$/.test(formData.pincode.trim())) return undefined;
+    const timer = setTimeout(() => { resolvePincode(false); }, 350);
+    return () => clearTimeout(timer);
+  }, [formData.pincode, paymentMethod, resolvePincode]);
 
   const applyCoupon = async () => {
     if (!coupon.trim()) return toast.error("Enter a coupon code");
@@ -110,7 +122,9 @@ function Checkout() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!user || cartItems.length === 0) return;
+    if (formData.name.trim().length < 2) return toast.error("Enter the recipient's full name");
     if (!/^\+?[0-9]{10,13}$/.test(formData.phone.replace(/\s/g, ""))) return toast.error("Enter a valid phone number");
+    if (formData.address.trim().length < 10) return toast.error("Enter a complete house, street and landmark address");
     const locality = await resolvePincode();
     if (!locality) return;
 
@@ -218,22 +232,26 @@ function Checkout() {
             </div>
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               {[
-                ["name", "Full name", "text"],
+                ["name", "Recipient full name", "text"],
                 ["email", "Email", "email"],
                 ["phone", "Phone number", "tel"],
                 ["pincode", "Pincode", "text"],
                 ["city", "City", "text"],
                 ["state", "State", "text"],
+                ["country", "Country", "text"],
               ].map(([name, label, type]) => (
                 <label key={name}>
                   <span className="mb-2 block text-sm font-medium">{label}</span>
-                  <input required name={name} type={type} value={formData[name]} onChange={updateField} onBlur={name === "pincode" ? () => resolvePincode(true) : undefined} maxLength={name === "pincode" ? 6 : undefined} inputMode={name === "pincode" ? "numeric" : undefined} readOnly={["email", "city", "state"].includes(name)} className="w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
+                  <input required name={name} type={type} value={formData[name]} onChange={updateField} minLength={name === "name" ? 2 : undefined} maxLength={name === "pincode" ? 6 : name === "phone" ? 13 : undefined} pattern={name === "pincode" ? "[0-9]{6}" : name === "phone" ? "[+]?[0-9]{10,13}" : undefined} inputMode={name === "pincode" ? "numeric" : name === "phone" ? "tel" : undefined} autoComplete={name === "name" ? "name" : name === "email" ? "email" : name === "phone" ? "tel" : name === "pincode" ? "postal-code" : name === "city" ? "address-level2" : name === "state" ? "address-level1" : name === "country" ? "country-name" : undefined} readOnly={["email", "city", "state", "country"].includes(name)} className="w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
                 </label>
               ))}
               {addressChecking && <p className="text-sm text-brand-primary sm:col-span-2">Checking delivery location…</p>}
+              {!addressChecking && addressStatus === "verified" && <p className="text-sm font-medium text-emerald-700 sm:col-span-2">✓ Pincode verified for {paymentMethod === "cod" ? "cash on delivery" : "prepaid delivery"}</p>}
+              {!addressChecking && addressStatus === "error" && <p className="text-sm font-medium text-red-600 sm:col-span-2">Delivery is unavailable or the pincode could not be verified.</p>}
               <label className="sm:col-span-2">
-                <span className="mb-2 block text-sm font-medium">Complete address</span>
-                <textarea required name="address" rows="4" value={formData.address} onChange={updateField} placeholder="House number, street, landmark" className="w-full rounded-xl border p-3.5 outline-none focus:border-brand-primary" />
+                <span className="mb-2 block text-sm font-medium">House, street and landmark</span>
+                <textarea required minLength="10" maxLength="500" name="address" rows="4" value={formData.address} onChange={updateField} autoComplete="street-address" placeholder="House/flat number, building, street, area and nearby landmark" className="w-full rounded-xl border p-3.5 outline-none focus:border-brand-primary" />
+                <span className="mt-2 block text-xs text-gray-500">Include enough detail for the courier to locate the address without calling repeatedly.</span>
               </label>
             </div>
           </section>
