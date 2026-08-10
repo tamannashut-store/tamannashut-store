@@ -62,7 +62,7 @@ app.use(
 app.use(helmet());
 app.use(compression());
 app.post("/api/payment/webhook", express.raw({ type: "application/json", limit: "256kb" }), razorpayWebhook);
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 300,
@@ -96,11 +96,34 @@ app.use("/", robotsRoutes);
 app.get("/api", (req, res) => {
   res.json({ message: "API is working" });
 });
+app.get("/api/health/live", (req, res) => {
+  res.json({ status: "ok", uptimeSeconds: Math.floor(process.uptime()) });
+});
+app.get("/api/health/ready", (req, res) => {
+  const ready = mongoose.connection.readyState === 1;
+  res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "not_ready" });
+});
+app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 app.use(errorHandler);
-mongoose.connect(process.env.MONGO_URI).then(() => console.log("MongoDB connected")).catch((err) => console.log(err));
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+let server;
+const start = async () => {
+  if (!process.env.MONGO_URI || !process.env.JWT_SECRET) throw new Error("Required server configuration is missing");
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log("MongoDB connected");
+  server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+};
+const shutdown = async (signal) => {
+  console.log(`${signal} received; shutting down`);
+  if (server) await new Promise((resolve) => server.close(resolve));
+  await mongoose.connection.close();
+  process.exit(0);
+};
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+start().catch((error) => {
+  console.error("Server startup failed:", error.message);
+  process.exit(1);
 });
 
 // app.post("/api/register", async (req, res) => {
