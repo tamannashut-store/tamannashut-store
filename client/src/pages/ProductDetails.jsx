@@ -37,9 +37,11 @@ function DiscoveryProducts({ title, products }) {
         <h2 className="text-2xl font-semibold md:text-3xl">{title}</h2>
         <Link to="/shop" className="text-sm font-semibold text-brand-primary hover:underline">View all</Link>
       </div>
-      <Swiper modules={[Navigation, Pagination]} navigation={products.length > 1} pagination={products.length > 1 ? { clickable: true } : false} slidesPerView={1.08} spaceBetween={16} className="commerce-slider pb-10 lg:hidden">
-        {products.map((item) => <SwiperSlide key={item._id} className="h-auto"><DiscoveryCard item={item} /></SwiperSlide>)}
-      </Swiper>
+      <div className="lg:hidden">
+        <Swiper modules={[Navigation, Pagination]} navigation={products.length > 1} pagination={products.length > 1 ? { clickable: true } : false} slidesPerView={1.08} spaceBetween={16} className="commerce-slider pb-10">
+          {products.map((item) => <SwiperSlide key={item._id} className="h-auto"><DiscoveryCard item={item} /></SwiperSlide>)}
+        </Swiper>
+      </div>
       <div className="hidden grid-cols-4 gap-4 lg:grid">
         {products.slice(0, 8).map((item) => <DiscoveryCard key={item._id} item={item} />)}
       </div>
