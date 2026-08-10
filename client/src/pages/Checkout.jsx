@@ -25,12 +25,14 @@ function Checkout() {
     phone: "",
     address: "",
     city: "",
+    state: "",
     pincode: "",
   });
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [coupon, setCoupon] = useState("");
   const [couponPercent, setCouponPercent] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [addressChecking, setAddressChecking] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -48,6 +50,7 @@ function Checkout() {
           phone: data.phone || "",
           address: data.address || "",
           city: data.city || "",
+          state: data.state || data.State || "",
           pincode: data.pincode || "",
         });
       })
@@ -67,7 +70,21 @@ function Checkout() {
   }));
 
   const updateField = (event) => {
-    setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value, ...(name === "pincode" ? { city: "", state: "" } : {}) }));
+  };
+
+  const resolvePincode = async (showSuccess = false) => {
+    const pincode = formData.pincode.trim();
+    if (!/^\d{6}$/.test(pincode)) { toast.error("Enter a valid 6-digit pincode"); return null; }
+    setAddressChecking(true);
+    try {
+      const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/logistics/postcode/${pincode}`, { params: { cod: paymentMethod === "cod" ? 1 : 0 } });
+      setFormData((current) => ({ ...current, pincode: data.pincode, city: data.city, state: data.state }));
+      if (showSuccess) toast.success("Delivery location verified");
+      return data;
+    } catch (error) { toast.error(error.response?.data?.message || "This pincode could not be verified for delivery"); return null; }
+    finally { setAddressChecking(false); }
   };
 
   const applyCoupon = async () => {
@@ -93,12 +110,13 @@ function Checkout() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!user || cartItems.length === 0) return;
-    if (!/^\d{6}$/.test(formData.pincode.trim())) return toast.error("Enter a valid 6-digit pincode");
     if (!/^\+?[0-9]{10,13}$/.test(formData.phone.replace(/\s/g, ""))) return toast.error("Enter a valid phone number");
+    const locality = await resolvePincode();
+    if (!locality) return;
 
     setLoading(true);
     const idempotencyKey = getCheckoutKey();
-    const customer = { ...formData, phone: formData.phone.replace(/\s/g, "") };
+    const customer = { ...formData, city: locality.city, state: locality.state, pincode: locality.pincode, phone: formData.phone.replace(/\s/g, "") };
     const couponCode = couponPercent > 0 ? coupon : "";
 
     try {
@@ -107,6 +125,7 @@ function Checkout() {
         phone: customer.phone,
         address: customer.address,
         city: customer.city,
+        state: customer.state,
         pincode: customer.pincode,
       });
 
@@ -204,12 +223,14 @@ function Checkout() {
                 ["phone", "Phone number", "tel"],
                 ["pincode", "Pincode", "text"],
                 ["city", "City", "text"],
+                ["state", "State", "text"],
               ].map(([name, label, type]) => (
                 <label key={name}>
                   <span className="mb-2 block text-sm font-medium">{label}</span>
-                  <input required name={name} type={type} value={formData[name]} onChange={updateField} readOnly={name === "email"} className="w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
+                  <input required name={name} type={type} value={formData[name]} onChange={updateField} onBlur={name === "pincode" ? () => resolvePincode(true) : undefined} maxLength={name === "pincode" ? 6 : undefined} inputMode={name === "pincode" ? "numeric" : undefined} readOnly={["email", "city", "state"].includes(name)} className="w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
                 </label>
               ))}
+              {addressChecking && <p className="text-sm text-brand-primary sm:col-span-2">Checking delivery location…</p>}
               <label className="sm:col-span-2">
                 <span className="mb-2 block text-sm font-medium">Complete address</span>
                 <textarea required name="address" rows="4" value={formData.address} onChange={updateField} placeholder="House number, street, landmark" className="w-full rounded-xl border p-3.5 outline-none focus:border-brand-primary" />
