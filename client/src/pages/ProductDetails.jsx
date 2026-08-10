@@ -153,10 +153,11 @@ function ProductDetails() {
     if (!comment.trim()) return toast.error("Write a short review first");
     try {
       setSubmittingReview(true);
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/products/${id}/review`, { rating: Number(rating), comment });
-      toast.success("Thank you for your review");
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/products/${id}/review`, { rating: Number(rating), comment });
+      toast.success(data.message || "Your review was submitted for approval");
       setComment("");
       setRating(5);
+      setReviewEligibility({ loading: false, eligible: false, reason: "Your review is awaiting seller approval" });
       await fetchProduct();
     } catch (error) {
       toast.error(error.response?.data?.message || "Review could not be submitted");

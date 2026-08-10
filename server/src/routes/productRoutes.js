@@ -8,6 +8,12 @@ import InventoryLog from "../models/InventoryLog.js";
 import Order from "../models/Order.js";
 
 const router = express.Router();
+const approvedReviews = (reviews = []) => reviews.filter((review) => !review.status || review.status === "approved");
+const refreshReviewSummary = (product) => {
+  const visible = approvedReviews(product.reviews);
+  product.averageRating = visible.length ? visible.reduce((sum, review) => sum + Number(review.rating || 0), 0) / visible.length : 0;
+  product.approvedReviewCount = visible.length;
+};
 const parseProductFields = (body) => {
   const name = String(body.name || "").trim();
   const price = Number(body.price);
@@ -253,8 +259,13 @@ router.get("/", async (req, res) => {
       "public, max-age=30, s-maxage=300, stale-while-revalidate=86400"
     );
 
+    const publicProducts = products.map(({ reviews: _reviews, ...product }) => ({
+      ...product,
+      approvedReviewCount: Number(product.approvedReviewCount || 0),
+    }));
+
     res.json({
-      products,
+      products: publicProducts,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       totalProducts: total,
@@ -287,7 +298,7 @@ router.get("/:id/related", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).select("category tags").lean();
     if (!product) return res.status(404).json({ message: "Product not found" });
-    const related = await Product.find({ _id: { $ne: product._id }, status: { $nin: ["draft", "archived"] }, $or: [{ category: product.category }, { tags: { $in: product.tags || [] } }] }).sort({ averageRating: -1, createdAt: -1 }).limit(8).lean();
+    const related = await Product.find({ _id: { $ne: product._id }, status: { $nin: ["draft", "archived"] }, $or: [{ category: product.category }, { tags: { $in: product.tags || [] } }] }).select("-reviews").sort({ averageRating: -1, createdAt: -1 }).limit(8).lean();
     return res.json({ products: related });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
@@ -304,7 +315,7 @@ router.get("/admin/list", protect, admin, async (req, res) => {
       filter.$or = [{ name: regex }, { baseSku: regex }, { "variants.sku": regex }];
     }
     if (["draft", "active", "archived"].includes(req.query.status)) filter.status = req.query.status;
-    const products = await Product.find(filter).sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+    const products = await Product.find(filter).select("-reviews").sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
     const total = await Product.countDocuments(filter);
     return res.json({ products, totalProducts: total, currentPage: page, totalPages: Math.max(Math.ceil(total / limit), 1) });
   } catch (error) {
@@ -335,6 +346,39 @@ router.get("/admin/:id/inventory-history", protect, admin, async (req, res) => {
   }
 });
 
+router.get("/admin/reviews/list", protect, admin, async (req, res) => {
+  try {
+    const requestedStatus = String(req.query.status || "pending").toLowerCase();
+    const status = ["all", "pending", "approved", "rejected"].includes(requestedStatus) ? requestedStatus : "pending";
+    const products = await Product.find({ "reviews.0": { $exists: true } }).select("name images reviews").sort({ updatedAt: -1 }).lean();
+    const reviews = products.flatMap((product) => (product.reviews || []).map((review) => ({
+      ...review,
+      status: review.status || "approved",
+      productId: product._id,
+      productName: product.name,
+      productImage: product.images?.[0]?.url || "",
+    }))).filter((review) => status === "all" || review.status === status).sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
+    return res.json({ reviews, counts: reviews.reduce((result, review) => ({ ...result, [review.status]: (result[review.status] || 0) + 1 }), {}) });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
+router.patch("/admin/:productId/reviews/:reviewId", protect, admin, async (req, res) => {
+  try {
+    const status = String(req.body.status || "").toLowerCase();
+    if (!["approved", "rejected"].includes(status)) return res.status(400).json({ message: "Choose approve or reject" });
+    const product = await Product.findById(req.params.productId);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    const review = product.reviews.id(req.params.reviewId);
+    if (!review) return res.status(404).json({ message: "Review not found" });
+    review.status = status;
+    review.moderatedAt = new Date();
+    review.moderatedBy = req.user.email || String(req.user._id);
+    refreshReviewSummary(product);
+    await product.save();
+    return res.json({ success: true, review, averageRating: product.averageRating, approvedReviewCount: product.approvedReviewCount });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).lean();
@@ -345,6 +389,8 @@ router.get("/:id", async (req, res) => {
       });
     }
 
+    product.reviews = approvedReviews(product.reviews);
+    product.approvedReviewCount = product.reviews.length;
     res.json(product);
   } catch (error) {
     res.status(500).json({
@@ -618,20 +664,16 @@ router.post("/:id/review", protect, async (req, res) => {
       rating,
       comment,
       verifiedPurchase: true,
+      status: "pending",
     });
 
-    product.averageRating =
-      product.reviews.reduce(
-        (acc, review) =>
-          acc + review.rating,
-        0
-      ) /
-      product.reviews.length;
+    refreshReviewSummary(product);
 
     await product.save();
 
     res.json({
       success: true,
+      message: "Your verified review was submitted for approval",
     });
 
   } catch (error) {

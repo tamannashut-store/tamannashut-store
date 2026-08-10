@@ -58,6 +58,13 @@ const productSchema = new mongoose.Schema(
         rating: Number,
         comment: String,
         verifiedPurchase: { type: Boolean, default: false },
+        status: {
+          type: String,
+          enum: ["pending", "approved", "rejected"],
+          default: "approved",
+        },
+        moderatedAt: Date,
+        moderatedBy: String,
         createdAt: {
           type: Date,
           default: Date.now,
@@ -69,6 +76,7 @@ const productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    approvedReviewCount: { type: Number, default: 0 },
   },
   {
     timestamps: true,

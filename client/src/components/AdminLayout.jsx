@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FiBarChart2, FiBox, FiExternalLink, FiLogOut, FiMenu, FiMessageSquare, FiPercent, FiShoppingBag, FiX } from "react-icons/fi";
+import { FiBarChart2, FiBox, FiExternalLink, FiLogOut, FiMenu, FiMessageSquare, FiPercent, FiShoppingBag, FiStar, FiX } from "react-icons/fi";
 import logo from "../assets/logo.png";
 
 const links = [
   ["/admin/dashboard", "Overview", FiBarChart2],
   ["/admin", "Products", FiBox],
   ["/admin/orders", "Orders", FiShoppingBag],
+  ["/admin/reviews", "Reviews", FiStar],
   ["/admin/coupons", "Coupons", FiPercent],
   ["/admin/contacts", "Messages", FiMessageSquare],
 ];
