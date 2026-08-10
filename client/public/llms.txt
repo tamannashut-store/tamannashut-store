@@ -1,0 +1,18 @@
+# Tamanna's Hut
+
+> Tamanna's Hut is an Indian ecommerce store for baby and children's clothing, including girlswear, boyswear, coordinated sets, and new arrivals.
+
+## Primary pages
+
+- [Storefront](https://www.tamannashut.com/): Featured collections and new products.
+- [Shop](https://www.tamannashut.com/shop): Search, filter, and browse all active products.
+- [Girls](https://www.tamannashut.com/shop?category=girls): Girlswear catalogue.
+- [Boys](https://www.tamannashut.com/shop?category=boys): Boyswear catalogue.
+- [New arrivals](https://www.tamannashut.com/shop?category=new-arrivals): Recently published products.
+- [Contact](https://www.tamannashut.com/contact): Customer-support information.
+- [Shipping policy](https://www.tamannashut.com/shipping-policy): Delivery information.
+- [Return policy](https://www.tamannashut.com/return-policy): Return and refund conditions.
+
+## Shopping guidance
+
+Product pages provide images, available colours, sizes, stock, price, reviews, and related products. Customers must sign in before checkout. Payment and account actions require explicit customer confirmation.

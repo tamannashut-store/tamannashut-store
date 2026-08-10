@@ -16,6 +16,21 @@ const getCheckoutKey = () => {
 
 const productImage = (item) => item.images?.[0]?.url || item.image || "/placeholder.png";
 
+const loadRazorpay = () => {
+  if (window.Razorpay) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[data-payment-provider="razorpay"]');
+    if (existing) { existing.addEventListener("load", resolve, { once: true }); existing.addEventListener("error", reject, { once: true }); return; }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.dataset.paymentProvider = "razorpay";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("Payment service could not be loaded"));
+    document.head.appendChild(script);
+  });
+};
+
 function Checkout() {
   const { cartItems, clearCart } = useContext(CartContext);
   const navigate = useNavigate();
@@ -157,6 +172,7 @@ function Checkout() {
         return;
       }
 
+      await loadRazorpay();
       if (!window.Razorpay) throw new Error("Payment service is still loading. Please try again.");
       const { data: razorpayOrder } = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/payment/create-order`,
