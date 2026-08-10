@@ -8,6 +8,26 @@ import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import ImageMagnifier from "../components/ImageMagnifier";
 import { trackEvent } from "../utils/analytics";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Navigation, Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/navigation";
+import "swiper/css/pagination";
+
+function DiscoveryCard({ item }) {
+  return (
+    <Link to={`/product/${item._id}`} className="group block h-full overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+      <div className="aspect-[4/5] overflow-hidden bg-gray-50">
+        <img src={item.images?.[0]?.url || "/placeholder.png"} alt={item.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+      </div>
+      <div className="p-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-primary">{item.category?.replace(/-/g, " ") || "Kidswear"}</p>
+        <h3 className="mt-2 line-clamp-2 min-h-12 font-semibold leading-6">{item.name}</h3>
+        <div className="mt-3 flex items-center gap-2"><span className="text-lg font-bold text-brand-primary">₹{Number(item.price || 0).toLocaleString("en-IN")}</span>{Number(item.mrp) > Number(item.price) && <span className="text-sm text-gray-400 line-through">₹{Number(item.mrp).toLocaleString("en-IN")}</span>}</div>
+      </div>
+    </Link>
+  );
+}
 
 function DiscoveryProducts({ title, products }) {
   if (!products.length) return null;
@@ -17,19 +37,11 @@ function DiscoveryProducts({ title, products }) {
         <h2 className="text-2xl font-semibold md:text-3xl">{title}</h2>
         <Link to="/shop" className="text-sm font-semibold text-brand-primary hover:underline">View all</Link>
       </div>
-      <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-4 pr-8 scroll-smooth lg:grid lg:grid-cols-4 lg:overflow-visible lg:pr-0">
-        {products.map((item) => (
-          <Link key={item._id} to={`/product/${item._id}`} className="group w-[78vw] max-w-[280px] shrink-0 snap-start overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:w-[42vw] lg:w-auto lg:max-w-none">
-            <div className="aspect-[4/5] overflow-hidden bg-gray-50">
-              <img src={item.images?.[0]?.url || "/placeholder.png"} alt={item.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
-            </div>
-            <div className="p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-brand-primary">{item.category?.replace(/-/g, " ") || "Kidswear"}</p>
-              <h3 className="mt-2 line-clamp-2 min-h-12 font-semibold leading-6">{item.name}</h3>
-              <div className="mt-3 flex items-center gap-2"><span className="text-lg font-bold text-brand-primary">₹{Number(item.price || 0).toLocaleString("en-IN")}</span>{Number(item.mrp) > Number(item.price) && <span className="text-sm text-gray-400 line-through">₹{Number(item.mrp).toLocaleString("en-IN")}</span>}</div>
-            </div>
-          </Link>
-        ))}
+      <Swiper modules={[Navigation, Pagination]} navigation={products.length > 1} pagination={products.length > 1 ? { clickable: true } : false} slidesPerView={1.08} spaceBetween={16} className="commerce-slider pb-10 lg:hidden">
+        {products.map((item) => <SwiperSlide key={item._id} className="h-auto"><DiscoveryCard item={item} /></SwiperSlide>)}
+      </Swiper>
+      <div className="hidden grid-cols-4 gap-4 lg:grid">
+        {products.slice(0, 8).map((item) => <DiscoveryCard key={item._id} item={item} />)}
       </div>
     </section>
   );

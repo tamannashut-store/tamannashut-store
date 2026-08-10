@@ -97,6 +97,15 @@ button:focus-visible, a:focus-visible {
     text-align: center;
 }
 
+@media (max-width: 639px) {
+    body { font-size: 15px; }
+    .page-shell { width: min(100% - 1.25rem, 80rem); padding-block: 2.5rem; }
+    .surface-card { border-radius: 1.125rem; }
+    .btn-primary, .btn-secondary { padding: .72rem 1rem; }
+    main h1 { letter-spacing: -.025em; }
+    main h2 { line-height: 1.15; }
+}
+
 .commerce-slider {
     --swiper-navigation-color: #234229;
     --swiper-pagination-color: #355e3b;

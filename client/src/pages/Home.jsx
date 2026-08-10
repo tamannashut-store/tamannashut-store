@@ -93,7 +93,7 @@ function Home() {
           <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-5 py-10 md:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:py-16">
             <div className="max-w-xl py-6">
               <p className="eyebrow">New season · Thoughtful essentials</p>
-              <h1 className="mt-5 font-serif text-5xl leading-[1.04] text-slate-950 md:text-6xl lg:text-7xl">Beautiful clothes for their biggest little moments.</h1>
+              <h1 className="mt-5 font-serif text-4xl leading-[1.06] text-slate-950 sm:text-5xl md:text-6xl lg:text-7xl">Beautiful clothes for their biggest little moments.</h1>
               <p className="mt-6 max-w-lg text-lg leading-8 text-slate-600">Comfort-first kidswear selected for quality, easy movement and celebrations worth remembering.</p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link to="/shop" className="btn-primary">Shop the collection <FiArrowRight /></Link>
@@ -111,7 +111,7 @@ function Home() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1400px] px-5 py-20 md:px-8">
+        <section className="mx-auto max-w-[1400px] px-5 py-14 sm:py-20 md:px-8">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div><p className="eyebrow">Shop their world</p><h2 className="mt-3 font-serif text-4xl text-slate-950 md:text-5xl">Made for every moment</h2></div>
             <Link to="/shop" className="inline-flex items-center gap-2 font-semibold text-[#183d2b]">View all products <FiArrowRight /></Link>
@@ -135,7 +135,7 @@ function Home() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1400px] px-5 py-20 md:px-8">
+        <section className="mx-auto max-w-[1400px] px-5 py-14 sm:py-20 md:px-8">
           <div className="flex items-end justify-between gap-6"><div><p className="eyebrow">Fresh from the catalogue</p><h2 className="mt-3 font-serif text-4xl md:text-5xl">Latest products</h2></div><Link to="/shop" className="hidden font-semibold text-[#183d2b] sm:block">Shop all</Link></div>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {loading ? Array.from({ length: 8 }, (_, index) => <SkeletonProduct key={index} />) : products.slice(0, 8).map((product) => <ProductCard key={product._id} product={product} onWishlist={addToWishlist} />)}

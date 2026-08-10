@@ -113,11 +113,11 @@ function Shop() {
         <link rel="canonical" href="https://www.tamannashut.com/shop" />
       </Helmet>
 
-      <main className="mx-auto max-w-7xl px-6 py-16">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
             <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">Tamanna&apos;s Hut collection</p>
-            <h1 className="mt-2 text-4xl font-bold md:text-5xl">Find their perfect outfit</h1>
+            <h1 className="mt-2 text-3xl font-bold sm:text-4xl md:text-5xl">Find their perfect outfit</h1>
             <p className="mt-3 text-gray-500">{loading ? "Finding products…" : `${totalProducts} products found`}</p>
           </div>
 
