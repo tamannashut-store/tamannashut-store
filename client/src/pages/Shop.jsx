@@ -133,7 +133,9 @@ function Shop() {
           </form>
         </div>
 
-        <button type="button" onClick={() => setFiltersOpen(true)} className="btn-secondary mt-6 w-full lg:hidden"><FiFilter/> Filters & sorting</button>
+        <div className="mt-6 lg:hidden">
+          <button type="button" onClick={() => setFiltersOpen(true)} className="btn-secondary w-full"><FiFilter/> Filters & sorting</button>
+        </div>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[260px_1fr]">
           {filtersOpen && <button type="button" aria-label="Close filters" onClick={() => setFiltersOpen(false)} className="fixed inset-0 z-[70] bg-slate-950/45 lg:hidden"/>}
