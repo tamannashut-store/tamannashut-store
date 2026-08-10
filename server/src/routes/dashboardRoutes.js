@@ -3,11 +3,31 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 import AuditLog from "../models/AuditLog.js";
+import Contact from "../models/Contact.js";
 import { admin, protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 const money = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 const dayKey = (value) => new Date(value).toISOString().slice(0, 10);
+
+router.get("/notifications", protect, admin, async (_req, res) => {
+  try {
+    const [orders, reviewResult, messages] = await Promise.all([
+      Order.countDocuments({ $or: [
+        { status: { $in: ["Pending", "Cancellation Requested", "Return Requested", "Returned", "RTO Delivered"] } },
+        { status: "Refund Pending", paymentMethod: "COD" },
+        { "refund.status": "Failed" },
+      ] }),
+      Product.aggregate([
+        { $unwind: "$reviews" },
+        { $match: { "reviews.status": "pending" } },
+        { $count: "count" },
+      ]),
+      Contact.countDocuments({ readAt: null }),
+    ]);
+    return res.json({ orders, reviews: reviewResult[0]?.count || 0, messages });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
 
 router.get("/operations", protect, admin, async (_req, res) => {
   try {

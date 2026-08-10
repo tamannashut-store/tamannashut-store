@@ -6,7 +6,7 @@ import { SellerEmpty, SellerHeader, SellerPage } from "../components/SellerUI";
 function AdminContacts() {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => { let active = true; axios.get(`${import.meta.env.VITE_API_URL}/api/contacts`).then(({ data }) => { if (active) setContacts(Array.isArray(data) ? data : []); }).catch(() => {}).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
+  useEffect(() => { let active = true; axios.get(`${import.meta.env.VITE_API_URL}/api/contacts`).then(async ({ data }) => { const items = Array.isArray(data) ? data : []; if (active) setContacts(items); const unreadIds = items.filter((item) => !item.readAt).map((item) => item._id); if (unreadIds.length) { await axios.patch(`${import.meta.env.VITE_API_URL}/api/contacts/read`, { ids: unreadIds }); if (active) { setContacts((current) => current.map((item) => unreadIds.includes(item._id) ? { ...item, readAt: new Date().toISOString() } : item)); window.dispatchEvent(new Event("admin-notifications-refresh")); } } }).catch(() => {}).finally(() => { if (active) setLoading(false); }); return () => { active = false; }; }, []);
   return <SellerPage><SellerHeader title="Customer messages" description="Questions and requests submitted through the storefront contact form." />
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 px-6 py-5"><h2 className="font-semibold">Inbox</h2><p className="mt-1 text-sm text-slate-500">{loading ? "Loading messages…" : `${contacts.length} message${contacts.length === 1 ? "" : "s"}`}</p></div>

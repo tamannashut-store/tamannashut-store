@@ -21,6 +21,16 @@ router.get("/", protect, admin, async (req, res) => {
         });
     }
 });
+router.patch("/read", protect, admin, async (req, res) => {
+    try {
+        const ids = Array.isArray(req.body.ids) ? req.body.ids.filter(Boolean).slice(0, 200) : [];
+        if (!ids.length) return res.json({ success: true, modifiedCount: 0 });
+        const result = await Contact.updateMany({ _id: { $in: ids }, readAt: null }, { $set: { readAt: new Date() } });
+        return res.json({ success: true, modifiedCount: result.modifiedCount });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+});
 router.post("/", async (req, res) => {
     try {
         const { name, email, message } = req.body;

@@ -40,6 +40,7 @@ function AdminReviews() {
       await axios.patch(`${import.meta.env.VITE_API_URL}/api/products/admin/${review.productId}/reviews/${review._id}`, { status: nextStatus });
       toast.success(nextStatus === "approved" ? "Review published" : "Review rejected");
       await loadReviews();
+      window.dispatchEvent(new Event("admin-notifications-refresh"));
     } catch (error) {
       toast.error(error.response?.data?.message || "Review could not be updated");
     } finally {
