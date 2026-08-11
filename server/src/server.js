@@ -1,3 +1,4 @@
+import "./instrument.js";
 // import express from "express";
 // import mongoose from "mongoose";
 // import dotenv from "dotenv";
@@ -47,6 +48,7 @@ import { razorpayWebhook } from "./routes/razorpayWebhook.js";
 import shippingRoutes from "./routes/shippingRoutes.js";
 import socialRoutes from "./routes/socialRoutes.js";
 import crypto from "crypto";
+import * as Sentry from "@sentry/node";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -113,6 +115,7 @@ app.get("/api/health/ready", (req, res) => {
   res.status(ready ? 200 : 503).json({ status: ready ? "ready" : "not_ready" });
 });
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
+Sentry.setupExpressErrorHandler(app);
 app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 let server;
@@ -131,8 +134,9 @@ const shutdown = async (signal) => {
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 start().catch((error) => {
+  Sentry.captureException(error);
   console.error("Server startup failed:", error.message);
-  process.exit(1);
+  Sentry.flush(2000).finally(() => process.exit(1));
 });
 
 // app.post("/api/register", async (req, res) => {

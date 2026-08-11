@@ -7,6 +7,9 @@ import CartProvider from "./context/CartContext";
 import WishlistProvider from "./context/WishlistContext";
 import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "react-hot-toast";
+import * as Sentry from "@sentry/react";
+import "./monitoring/sentry";
+import AppErrorFallback from "./components/AppErrorFallback";
 
 const storedUser = JSON.parse(localStorage.getItem("user"));
 if (storedUser?.token) {
@@ -20,6 +23,7 @@ axios.interceptors.response.use(
       localStorage.removeItem("user");
       window.location.href = "/login";
     }
+    if (error.response?.status >= 500) Sentry.captureException(error, { tags: { source: "api" } });
 
     return Promise.reject(error);
   }
@@ -30,7 +34,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <HelmetProvider>
         <WishlistProvider>
           <CartProvider>
-            <App />
+            <Sentry.ErrorBoundary fallback={({ resetError }) => <AppErrorFallback resetError={resetError}/>}>
+              <App />
+            </Sentry.ErrorBoundary>
             <Toaster position="top-right" />
           </CartProvider>
         </WishlistProvider>
