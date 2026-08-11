@@ -49,6 +49,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    marketingConsent: { type: Boolean, default: false },
+    cartUpdatedAt: { type: Date, default: null, index: true },
+    cartRecovery: {
+      lastSentAt: { type: Date, default: null },
+      lastCartUpdatedAt: { type: Date, default: null },
+    },
     cart: [
       {
         productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },

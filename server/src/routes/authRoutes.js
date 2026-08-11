@@ -35,6 +35,7 @@ router.post("/register", async (req, res) => {
             name,
             email,
             password: hashedPassword,
+            marketingConsent: req.body.marketingConsent === true,
         });
 
         const token = jwt.sign(
@@ -220,6 +221,10 @@ router.put("/profile/:id", protect, async (req, res) => {
 
         user.pincode =
             req.body.pincode || user.pincode;
+
+        if (typeof req.body.marketingConsent === "boolean") {
+            user.marketingConsent = req.body.marketingConsent;
+        }
 
         const updatedUser = await user.save();
         return res.json(updatedUser);

@@ -31,10 +31,13 @@ router.get("/notifications", protect, admin, async (_req, res) => {
 
 router.get("/operations", protect, admin, async (_req, res) => {
   try {
-    const [recentActivity, failedRefunds, pendingRefunds] = await Promise.all([
+    const abandonedBefore = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const [recentActivity, failedRefunds, pendingRefunds, abandonedCarts, recoveryEligible] = await Promise.all([
       AuditLog.find().sort({ createdAt: -1 }).limit(50).select("actorEmail action entityType entityId summary metadata createdAt").lean(),
       Order.countDocuments({ "refund.status": "Failed" }),
       Order.countDocuments({ "refund.status": "Pending" }),
+      User.countDocuments({ "cart.0": { $exists: true }, cartUpdatedAt: { $lte: abandonedBefore } }),
+      User.countDocuments({ "cart.0": { $exists: true }, cartUpdatedAt: { $lte: abandonedBefore }, marketingConsent: true }),
     ]);
     const configured = (...names) => names.every((name) => Boolean(String(process.env[name] || "").trim()));
     return res.json({
@@ -48,7 +51,7 @@ router.get("/operations", protect, admin, async (_req, res) => {
         { key: "instagram", label: "Instagram feed", ready: configured("INSTAGRAM_ACCESS_TOKEN"), required: false },
         { key: "monitoring", label: "Sentry monitoring", ready: configured("SENTRY_DSN"), required: false },
       ],
-      alerts: { failedRefunds, pendingRefunds },
+      alerts: { failedRefunds, pendingRefunds, abandonedCarts, recoveryEligible },
       recentActivity,
       checkedAt: new Date(),
     });

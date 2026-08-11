@@ -21,6 +21,7 @@ const normalizeItems = (items) => {
 };
 
 const cartKey = (item) => `${item.productId}:${item.selectedSku || item.selectedSize}`;
+const cartTrackingUpdate = (cart) => ({ cart, cartUpdatedAt: cart.length ? new Date() : null });
 
 const expandCart = async (cart) => {
   const products = await Product.find({ _id: { $in: cart.map((item) => item.productId) }, status: { $nin: ["draft", "archived"] } }).lean();
@@ -44,7 +45,7 @@ router.get("/", protect, async (req, res) => {
 router.put("/", protect, async (req, res) => {
   try {
     const cart = normalizeItems(req.body.items);
-    await User.updateOne({ _id: req.user._id }, { $set: { cart } });
+    await User.updateOne({ _id: req.user._id }, { $set: cartTrackingUpdate(cart) });
     return res.json({ items: await expandCart(cart) });
   } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
 });
@@ -59,7 +60,7 @@ router.post("/merge", protect, async (req, res) => {
       merged.set(key, { ...item, qty: Math.min((current?.qty || 0) + item.qty, 20) });
     });
     const cart = [...merged.values()].slice(0, 50);
-    await User.updateOne({ _id: req.user._id }, { $set: { cart } });
+    await User.updateOne({ _id: req.user._id }, { $set: cartTrackingUpdate(cart) });
     return res.json({ items: await expandCart(cart) });
   } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
 });

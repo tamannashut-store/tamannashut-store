@@ -22,6 +22,7 @@ async function mockApi(page) {
     if (pathname.endsWith("/api/products")) body = { products: [product], totalProducts: 1, searchMode: searchParams.get("search") === "maron" ? "fuzzy" : "exact" };
     else if (pathname.endsWith("/api/social/instagram")) body = { posts: [] };
     else if (pathname.endsWith("/api/dashboard/notifications")) body = { orders: 3, reviews: 2, messages: 1 };
+    else if (pathname.endsWith("/api/dashboard/operations")) body = { services: [], alerts: { failedRefunds: 0, pendingRefunds: 0, abandonedCarts: 4, recoveryEligible: 2 }, recentActivity: [] };
     else if (pathname.endsWith("/api/dashboard/analytics")) body = {
       summary: { orders: 2, realizedRevenue: 299, averageOrderValue: 299, publishedProducts: 1 },
       dailySales: [{ date: "2026-08-11", revenue: 299, orders: 1 }],
@@ -114,4 +115,12 @@ test("shop explains when typo-tolerant results are shown", async ({ page }) => {
   await page.goto("/shop?search=maron");
   await expect(page.getByText("Showing close matches for “maron”.")).toBeVisible();
   await expect(page.getByRole("heading", { name: product.name })).toBeVisible();
+});
+
+test("seller operations distinguishes saved carts from consent-eligible recoveries", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
+  await page.goto("/admin/operations");
+  await expect(page.getByText("Saved carts inactive for 2+ hours")).toBeVisible();
+  await expect(page.getByText("Consent-eligible recoveries")).toBeVisible();
+  await expect(page.getByText("No recovery message is sent automatically.")).toBeVisible();
 });
