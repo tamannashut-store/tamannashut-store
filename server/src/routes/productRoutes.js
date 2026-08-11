@@ -1,4 +1,5 @@
 import express from "express";
+import { buildSearchRegex, escapeRegex } from "../utils/search.js";
 import Product from "../models/Product.js";
 import upload from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
@@ -187,10 +188,9 @@ router.get("/", async (req, res) => {
     const filter = {};
     filter.status = { $nin: ["draft", "archived"] };
 
-    const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const search = String(req.query.search || "").trim().slice(0, 100);
     if (search) {
-      const searchRegex = new RegExp(escapeRegex(search), "i");
+      const searchRegex = buildSearchRegex(search);
       filter.$or = [
         { name: searchRegex },
         { description: searchRegex },
@@ -240,6 +240,21 @@ router.get("/", async (req, res) => {
     };
     const sort = sortOptions[req.query.sort] || sortOptions.newest;
 
+    let searchMode = "exact";
+    if (search && search.length >= 3 && await Product.countDocuments(filter) === 0) {
+      const fuzzyRegex = buildSearchRegex(search, { fuzzy: true });
+      filter.$or = [
+        { name: fuzzyRegex },
+        { description: fuzzyRegex },
+        { category: fuzzyRegex },
+        { color: fuzzyRegex },
+        { fabric: fuzzyRegex },
+        { ageGroup: fuzzyRegex },
+        { tags: fuzzyRegex },
+      ];
+      searchMode = "fuzzy";
+    }
+
     const skip = (page - 1) * limit;
 
     const activeFilter = { status: { $nin: ["draft", "archived"] } };
@@ -271,6 +286,7 @@ router.get("/", async (req, res) => {
       currentPage: page,
       totalProducts: total,
       pageSize: limit,
+      searchMode,
       availableSizes: [...new Set([...variantSizes, ...legacySizes].filter(Boolean))].sort((left, right) => left.localeCompare(right, undefined, { numeric: true })),
       filterOptions: {
         colors: [...new Set([...colors, ...variantColors].filter(Boolean))].sort(),
@@ -289,8 +305,14 @@ router.get("/suggestions/search", async (req, res) => {
   try {
     const query = String(req.query.q || "").trim().slice(0, 60);
     if (query.length < 2) return res.json({ suggestions: [] });
-    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    const products = await Product.find({ status: { $nin: ["draft", "archived"] }, $or: [{ name: regex }, { tags: regex }, { category: regex }] }).select("name category images price").sort({ averageRating: -1, createdAt: -1 }).limit(6).lean();
+    let regex = buildSearchRegex(query);
+    const baseFilter = { status: { $nin: ["draft", "archived"] } };
+    let suggestionFilter = { ...baseFilter, $or: [{ name: regex }, { tags: regex }, { category: regex }, { color: regex }, { "variants.color": regex }] };
+    if (await Product.countDocuments(suggestionFilter) === 0 && query.length >= 3) {
+      regex = buildSearchRegex(query, { fuzzy: true });
+      suggestionFilter = { ...baseFilter, $or: [{ name: regex }, { tags: regex }, { category: regex }, { color: regex }, { "variants.color": regex }] };
+    }
+    const products = await Product.find(suggestionFilter).select("name category images price").sort({ averageRating: -1, createdAt: -1 }).limit(6).lean();
     return res.set("Cache-Control", "public, max-age=60").json({ suggestions: products.map((product) => ({ id: product._id, name: product.name, category: product.category, image: product.images?.[0]?.url || "", price: product.price })) });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });

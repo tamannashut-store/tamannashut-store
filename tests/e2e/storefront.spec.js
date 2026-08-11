@@ -17,9 +17,9 @@ async function mockApi(page) {
   // Intercept every API host so a developer's local .env can never make this
   // suite read from or write to production services.
   await page.route("**/api/**", async (route) => {
-    const { pathname } = new URL(route.request().url());
+    const { pathname, searchParams } = new URL(route.request().url());
     let body = {};
-    if (pathname.endsWith("/api/products")) body = { products: [product] };
+    if (pathname.endsWith("/api/products")) body = { products: [product], totalProducts: 1, searchMode: searchParams.get("search") === "maron" ? "fuzzy" : "exact" };
     else if (pathname.endsWith("/api/social/instagram")) body = { posts: [] };
     else if (pathname.endsWith("/api/dashboard/notifications")) body = { orders: 3, reviews: 2, messages: 1 };
     else if (pathname.endsWith("/api/dashboard/analytics")) body = {
@@ -108,4 +108,10 @@ test("seller overview renders analytics without a runtime error", async ({ page 
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await expect(page.getByText("Realized revenue")).toBeVisible();
   await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
+});
+
+test("shop explains when typo-tolerant results are shown", async ({ page }) => {
+  await page.goto("/shop?search=maron");
+  await expect(page.getByText("Showing close matches for “maron”.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: product.name })).toBeVisible();
 });

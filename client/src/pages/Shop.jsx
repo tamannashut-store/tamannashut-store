@@ -25,6 +25,7 @@ function Shop() {
   const [reloadKey, setReloadKey] = useState(0);
   const [filterOptions, setFilterOptions] = useState({ colors: [], fabrics: [], ageGroups: [], price: { min: 0, max: 0 } });
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchMode, setSearchMode] = useState("exact");
 
   const category = searchParams.get("category") || "";
   const selectedSize = searchParams.get("size") || "";
@@ -51,6 +52,7 @@ function Shop() {
         setProducts(data.products || []);
         setTotalProducts(data.totalProducts ?? data.products?.length ?? 0);
         setTotalPages(Math.max(data.totalPages || 1, 1));
+        setSearchMode(data.searchMode || "exact");
         const responseProducts = data.products || [];
         const responseSizes = data.availableSizes?.length ? data.availableSizes : [...new Set(responseProducts.flatMap((product) => [...(product.variants || []), ...(product.sizeStock || [])].map((item) => item.size).filter(Boolean)))];
         setAvailableSizes(responseSizes);
@@ -119,6 +121,7 @@ function Shop() {
             <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">Tamanna&apos;s Hut collection</p>
             <h1 className="mt-2 text-3xl font-bold sm:text-4xl md:text-5xl">Find their perfect outfit</h1>
             <p className="mt-3 text-gray-500">{loading ? "Finding products…" : `${totalProducts} products found`}</p>
+            {!loading && searchMode === "fuzzy" && searchParams.get("search") && <p className="mt-2 text-sm font-medium text-amber-700">Showing close matches for “{searchParams.get("search")}”.</p>}
           </div>
 
           <form key={`search-${searchParams.get("search") || ""}`} onSubmit={submitSearch} className="flex w-full max-w-md gap-2">
