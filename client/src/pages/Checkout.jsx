@@ -300,7 +300,7 @@ function Checkout() {
                 <img src={productImage(item)} alt={item.name} className="h-20 w-16 rounded-xl bg-gray-100 object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{item.name}</p>
-                  <p className="mt-1 text-sm text-gray-500">Size {item.selectedSize} · Qty {item.qty}</p>
+                  <p className="mt-1 text-sm text-gray-500">{item.selectedColor ? `${item.selectedColor} · ` : ""}Size {item.selectedSize} · Qty {item.qty}</p>
                   <p className="mt-1 font-semibold">₹{(Number(item.price) * item.qty).toLocaleString("en-IN")}</p>
                 </div>
               </div>
