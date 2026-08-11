@@ -34,7 +34,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <HelmetProvider>
         <WishlistProvider>
           <CartProvider>
-            <Sentry.ErrorBoundary fallback={({ resetError }) => <AppErrorFallback resetError={resetError}/>}>
+            <Sentry.ErrorBoundary fallback={<AppErrorFallback/>}>
               <App />
             </Sentry.ErrorBoundary>
             <Toaster position="top-right" />

@@ -22,6 +22,13 @@ async function mockApi(page) {
     if (pathname.endsWith("/api/products")) body = { products: [product] };
     else if (pathname.endsWith("/api/social/instagram")) body = { posts: [] };
     else if (pathname.endsWith("/api/dashboard/notifications")) body = { orders: 3, reviews: 2, messages: 1 };
+    else if (pathname.endsWith("/api/dashboard/analytics")) body = {
+      summary: { orders: 2, realizedRevenue: 299, averageOrderValue: 299, publishedProducts: 1 },
+      dailySales: [{ date: "2026-08-11", revenue: 299, orders: 1 }],
+      statusBreakdown: [{ status: "Delivered", count: 1 }],
+      paymentMix: [{ method: "COD", count: 1 }],
+      topProducts: [], couponPerformance: [], recentOrders: [],
+    };
     else if (pathname.endsWith("/api/orders")) body = [];
     else if (pathname.endsWith("/api/cart")) body = { items: [] };
     else if (pathname.endsWith("/api/auth/login")) body = { token: "safe-local-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } };
@@ -93,4 +100,12 @@ test("seller sidebar shows actionable notification counts", async ({ page }) => 
   await expect(page.getByRole("link", { name: /Orders 3 items need attention/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Reviews 2 items need attention/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Messages 1 items need attention/ })).toBeVisible();
+});
+
+test("seller overview renders analytics without a runtime error", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
+  await page.goto("/admin/dashboard");
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByText("Realized revenue")).toBeVisible();
+  await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
 });
