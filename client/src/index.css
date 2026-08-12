@@ -106,6 +106,10 @@ button:focus-visible, a:focus-visible {
     main h2 { line-height: 1.15; }
 }
 
+@media (max-width: 767px) {
+    .admin-product-list > .overflow-x-auto { display: none; }
+}
+
 .commerce-slider {
     --swiper-navigation-color: #234229;
     --swiper-pagination-color: #355e3b;
