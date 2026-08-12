@@ -1,4 +1,5 @@
 import { paymentMethodLabel, paymentStatusLabel } from "./paymentPresentation.js";
+import { escapeHtml } from "./html.js";
 
 export const invoiceTemplate = (order) => {
 
@@ -143,16 +144,16 @@ export const invoiceTemplate = (order) => {
                 margin:0;
               ">
                 <strong>
-                  ${order.customerName}
+                  ${escapeHtml(order.customerName)}
                 </strong><br/>
 
-                ${order.email}<br/>
+                ${escapeHtml(order.email)}<br/>
 
-                ${order.phone}<br/>
+                ${escapeHtml(order.phone)}<br/>
 
-                ${order.address}<br/>
+                ${escapeHtml(order.address)}<br/>
 
-                ${order.city} - ${order.pincode}
+                ${escapeHtml(order.city)} - ${escapeHtml(order.pincode)}
               </p>
 
             </td>
@@ -226,11 +227,11 @@ export const invoiceTemplate = (order) => {
               ">
 
                 <td>
-                  ${item.name}
+                  ${escapeHtml(item.name)}
                 </td>
 
                 <td align="center">
-                  ${item.selectedSize}
+                  ${escapeHtml(item.selectedSize)}
                 </td>
 
                 <td align="center">
@@ -333,7 +334,7 @@ export const invoiceTemplate = (order) => {
 
           <p>
             Order Status:
-            ${order.status || "Processing"}
+            ${escapeHtml(order.status || "Processing")}
           </p>
 
         </div>

@@ -6,6 +6,7 @@ import User from "../models/User.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { orderEmailTemplate } from "../utils/emailTemplates.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
+import { escapeHtml } from "../utils/html.js";
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -199,16 +200,17 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
 };
 
 export const sendOrderNotifications = async (order) => {
+  const cod = order.paymentMethod === "COD";
   const customerEmail = sendEmail(
     order.email,
-    "Order Confirmed - Tamanna's Hut",
+    `${cod ? "COD Order Received" : "Payment Confirmed"} - Tamanna's Hut`,
     `${orderEmailTemplate(order)}<hr />${invoiceTemplate(order)}`
   );
   const adminEmail = process.env.ADMIN_EMAIL
-    ? sendEmail(process.env.ADMIN_EMAIL, `New Order Received - ${order._id}`, `<h2>New order received</h2><p>Order: ${order._id}</p><p>Customer: ${order.customerName}</p><p>Total: ₹${order.totalAmount}</p>`)
+    ? sendEmail(process.env.ADMIN_EMAIL, `New Order Received - ${order._id}`, `<h2>New order received</h2><p>Order: ${escapeHtml(order._id)}</p><p>Customer: ${escapeHtml(order.customerName)}</p><p>Total: ₹${Number(order.totalAmount || 0).toLocaleString("en-IN")}</p>`)
     : Promise.resolve();
   const phone = order.phone.startsWith("+") ? order.phone : `+91${order.phone}`;
-  const whatsapp = sendWhatsApp(phone, `Order confirmed!\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`);
+  const whatsapp = sendWhatsApp(phone, `${cod ? "COD order received. No payment has been collected yet." : "Payment verified and order received."}\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`);
   await Promise.allSettled([customerEmail, adminEmail, whatsapp]);
 };
 
