@@ -134,6 +134,20 @@ test("authenticated mobile checkout renders the selected variant and required de
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 });
 
+test("COD confirmation says order placed and payment pending", async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem("last_order_confirmation", JSON.stringify({ paymentMethod: "COD", orderId: "66aa11bb22cc33dd44ee55ff", total: 299, createdAt: Date.now() })));
+  await page.goto("/success");
+  await expect(page.getByRole("heading", { name: "Your order is placed" })).toBeVisible();
+  await expect(page.getByText("Cash on delivery · Payment pending")).toBeVisible();
+  await expect(page.getByText("Payment successful")).toHaveCount(0);
+});
+
+test("direct confirmation visits never claim a successful payment", async ({ page }) => {
+  await page.goto("/success");
+  await expect(page.getByRole("heading", { name: "Open your orders to confirm status" })).toBeVisible();
+  await expect(page.getByText("Payment successful")).toHaveCount(0);
+});
+
 test("seller sidebar shows actionable notification counts", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
   await page.goto("/admin/orders");

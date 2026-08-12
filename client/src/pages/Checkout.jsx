@@ -129,12 +129,14 @@ function Checkout() {
     }
   };
 
-  const finishOrder = () => {
-    trackEvent("purchase", { currency: "INR", value: displayedTotal, transaction_id: getCheckoutKey(), items: cartItems.map((item) => ({ item_id: item._id, item_name: item.name, item_variant: item.selectedColor, price: Number(item.price), quantity: Number(item.qty) })) });
+  const finishOrder = (method, order) => {
+    const confirmation = { paymentMethod: method, orderId: order?._id || "", total: Number(order?.totalAmount ?? displayedTotal), createdAt: Date.now() };
+    trackEvent("purchase", { currency: "INR", value: confirmation.total, transaction_id: confirmation.orderId || getCheckoutKey(), items: cartItems.map((item) => ({ item_id: item._id, item_name: item.name, item_variant: item.selectedColor, price: Number(item.price), quantity: Number(item.qty) })) });
+    sessionStorage.setItem("last_order_confirmation", JSON.stringify(confirmation));
     sessionStorage.removeItem("checkout_request_id");
     clearCart();
     toast.success("Order placed successfully");
-    navigate("/success");
+    navigate("/success", { state: confirmation, replace: true });
   };
 
   const handleSubmit = async (event) => {
@@ -162,14 +164,14 @@ function Checkout() {
       });
 
       if (paymentMethod === "cod") {
-        await axios.post(`${import.meta.env.VITE_API_URL}/api/orders`, {
+        const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/orders`, {
           customer,
           products: checkoutProducts,
           couponCode,
           paymentMethod: "COD",
           idempotencyKey,
         });
-        finishOrder();
+        finishOrder("COD", data.order);
         return;
       }
 
@@ -197,14 +199,14 @@ function Checkout() {
         },
         handler: async (response) => {
           try {
-            await axios.post(`${import.meta.env.VITE_API_URL}/api/payment/verify-payment`, {
+            const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/payment/verify-payment`, {
               ...response,
               customer,
               products: checkoutProducts,
               couponCode,
               idempotencyKey,
             });
-            finishOrder();
+            finishOrder("Online", data.order);
           } catch (error) {
             toast.error(error.response?.data?.message || "Payment was received but order verification failed. Contact support.");
             setLoading(false);
