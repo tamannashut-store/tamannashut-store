@@ -136,6 +136,10 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
   const existing = await Order.findOne({ userId: user._id, idempotencyKey: safeKey });
   if (existing) return { order: existing, created: false };
 
+  const validPayment = (payment?.method === "COD" && payment?.status === "Pending")
+    || (payment?.method === "Online" && payment?.status === "Paid" && payment?.paymentId);
+  if (!validPayment) throw Object.assign(new Error("Order payment could not be verified"), { status: 400 });
+
   const cleanCustomer = normalizeCustomer(customer);
 
   const reservedItems = [];
