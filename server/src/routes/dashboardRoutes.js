@@ -7,6 +7,7 @@ import Contact from "../models/Contact.js";
 import { admin, protect } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { recordAudit } from "../utils/recordAudit.js";
+import { isLowStockProduct } from "../utils/inventory.js";
 
 const router = express.Router();
 const money = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -23,7 +24,7 @@ const maskedEmail = (email) => { const [name, domain] = String(email || "").spli
 
 router.get("/notifications", protect, admin, async (_req, res) => {
   try {
-    const [orders, reviewResult, messages] = await Promise.all([
+    const [orders, reviewResult, messages, products] = await Promise.all([
       Order.countDocuments({ $or: [
         { status: { $in: ["Pending", "Cancellation Requested", "Return Requested", "Returned", "RTO Delivered"] } },
         { status: "Refund Pending", paymentMethod: "COD" },
@@ -35,8 +36,9 @@ router.get("/notifications", protect, admin, async (_req, res) => {
         { $count: "count" },
       ]),
       Contact.countDocuments({ readAt: null }),
+      Product.find({ status: "active" }).select("variants sizeStock lowStockThreshold").lean(),
     ]);
-    return res.json({ orders, reviews: reviewResult[0]?.count || 0, messages });
+    return res.json({ orders, reviews: reviewResult[0]?.count || 0, messages, products: products.filter(isLowStockProduct).length });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 
@@ -148,7 +150,7 @@ router.get("/analytics", protect, admin, async (req, res) => {
     currentDelivered.forEach((order) => customerOrders.set(String(order.userId), (customerOrders.get(String(order.userId)) || 0) + 1));
     const repeatCustomers = [...customerOrders.values()].filter((count) => count > 1).length;
     const refunds = currentOrders.filter((order) => ["Processed", "Refunded"].includes(order.refund?.status));
-    const lowStock = products.filter((product) => (product.variants?.length ? product.variants : product.sizeStock || []).some((item) => Number(item.stock || 0) <= Number(product.lowStockThreshold ?? 3))).length;
+    const lowStock = products.filter(isLowStockProduct).length;
 
     return res.json({
       period: { days, from: periodStart, to: now },

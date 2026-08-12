@@ -21,7 +21,7 @@ async function mockApi(page) {
     let body = {};
     if (pathname.endsWith("/api/products")) body = { products: [product], totalProducts: 1, searchMode: searchParams.get("search") === "maron" ? "fuzzy" : "exact" };
     else if (pathname.endsWith("/api/social/instagram")) body = { posts: [] };
-    else if (pathname.endsWith("/api/dashboard/notifications")) body = { orders: 3, reviews: 2, messages: 1 };
+    else if (pathname.endsWith("/api/dashboard/notifications")) body = { products: 4, orders: 3, reviews: 2, messages: 1 };
     else if (pathname.endsWith("/api/dashboard/operations")) body = { services: [], alerts: { failedRefunds: 0, pendingRefunds: 0, abandonedCarts: 4, recoveryEligible: 2 }, recentActivity: [] };
     else if (pathname.endsWith("/api/dashboard/cart-recoveries")) body = { recoveries: [{ id: "eligible-user", customer: "Test Customer", email: "te***@example.com", itemCount: 2, inactiveSince: "2026-08-11T10:00:00.000Z" }] };
     else if (pathname.endsWith("/api/dashboard/cart-recoveries/eligible-user/send")) body = { message: "Recovery email sent" };
@@ -137,6 +137,7 @@ test("authenticated mobile checkout renders the selected variant and required de
 test("seller sidebar shows actionable notification counts", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
   await page.goto("/admin/orders");
+  await expect(page.getByRole("link", { name: /Products 4 items need attention/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Orders 3 items need attention/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Reviews 2 items need attention/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Messages 1 items need attention/ })).toBeVisible();

@@ -6,7 +6,7 @@ import logo from "../assets/logo.png";
 
 const links = [
   ["/admin/dashboard", "Overview", FiBarChart2],
-  ["/admin", "Products", FiBox],
+  ["/admin", "Products", FiBox, "products"],
   ["/admin/orders", "Orders", FiShoppingBag, "orders"],
   ["/admin/reviews", "Reviews", FiStar, "reviews"],
   ["/admin/coupons", "Coupons", FiPercent],
@@ -20,7 +20,7 @@ function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState({ orders: 0, reviews: 0, messages: 0 });
+  const [notifications, setNotifications] = useState({ products: 0, orders: 0, reviews: 0, messages: 0 });
   const logout = () => {
     localStorage.removeItem("user");
     delete axios.defaults.headers.common.Authorization;
@@ -35,7 +35,7 @@ function AdminLayout() {
   }, [menuOpen]);
   useEffect(() => {
     let active = true;
-    const refresh = () => axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/notifications`).then(({ data }) => { if (active) setNotifications({ orders: Number(data.orders || 0), reviews: Number(data.reviews || 0), messages: Number(data.messages || 0) }); }).catch(() => {});
+    const refresh = () => axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/notifications`).then(({ data }) => { if (active) setNotifications({ products: Number(data.products || 0), orders: Number(data.orders || 0), reviews: Number(data.reviews || 0), messages: Number(data.messages || 0) }); }).catch(() => {});
     refresh();
     const timer = window.setInterval(refresh, 30000);
     window.addEventListener("focus", refresh);
