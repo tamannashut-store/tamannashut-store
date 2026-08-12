@@ -23,6 +23,7 @@ const transitions = {
 };
 
 export const canTransitionOrder = (current, next) => current === next || (transitions[current] || []).includes(next);
+export const shouldRecordOrderTransition = (current, next) => Boolean(next) && current !== next && canTransitionOrder(current, next);
 export const getNextOrderStatuses = (current) => transitions[current] || [];
 export const restoresStockAt = new Set(["Cancelled", "Returned", "RTO Delivered"]);
 
