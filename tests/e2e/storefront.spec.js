@@ -62,6 +62,25 @@ test("mobile navigation exposes storefront and account destinations", async ({ p
   await expect(dialog.getByRole("link", { name: "Sign in" })).toBeVisible();
 });
 
+test("unknown storefront URLs show a useful 404 page", async ({ page }) => {
+  await page.goto("/this-page-does-not-exist");
+  await expect(page.getByRole("heading", { name: "This page wandered off" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Shop products" })).toHaveAttribute("href", "/shop");
+  await expect(page).toHaveURL(/this-page-does-not-exist$/);
+});
+
+test("corrupted browser storage is cleared without crashing the storefront", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("user", "{broken-session");
+    localStorage.setItem("guest_cart", "{broken-cart");
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Beautiful clothes for their biggest little moments." })).toBeVisible();
+  await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]"))).toEqual([]);
+});
+
 test("login offers recovery and registration and accepts a safe mocked session", async ({ page }) => {
   await page.goto("/login");
   await expect(page.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");

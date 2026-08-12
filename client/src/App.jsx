@@ -16,6 +16,7 @@ const EditProduct = lazy(() => import("./pages/EditProduct")); const AdminDashbo
 const AdminContacts = lazy(() => import("./pages/AdminContacts")); const AdminLogin = lazy(() => import("./pages/AdminLogin")); const AdminLayout = lazy(() => import("./components/AdminLayout"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
 const AdminOperations = lazy(() => import("./pages/AdminOperations"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => <div className="grid min-h-[55vh] place-items-center bg-brand-background text-sm font-medium text-slate-500">Loading…</div>;
 
@@ -45,6 +46,7 @@ function App() {
           <Route path="/terms-conditions" element={<TermsConditions />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/about" element={<About />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
 
         <Route path="/admin-login" element={<AdminLogin />} />
@@ -59,7 +61,6 @@ function App() {
           <Route path="/admin/contacts" element={<AdminContacts />} />
         </Route>
         <Route path="/admin-coupons" element={<Navigate to="/admin/coupons" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes></Suspense>
     </BrowserRouter>
   );

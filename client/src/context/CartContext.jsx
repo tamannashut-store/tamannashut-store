@@ -7,14 +7,13 @@ import {
 } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { readSession, readStoredArray } from "../utils/storage";
 
 export const CartContext = createContext();
 
 function CartProvider({ children }) {
   const [cartKey, setCartKey] = useState(() => {
-    const user = JSON.parse(
-      localStorage.getItem("user")
-    );
+    const user = readSession();
   
     return user?.user?.id
       ? `cart_${user.user.id}`
@@ -26,7 +25,7 @@ function CartProvider({ children }) {
   const syncQueue = useRef(Promise.resolve());
 
   const persistAccountCart = (items) => {
-    const user = JSON.parse(localStorage.getItem("user"));
+    const user = readSession();
     if (!user?.token) return;
     const payload = items.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty }));
     syncQueue.current = syncQueue.current
@@ -46,9 +45,7 @@ function CartProvider({ children }) {
     const loadCart = async () => {
       setHydrated(false);
   
-      const user = JSON.parse(
-        localStorage.getItem("user")
-      );
+      const user = readSession();
   
       const newCartKey =
         user?.user?.id
@@ -62,7 +59,7 @@ function CartProvider({ children }) {
           const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/cart`);
           let serverItems = data.items || [];
           const migrationKey = `cart_migrated_${user.user?.id}`;
-          const cached = JSON.parse(localStorage.getItem(newCartKey) || "[]");
+          const cached = readStoredArray(newCartKey);
           if (!localStorage.getItem(migrationKey) && cached.length) {
             const merged = await axios.post(`${import.meta.env.VITE_API_URL}/api/cart/merge`, {
               items: cached.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty })),
@@ -74,13 +71,11 @@ function CartProvider({ children }) {
           setHydrated(true);
         } catch (error) {
           if (error.response?.status !== 401) console.error("Cart sync failed", error);
-          const cachedCart = localStorage.getItem(newCartKey);
-          setCartItems(cachedCart ? JSON.parse(cachedCart) : []);
+          setCartItems(readStoredArray(newCartKey));
           setHydrated(true);
         }
       } else {
-        const savedCart = localStorage.getItem("guest_cart");
-        setCartItems(savedCart ? JSON.parse(savedCart) : []);
+        setCartItems(readStoredArray("guest_cart"));
         setHydrated(true);
       }
     };
@@ -105,7 +100,7 @@ function CartProvider({ children }) {
   useEffect(() => {
 
     if (!hydrated) return undefined;
-    const user = JSON.parse(localStorage.getItem("user"));
+    const user = readSession();
     if (!user?.token) {
       localStorage.setItem("guest_cart", JSON.stringify(cartItems));
       return undefined;

@@ -1,10 +1,9 @@
 import { Navigate } from "react-router-dom";
+import { readSession } from "../utils/storage";
 
 function AdminRoute({ children }) {
 
-    const userData = JSON.parse(
-        localStorage.getItem("user")
-    );
+    const userData = readSession();
 
     if (!userData?.user?.isAdmin) {
 

@@ -10,8 +10,9 @@ import { Toaster } from "react-hot-toast";
 import * as Sentry from "@sentry/react";
 import "./monitoring/sentry";
 import AppErrorFallback from "./components/AppErrorFallback";
+import { readSession } from "./utils/storage";
 
-const storedUser = JSON.parse(localStorage.getItem("user"));
+const storedUser = readSession();
 if (storedUser?.token) {
   axios.defaults.headers.common["Authorization"] = `Bearer ${storedUser.token}`;
 }
