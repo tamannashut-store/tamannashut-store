@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import { paymentMethodLabel, paymentStatusLabel } from "./paymentPresentation.js";
 
 export const generateInvoice = (order, res) => {
   const doc = new PDFDocument({
@@ -189,10 +190,10 @@ export const generateInvoice = (order, res) => {
   doc
     .fillColor("#333333")
     .fontSize(10)
-    .text(`Payment Method: ${order.paymentMethod || "Online"}`, 40, y);
+    .text(`Payment Method: ${paymentMethodLabel(order)}`, 40, y);
 
   y += 14;
-  doc.text(`Payment Status: ${order.paymentStatus || "Paid"}`, 40, y);
+  doc.text(`Payment Status: ${paymentStatusLabel(order)}`, 40, y);
 
   y += 14;
   doc.text(`Order Status: ${order.status || "Processing"}`, 40, y);

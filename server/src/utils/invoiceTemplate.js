@@ -1,3 +1,5 @@
+import { paymentMethodLabel, paymentStatusLabel } from "./paymentPresentation.js";
+
 export const invoiceTemplate = (order) => {
 
   const subtotal = order.products.reduce(
@@ -321,12 +323,12 @@ export const invoiceTemplate = (order) => {
 
           <p>
             Payment Method:
-            ${order.paymentMethod || "Online"}
+            ${paymentMethodLabel(order)}
           </p>
 
           <p>
             Payment Status:
-            ${order.paymentStatus || "Paid"}
+            ${paymentStatusLabel(order)}
           </p>
 
           <p>
