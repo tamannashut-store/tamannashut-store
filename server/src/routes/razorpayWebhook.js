@@ -1,10 +1,13 @@
 import crypto from "crypto";
+import * as Sentry from "@sentry/node";
 import Order from "../models/Order.js";
 import PaymentAttempt from "../models/PaymentAttempt.js";
 import User from "../models/User.js";
 import { createOrderWithReservedStock, sendOrderNotifications } from "../services/orderService.js";
+import { razorpayWebhookContext } from "../utils/webhookMonitoring.js";
 
 export const razorpayWebhook = async (req, res) => {
+  let event;
   try {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (!secret) return res.status(503).json({ message: "Payment webhook is not configured" });
@@ -14,7 +17,7 @@ export const razorpayWebhook = async (req, res) => {
     const expectedBuffer = Buffer.from(expected);
     if (received.length !== expectedBuffer.length || !crypto.timingSafeEqual(received, expectedBuffer)) return res.status(401).json({ message: "Invalid webhook signature" });
 
-    const event = JSON.parse(req.body.toString("utf8"));
+    event = JSON.parse(req.body.toString("utf8"));
     const payment = event.payload?.payment?.entity;
     const refund = event.payload?.refund?.entity;
 
@@ -52,7 +55,12 @@ export const razorpayWebhook = async (req, res) => {
     }
     return res.status(200).json({ received: true });
   } catch (error) {
-    console.error("RAZORPAY WEBHOOK ERROR", error);
+    Sentry.withScope((scope) => {
+      scope.setTag("integration", "razorpay");
+      scope.setTag("webhook.processing", "failed");
+      scope.setContext("payment_event", razorpayWebhookContext(event));
+      Sentry.captureException(error);
+    });
     return res.status(500).json({ message: "Webhook processing failed" });
   }
 };

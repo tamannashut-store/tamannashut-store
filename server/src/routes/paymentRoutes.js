@@ -1,6 +1,7 @@
 import express from "express";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import * as Sentry from "@sentry/node";
 import { protect } from "../middleware/authMiddleware.js";
 import {
   calculateCart,
@@ -99,7 +100,11 @@ router.post("/verify-payment", protect, async (req, res) => {
         });
         orderError.message = `${orderError.message}. Your payment has been refunded.`;
       } catch (refundError) {
-        console.error("AUTOMATIC REFUND FAILED", refundError);
+        Sentry.withScope((scope) => {
+          scope.setTag("integration", "razorpay");
+          scope.setTag("payment.refund", "automatic_failed");
+          Sentry.captureException(refundError);
+        });
         orderError.message = `${orderError.message}. Please contact support with payment ID ${razorpay_payment_id}.`;
       }
       throw orderError;
