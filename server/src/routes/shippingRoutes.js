@@ -1,8 +1,10 @@
 import crypto from "crypto";
 import express from "express";
+import * as Sentry from "@sentry/node";
 import Order from "../models/Order.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
 import { shouldRecordOrderTransition, syncCodPaymentStatus } from "../utils/orderLifecycle.js";
+import { shiprocketWebhookContext } from "../utils/webhookMonitoring.js";
 import { restoreOrderStock } from "../services/orderService.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import {
@@ -40,8 +42,8 @@ const fail = (res, error) => res.status(error.status || 500).json({ message: err
 
 router.post("/events", async (req, res) => {
   if (!safeEqual(req.get("x-api-key"), process.env.SHIPROCKET_WEBHOOK_SECRET)) return res.status(401).json({ message: "Invalid webhook token" });
+  const payload = req.body || {};
   try {
-    const payload = req.body || {};
     const awb = String(payload.awb || payload.awb_code || "");
     const shipmentId = String(payload.shipment_id || "");
     const order = await Order.findOne({ $or: [{ "shipping.awbCode": awb || "__none__" }, { "shipping.shipmentId": shipmentId || "__none__" }, { "returnRequest.reverseAwb": awb || "__none__" }, { "returnRequest.reverseShipmentId": shipmentId || "__none__" }] });
@@ -62,7 +64,15 @@ router.post("/events", async (req, res) => {
     await order.save();
     if (transitioned) await Promise.allSettled([sendEmail(order.email, "Order Update - Tamanna's Hut", `<h2>Your order is ${mapped}</h2><p>Order <strong>${order._id}</strong> received a courier update.</p>`)]);
     return res.status(200).json({ received: true });
-  } catch { return res.status(200).json({ received: true }); }
+  } catch (error) {
+    Sentry.withScope((scope) => {
+      scope.setTag("integration", "shiprocket");
+      scope.setTag("webhook.processing", "failed");
+      scope.setContext("shipment_event", shiprocketWebhookContext(payload));
+      Sentry.captureException(error);
+    });
+    return res.status(200).json({ received: true });
+  }
 });
 
 router.get("/postcode/:pincode", protect, async (req, res) => { try { return res.json(await verifyShiprocketDeliveryPostcode(req.params.pincode, req.query.cod === "1")); } catch (error) { return fail(res, error); } });
