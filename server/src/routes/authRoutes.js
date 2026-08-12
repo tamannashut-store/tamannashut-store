@@ -39,7 +39,7 @@ router.post("/register", async (req, res) => {
         });
 
         const token = jwt.sign(
-            { id: user._id },
+            { id: user._id, sessionVersion: user.sessionVersion || 0 },
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
           );
@@ -95,6 +95,7 @@ router.post("/login", async (req, res) => {
         const token = jwt.sign(
             {
                 id: user._id,
+                sessionVersion: user.sessionVersion || 0,
             },
             process.env.JWT_SECRET,
             {
@@ -153,6 +154,8 @@ router.post("/reset-password/:token", async (req, res) => {
         const user = await User.findOne({ passwordResetToken: tokenHash, passwordResetExpires: { $gt: new Date() } }).select("+passwordResetToken +passwordResetExpires");
         if (!user) return res.status(400).json({ message: "This reset link is invalid or has expired" });
         user.password = await bcrypt.hash(password, 10);
+        user.passwordChangedAt = new Date();
+        user.sessionVersion = (user.sessionVersion || 0) + 1;
         user.passwordResetToken = undefined;
         user.passwordResetExpires = undefined;
         await user.save();
@@ -265,8 +268,14 @@ router.put("/change-password/:id", protect, async (req, res) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const { currentPassword, newPassword } =
-            req.body;
+        const currentPassword = String(req.body.currentPassword || "");
+        const newPassword = String(req.body.newPassword || "");
+        if (!currentPassword || newPassword.length < 8 || newPassword.length > 128) {
+            return res.status(400).json({ message: "Enter your current password and a new password between 8 and 128 characters" });
+        }
+        if (currentPassword === newPassword) {
+            return res.status(400).json({ message: "Choose a new password different from your current password" });
+        }
 
         const user = await User.findById(
             req.params.id
@@ -299,6 +308,8 @@ router.put("/change-password/:id", protect, async (req, res) => {
                 newPassword,
                 10
             );
+        user.passwordChangedAt = new Date();
+        user.sessionVersion = (user.sessionVersion || 0) + 1;
         user.passwordResetToken = undefined;
         user.passwordResetExpires = undefined;
 
@@ -306,7 +317,7 @@ router.put("/change-password/:id", protect, async (req, res) => {
 
         return res.json({
             success: true,
-            message: "Password changed",
+            message: "Password changed. Please sign in again",
         });
 
     } catch (error) {

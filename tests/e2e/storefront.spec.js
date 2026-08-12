@@ -80,6 +80,17 @@ test("registration makes shopping email consent optional", async ({ page }) => {
   await expect(consent).not.toBeChecked();
 });
 
+test("changing a password clears the current browser session", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-customer-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } })));
+  await page.goto("/change-password");
+  await page.getByPlaceholder("Current Password").fill("old-password");
+  await page.getByPlaceholder("New Password").fill("new-password");
+  await page.getByPlaceholder("Confirm Password").fill("new-password");
+  await page.getByRole("button", { name: "Update Password" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
+});
+
 test("guest cart preserves the selected colour image on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript((item) => localStorage.setItem("guest_cart", JSON.stringify([{ ...item, selectedColor: "Maroon", selectedSize: "0-3M", selectedSku: "TEST-MAR-03", qty: 1, image: item.images[0].url }])), product);

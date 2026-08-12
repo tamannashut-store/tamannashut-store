@@ -24,11 +24,28 @@ export const protect = async (req, res, next) => {
         );
 
         const user = await User.findById(decoded.id)
-            .select("-password");
+            .select("-password +passwordChangedAt");
 
         if (!user) {
             return res.status(401).json({
                 message: "User not found",
+            });
+        }
+
+        if ((decoded.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)) {
+            return res.status(401).json({
+                message: "Your session has expired. Please sign in again",
+                code: "SESSION_EXPIRED",
+            });
+        }
+
+        const passwordChangedAt = user.passwordChangedAt
+            ? Math.floor(user.passwordChangedAt.getTime() / 1000)
+            : 0;
+        if (passwordChangedAt && decoded.iat < passwordChangedAt) {
+            return res.status(401).json({
+                message: "Your password changed. Please sign in again",
+                code: "SESSION_EXPIRED",
             });
         }
 

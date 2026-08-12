@@ -1,8 +1,11 @@
 ﻿import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 function ChangePassword() {
+
+  const navigate = useNavigate();
 
   const user =
     JSON.parse(
@@ -30,12 +33,10 @@ function ChangePassword() {
             newPassword,
           }
         );
-        toast.success(
-          "Password Updated"
-        );
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
+        localStorage.removeItem("user");
+        delete axios.defaults.headers.common.Authorization;
+        toast.success("Password changed. Please sign in again");
+        navigate("/login", { replace: true });
       } catch (error) {
         toast.error(
           error.response?.data?.message ||
