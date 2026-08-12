@@ -5,10 +5,21 @@ import User from "../models/User.js";
 import AuditLog from "../models/AuditLog.js";
 import Contact from "../models/Contact.js";
 import { admin, protect } from "../middleware/authMiddleware.js";
+import { sendEmail } from "../utils/sendEmail.js";
+import { recordAudit } from "../utils/recordAudit.js";
 
 const router = express.Router();
 const money = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 const dayKey = (value) => new Date(value).toISOString().slice(0, 10);
+const abandonedBefore = () => new Date(Date.now() - 2 * 60 * 60 * 1000);
+const recoveryEligibleFilter = () => ({
+  "cart.0": { $exists: true },
+  cartUpdatedAt: { $lte: abandonedBefore() },
+  marketingConsent: true,
+  $expr: { $ne: ["$cartRecovery.lastCartUpdatedAt", "$cartUpdatedAt"] },
+});
+const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+const maskedEmail = (email) => { const [name, domain] = String(email || "").split("@"); return domain ? `${name.slice(0, 2)}***@${domain}` : "Customer"; };
 
 router.get("/notifications", protect, admin, async (_req, res) => {
   try {
@@ -29,15 +40,41 @@ router.get("/notifications", protect, admin, async (_req, res) => {
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 
+router.get("/cart-recoveries", protect, admin, async (_req, res) => {
+  try {
+    const users = await User.find(recoveryEligibleFilter()).select("name email cart cartUpdatedAt").sort({ cartUpdatedAt: 1 }).limit(50).lean();
+    return res.json({ recoveries: users.map((user) => ({ id: user._id, customer: user.name || "Customer", email: maskedEmail(user.email), itemCount: user.cart.reduce((sum, item) => sum + Number(item.qty || 0), 0), inactiveSince: user.cartUpdatedAt })) });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
+router.post("/cart-recoveries/:id/send", protect, admin, async (req, res) => {
+  try {
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.id, ...recoveryEligibleFilter() },
+      [{ $set: { "cartRecovery.lastSentAt": "$$NOW", "cartRecovery.lastCartUpdatedAt": "$cartUpdatedAt" } }],
+      { new: true }
+    );
+    if (!user) return res.status(409).json({ message: "This cart is no longer eligible or has already received a reminder" });
+    const cartUrl = `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/cart`;
+    const delivery = await sendEmail(user.email, "Your saved Tamanna's Hut cart", `<h2>Your saved items are waiting</h2><p>Hello ${escapeHtml(user.name || "Customer")},</p><p>You left ${user.cart.reduce((sum, item) => sum + Number(item.qty || 0), 0)} item(s) in your cart.</p><p><a href="${cartUrl}">Return to your cart</a></p><p>This is an optional shopping reminder. You can turn these emails off from your profile.</p>`);
+    if (!delivery?.sent) {
+      await User.updateOne({ _id: user._id, "cartRecovery.lastCartUpdatedAt": user.cartUpdatedAt }, { $set: { "cartRecovery.lastSentAt": null, "cartRecovery.lastCartUpdatedAt": null } });
+      return res.status(502).json({ message: "The recovery email could not be delivered" });
+    }
+    await recordAudit({ user: req.user, action: "cart_recovery_sent", entityType: "User", entityId: user._id, summary: "Sent a consent-based saved cart reminder", metadata: { itemCount: user.cart.reduce((sum, item) => sum + Number(item.qty || 0), 0) } });
+    return res.json({ message: "Recovery email sent" });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
 router.get("/operations", protect, admin, async (_req, res) => {
   try {
-    const abandonedBefore = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const abandonmentCutoff = abandonedBefore();
     const [recentActivity, failedRefunds, pendingRefunds, abandonedCarts, recoveryEligible] = await Promise.all([
       AuditLog.find().sort({ createdAt: -1 }).limit(50).select("actorEmail action entityType entityId summary metadata createdAt").lean(),
       Order.countDocuments({ "refund.status": "Failed" }),
       Order.countDocuments({ "refund.status": "Pending" }),
-      User.countDocuments({ "cart.0": { $exists: true }, cartUpdatedAt: { $lte: abandonedBefore } }),
-      User.countDocuments({ "cart.0": { $exists: true }, cartUpdatedAt: { $lte: abandonedBefore }, marketingConsent: true }),
+      User.countDocuments({ "cart.0": { $exists: true }, cartUpdatedAt: { $lte: abandonmentCutoff } }),
+      User.countDocuments(recoveryEligibleFilter()),
     ]);
     const configured = (...names) => names.every((name) => Boolean(String(process.env[name] || "").trim()));
     return res.json({

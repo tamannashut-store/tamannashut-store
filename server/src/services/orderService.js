@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Coupon from "../models/Coupon.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import User from "../models/User.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { orderEmailTemplate } from "../utils/emailTemplates.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
@@ -181,6 +182,7 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       inventoryRestored: false,
       statusHistory: [{ status: "Pending", note: "Order placed" }],
     });
+    await User.updateOne({ _id: user._id }, { $set: { cart: [], cartUpdatedAt: null } });
     return { order, created: true };
   } catch (error) {
     await restoreReservations(reservedItems);

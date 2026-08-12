@@ -11,12 +11,13 @@ function Register() {
         name: "",
         email: "",
         password: "",
+        marketingConsent: false,
     });
 
     const handleChange = (e) => {
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value,
+            [e.target.name]: e.target.type === "checkbox" ? e.target.checked : e.target.value,
         });
     };
 
@@ -71,6 +72,7 @@ function Register() {
                 <input type="text" name="name" placeholder="Name" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
                 <input type="email" name="email" placeholder="Email" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
                 <input type="password" name="password" placeholder="Password (minimum 8 characters)" minLength="8" onChange={handleChange} className="w-full border p-4 rounded-2xl" required />
+                <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm"><input type="checkbox" name="marketingConsent" checked={formData.marketingConsent} onChange={handleChange} className="mt-1"/><span><strong className="block text-slate-800">Helpful shopping emails</strong><span className="mt-1 block leading-5 text-slate-500">Optional saved-cart reminders and store updates. Essential account and order emails are unaffected.</span></span></label>
                 <button type="submit" className="w-full bg-brand-primary hover:bg-brand-primary-dark text-white py-4 rounded-full text-lg font-semibold">Register</button>
                 <p className="text-center text-sm text-slate-600">
                     Already have an account?{" "}

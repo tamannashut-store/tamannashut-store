@@ -23,6 +23,8 @@ async function mockApi(page) {
     else if (pathname.endsWith("/api/social/instagram")) body = { posts: [] };
     else if (pathname.endsWith("/api/dashboard/notifications")) body = { orders: 3, reviews: 2, messages: 1 };
     else if (pathname.endsWith("/api/dashboard/operations")) body = { services: [], alerts: { failedRefunds: 0, pendingRefunds: 0, abandonedCarts: 4, recoveryEligible: 2 }, recentActivity: [] };
+    else if (pathname.endsWith("/api/dashboard/cart-recoveries")) body = { recoveries: [{ id: "eligible-user", customer: "Test Customer", email: "te***@example.com", itemCount: 2, inactiveSince: "2026-08-11T10:00:00.000Z" }] };
+    else if (pathname.endsWith("/api/dashboard/cart-recoveries/eligible-user/send")) body = { message: "Recovery email sent" };
     else if (pathname.endsWith("/api/dashboard/analytics")) body = {
       summary: { orders: 2, realizedRevenue: 299, averageOrderValue: 299, publishedProducts: 1 },
       dailySales: [{ date: "2026-08-11", revenue: 299, orders: 1 }],
@@ -69,6 +71,13 @@ test("login offers recovery and registration and accepts a safe mocked session",
   await page.getByRole("button", { name: "Login" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("user") || "null")?.user?.email)).toBe("test@example.com");
+});
+
+test("registration makes shopping email consent optional", async ({ page }) => {
+  await page.goto("/register");
+  const consent = page.getByRole("checkbox", { name: /Helpful shopping emails/ });
+  await expect(consent).toBeVisible();
+  await expect(consent).not.toBeChecked();
 });
 
 test("guest cart preserves the selected colour image on mobile", async ({ page }) => {
@@ -123,4 +132,5 @@ test("seller operations distinguishes saved carts from consent-eligible recoveri
   await expect(page.getByText("Saved carts inactive for 2+ hours")).toBeVisible();
   await expect(page.getByText("Consent-eligible recoveries")).toBeVisible();
   await expect(page.getByText("No recovery message is sent automatically.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Send one reminder" })).toBeVisible();
 });
