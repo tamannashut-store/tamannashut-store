@@ -5,7 +5,7 @@ import { orderEmailTemplate } from "../utils/emailTemplates.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
 import { generateInvoice } from "../utils/generateInvoice.js";
 import { generatePackingSlip } from "../utils/generatePackingSlip.js";
-import { ORDER_STATUSES, canTransitionOrder, getNextOrderStatuses, restoresStockAt } from "../utils/orderLifecycle.js";
+import { ORDER_STATUSES, canTransitionOrder, getNextOrderStatuses, restoresStockAt, syncCodPaymentStatus } from "../utils/orderLifecycle.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
 import {
   calculateCart,
@@ -101,6 +101,7 @@ router.put("/cancel/:id", protect, async (req, res) => {
     if (nextStatus === "Cancelled") await restoreOrderStock(order);
     const cancellationReason = String(req.body.reason || "Requested by customer").trim().slice(0, 300);
     order.status = nextStatus;
+    syncCodPaymentStatus(order, nextStatus);
     order.cancellationRequest = { reason: cancellationReason, requestedAt: new Date(), requestedBy: req.user.isAdmin ? "Admin" : "Customer" };
     order.statusHistory.push({ status: nextStatus, note: cancellationReason });
     await order.save();
@@ -177,6 +178,7 @@ router.post("/:id/refund/complete-cod", protect, admin, async (req, res) => {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
     if (order.paymentMethod !== "COD") return res.status(400).json({ message: "Only COD refunds can be completed manually. Online refunds are confirmed by Razorpay." });
+    if (order.paymentStatus === "Not Collected") return res.status(400).json({ message: "No COD payment was collected, so this order cannot be refunded" });
     if (order.status === "Refunded" && order.refund?.status === "Processed") return res.json({ success: true, order });
     if (order.status !== "Refund Pending") return res.status(400).json({ message: "Move the order to Refund Pending before recording the COD refund" });
 
@@ -215,6 +217,7 @@ router.put("/:id", protect, admin, async (req, res) => {
     const nextStatus = req.body.status || order.status;
     if (!ORDER_STATUSES.includes(nextStatus)) return res.status(400).json({ message: "Invalid order status" });
     if (nextStatus === "Refunded" && nextStatus !== order.status) return res.status(400).json({ message: "Refunded status can only be confirmed by Razorpay" });
+    if (nextStatus === "Refund Pending" && order.paymentMethod === "COD" && order.paymentStatus === "Not Collected") return res.status(400).json({ message: "This COD order was not collected, so no customer refund is due" });
     if (!canTransitionOrder(order.status, nextStatus)) return res.status(400).json({ message: `Cannot move an order from ${order.status} to ${nextStatus}` });
     if (nextStatus === "Cancelled" && order.shipping?.awbCode && order.shipping?.externalStatus !== "Shipment cancelled") {
       if (order.shipping.pickupScheduled) return res.status(400).json({ message: "Cancel the active pickup in Shiprocket before cancelling this order" });
@@ -237,6 +240,7 @@ router.put("/:id", protect, admin, async (req, res) => {
         order.returnRequest.reviewedAt = new Date();
       }
       order.status = nextStatus;
+      syncCodPaymentStatus(order, nextStatus);
       order.statusHistory.push({ status: nextStatus, note: String(req.body.note || "Status updated by admin").slice(0, 300) });
     }
     const updatedOrder = await order.save();

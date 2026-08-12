@@ -25,3 +25,10 @@ const transitions = {
 export const canTransitionOrder = (current, next) => current === next || (transitions[current] || []).includes(next);
 export const getNextOrderStatuses = (current) => transitions[current] || [];
 export const restoresStockAt = new Set(["Cancelled", "Returned", "RTO Delivered"]);
+
+export const syncCodPaymentStatus = (order, nextStatus) => {
+  if (!order || order.paymentMethod !== "COD" || order.paymentStatus === "Refunded") return order?.paymentStatus;
+  if (nextStatus === "Delivered") order.paymentStatus = "Paid";
+  else if (["Cancelled", "RTO Initiated", "RTO Delivered"].includes(nextStatus)) order.paymentStatus = "Not Collected";
+  return order.paymentStatus;
+};

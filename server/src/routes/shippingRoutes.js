@@ -2,7 +2,7 @@ import crypto from "crypto";
 import express from "express";
 import Order from "../models/Order.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
-import { canTransitionOrder } from "../utils/orderLifecycle.js";
+import { canTransitionOrder, syncCodPaymentStatus } from "../utils/orderLifecycle.js";
 import { restoreOrderStock } from "../services/orderService.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import {
@@ -55,6 +55,7 @@ router.post("/events", async (req, res) => {
     if (mapped && canTransitionOrder(order.status, mapped)) {
       if (["Cancelled", "Returned", "RTO Delivered"].includes(mapped)) await restoreOrderStock(order);
       order.status = mapped;
+      syncCodPaymentStatus(order, mapped);
       order.statusHistory.push({ status: mapped, note: `Courier update: ${order.shipping.externalStatus || mapped}` });
       transitioned = true;
     }
