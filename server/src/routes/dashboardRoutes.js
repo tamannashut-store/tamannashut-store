@@ -123,11 +123,15 @@ router.get("/analytics", protect, admin, async (req, res) => {
     const dailyMap = new Map();
     for (let index = days - 1; index >= 0; index -= 1) {
       const date = new Date(now.getTime() - index * 86400000);
-      dailyMap.set(dayKey(date), { date: dayKey(date), revenue: 0, orders: 0 });
+      dailyMap.set(dayKey(date), { date: dayKey(date), revenue: 0, orders: 0, deliveredOrders: 0 });
     }
+    currentOrders.forEach((order) => {
+      const point = dailyMap.get(dayKey(order.createdAt));
+      if (point) point.orders += 1;
+    });
     currentDelivered.forEach((order) => {
       const point = dailyMap.get(dayKey(order.createdAt));
-      if (point) { point.revenue = money(point.revenue + Number(order.totalAmount || 0)); point.orders += 1; }
+      if (point) { point.revenue = money(point.revenue + Number(order.totalAmount || 0)); point.deliveredOrders += 1; }
     });
 
     const statusMap = currentOrders.reduce((map, order) => map.set(order.status, (map.get(order.status) || 0) + 1), new Map());

@@ -27,7 +27,7 @@ async function mockApi(page) {
     else if (pathname.endsWith("/api/dashboard/cart-recoveries/eligible-user/send")) body = { message: "Recovery email sent" };
     else if (pathname.endsWith("/api/dashboard/analytics")) body = {
       summary: { orders: 2, realizedRevenue: 299, averageOrderValue: 299, publishedProducts: 1 },
-      dailySales: [{ date: "2026-08-11", revenue: 299, orders: 1 }],
+      dailySales: [{ date: "2026-08-11", revenue: 299, orders: 2, deliveredOrders: 1 }],
       statusBreakdown: [{ status: "Delivered", count: 1 }],
       paymentMix: [{ method: "COD", count: 1 }],
       topProducts: [], couponPerformance: [], recentOrders: [],
@@ -148,6 +148,9 @@ test("seller overview renders analytics without a runtime error", async ({ page 
   await page.goto("/admin/dashboard");
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await expect(page.getByText("Realized revenue")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Orders" })).toBeVisible();
+  await page.getByRole("button", { name: "Orders" }).click();
+  await expect(page.getByLabel("Daily orders chart")).toBeVisible();
   await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
 });
 
