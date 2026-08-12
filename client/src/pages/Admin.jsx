@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import ColorVariantEditor from "../components/ColorVariantEditor";
 import ListingWizardNav, { WizardActions } from "../components/ListingWizardNav";
 import ColorImageManager from "../components/ColorImageManager";
+import VariantStockList from "../components/VariantStockList";
+import { lowStockVariants, totalInventory } from "../utils/inventory";
 
 const initialVariants = [];
 
@@ -15,6 +17,7 @@ function Admin() {
   const [meta, setMeta] = useState({ page: 1, totalPages: 1, totalProducts: 0 });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [inventoryFilter, setInventoryFilter] = useState("");
   const [selected, setSelected] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -29,7 +32,7 @@ function Admin() {
   const fetchProducts = useCallback(async (page = 1) => {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/admin/list`, {
-        params: { page, limit: 20, search: search || undefined, status: statusFilter || undefined },
+        params: { page, limit: 20, search: search || undefined, status: statusFilter || undefined, inventory: inventoryFilter || undefined },
       });
       setProducts(data.products || []);
       setMeta({ page: data.currentPage, totalPages: data.totalPages, totalProducts: data.totalProducts });
@@ -37,7 +40,7 @@ function Admin() {
     } catch (error) {
       toast.error(error.response?.data?.message || "Could not load products");
     }
-  }, [search, statusFilter]);
+  }, [search, statusFilter, inventoryFilter]);
 
   useEffect(() => {
     const timer = setTimeout(() => fetchProducts(1), 250);
@@ -170,7 +173,7 @@ function Admin() {
 
           </div>}
 
-          {createStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} onRenameColor={(oldColor, nextColor) => setImageColors((current) => current.map((color) => color === oldColor ? nextColor : color))} /></div>}
+          {createStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} lowStockThreshold={form.lowStockThreshold} onRenameColor={(oldColor, nextColor) => setImageColors((current) => current.map((color) => color === oldColor ? nextColor : color))} /></div>}
 
           {createStep === 2 && <div className="mx-auto max-w-5xl">
             <ColorImageManager colors={variantColors} variants={variants} images={previews.map((url, index) => ({ id: url, url, color: imageColors[index] || "", size: imageSizes[index] || "" }))} onUpload={selectImages} onAssign={(index, assignment) => { setImageColors((current) => current.map((value, itemIndex) => itemIndex === index ? assignment.color : value)); setImageSizes((current) => current.map((value, itemIndex) => itemIndex === index ? assignment.size : value)); }} onMove={moveImage} onRemove={removeImage} />
@@ -184,12 +187,11 @@ function Admin() {
       )}
 
       <section className="surface-card mt-8 overflow-hidden">
-        <div className="flex flex-wrap gap-3 border-b p-4"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or SKU" className="field-control max-w-sm" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="field-control max-w-44"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select>{selected.length > 0 && <><button onClick={() => bulkStatus("active")} className="btn-secondary text-sm">Activate</button><button onClick={() => bulkStatus("archived")} className="btn-secondary text-sm">Archive</button></>}</div>
+        <div className="grid gap-3 border-b p-4 sm:grid-cols-2 xl:flex"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or SKU" className="field-control xl:max-w-sm" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="field-control xl:max-w-44"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select><select value={inventoryFilter} onChange={(event) => setInventoryFilter(event.target.value)} className="field-control xl:max-w-56"><option value="">All inventory</option><option value="low">Low/out-of-stock variants</option></select>{selected.length > 0 && <><button onClick={() => bulkStatus("active")} className="btn-secondary text-sm">Activate</button><button onClick={() => bulkStatus("archived")} className="btn-secondary text-sm">Archive</button></>}</div>
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500"><tr><th className="p-4"><input type="checkbox" checked={products.length > 0 && selected.length === products.length} onChange={(event) => setSelected(event.target.checked ? products.map((product) => product._id) : [])} /></th><th>Product</th><th>Status</th><th>Price</th><th>Inventory</th><th>Updated</th><th className="pr-5 text-right">Actions</th></tr></thead><tbody>{products.map((product) => {
-          const stock = (product.variants?.length ? product.variants : product.sizeStock || []).reduce((sum, item) => sum + Number(item.stock || 0), 0);
-          const inventory = product.variants?.length ? product.variants.filter((variant) => variant.active !== false) : product.sizeStock || [];
-          const low = inventory.length > 0 && inventory.some((item) => Number(item.stock || 0) <= Number(product.lowStockThreshold ?? 3));
-          return <tr key={product._id} className="border-t hover:bg-slate-50/60"><td className="p-4"><input type="checkbox" checked={selected.includes(product._id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, product._id] : current.filter((id) => id !== product._id))} /></td><td className="py-4"><div className="flex items-center gap-3"><img src={product.images?.[0]?.url || "/placeholder.png"} alt="" className="h-14 w-12 rounded-lg object-cover" /><div><p className="font-semibold">{product.name}</p><p className="mt-1 text-xs text-slate-500">{product.baseSku || "No base SKU"} · {product.variants?.length || product.sizeStock?.length || 0} variants</p></div></div></td><td><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.status === "draft" ? "bg-amber-50 text-amber-700" : product.status === "archived" ? "bg-slate-100 text-slate-600" : "bg-green-50 text-green-700"}`}>{product.status || "active"}</span></td><td><p className="font-semibold">₹{Number(product.price).toLocaleString("en-IN")}</p>{product.mrp > product.price && <p className="text-xs text-slate-400 line-through">₹{product.mrp}</p>}</td><td><p className={low ? "font-semibold text-red-600" : "font-semibold text-slate-700"}>{stock} units</p><p className="text-xs text-slate-500">{low ? "Low stock" : "Available"}</p></td><td className="text-slate-500">{new Date(product.updatedAt).toLocaleDateString("en-IN")}</td><td className="pr-5 text-right"><button onClick={() => navigate(`/admin/edit/${product._id}`)} className="font-semibold text-brand-primary">Edit</button><button onClick={() => deleteProduct(product._id)} className="ml-4 text-red-600">Delete</button></td></tr>;
+          const stock = totalInventory(product);
+          const lowVariants = lowStockVariants(product);
+          return <tr key={product._id} className="border-t align-top hover:bg-slate-50/60"><td className="p-4"><input type="checkbox" checked={selected.includes(product._id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, product._id] : current.filter((id) => id !== product._id))} /></td><td className="py-4"><div className="flex items-center gap-3"><img src={product.images?.[0]?.url || "/placeholder.png"} alt="" className="h-14 w-12 rounded-lg object-cover" /><div><p className="font-semibold">{product.name}</p><p className="mt-1 text-xs text-slate-500">{product.baseSku || "No base SKU"} · {product.variants?.length || product.sizeStock?.length || 0} variants</p></div></div></td><td className="py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${product.status === "draft" ? "bg-amber-50 text-amber-700" : product.status === "archived" ? "bg-slate-100 text-slate-600" : "bg-green-50 text-green-700"}`}>{product.status || "active"}</span></td><td className="py-4"><p className="font-semibold">₹{Number(product.price).toLocaleString("en-IN")}</p>{product.mrp > product.price && <p className="text-xs text-slate-400 line-through">₹{product.mrp}</p>}</td><td className="max-w-md py-4 pr-4"><p className={lowVariants.length ? "font-semibold text-red-600" : "font-semibold text-slate-700"}>{stock} total units</p><p className="mb-2 text-xs text-slate-500">{lowVariants.length ? `${lowVariants.length} variant${lowVariants.length === 1 ? "" : "s"} need attention` : "All variants available"}</p>{lowVariants.length > 0 && <VariantStockList product={product}/>}</td><td className="py-4 text-slate-500">{new Date(product.updatedAt).toLocaleDateString("en-IN")}</td><td className="py-4 pr-5 text-right"><button onClick={() => navigate(`/admin/edit/${product._id}`)} className="font-semibold text-brand-primary">Edit</button><button onClick={() => deleteProduct(product._id)} className="ml-4 text-red-600">Delete</button></td></tr>;
         })}</tbody></table></div>
         {!products.length && <div className="p-12 text-center text-slate-500">No products match these filters.</div>}
         <div className="flex items-center justify-between border-t p-4 text-sm"><span>Page {meta.page} of {meta.totalPages}</span><div className="flex gap-2"><button disabled={meta.page <= 1} onClick={() => fetchProducts(meta.page - 1)} className="btn-secondary py-2 text-sm disabled:opacity-40">Previous</button><button disabled={meta.page >= meta.totalPages} onClick={() => fetchProducts(meta.page + 1)} className="btn-secondary py-2 text-sm disabled:opacity-40">Next</button></div></div>

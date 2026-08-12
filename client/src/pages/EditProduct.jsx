@@ -100,7 +100,7 @@ function EditProduct() {
             <label className="md:col-span-2"><span className="field-label">Description</span><textarea required rows="6" name="description" value={form.description} onChange={changeForm} className="field-control" /></label>
           </div></section>
         </div>}
-        {editStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} onRenameColor={(oldColor, nextColor) => setImages((current) => current.map((image) => image.color === oldColor ? { ...image, color: nextColor } : image))} /></div>}
+        {editStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} lowStockThreshold={form.lowStockThreshold} onRenameColor={(oldColor, nextColor) => setImages((current) => current.map((image) => image.color === oldColor ? { ...image, color: nextColor } : image))} /></div>}
         {editStep >= 2 && <div className="mx-auto max-w-5xl space-y-6">
           <ColorImageManager colors={variantColors} variants={variants} images={images} onUpload={addImages} onAssign={(index, assignment) => setImages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...assignment } : item))} onMove={moveImage} onRemove={(index) => setImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
         </div>}

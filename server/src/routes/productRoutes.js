@@ -16,6 +16,21 @@ const refreshReviewSummary = (product) => {
   product.averageRating = visible.length ? visible.reduce((sum, review) => sum + Number(review.rating || 0), 0) / visible.length : 0;
   product.approvedReviewCount = visible.length;
 };
+const lowStockExpression = {
+  $cond: [
+    { $gt: [{ $size: { $ifNull: ["$variants", []] } }, 0] },
+    { $anyElementTrue: { $map: {
+      input: { $filter: { input: "$variants", as: "variant", cond: { $ne: ["$$variant.active", false] } } },
+      as: "variant",
+      in: { $lte: [{ $ifNull: ["$$variant.stock", 0] }, { $ifNull: ["$lowStockThreshold", 3] }] },
+    } } },
+    { $anyElementTrue: { $map: {
+      input: { $ifNull: ["$sizeStock", []] },
+      as: "item",
+      in: { $lte: [{ $ifNull: ["$$item.stock", 0] }, { $ifNull: ["$lowStockThreshold", 3] }] },
+    } } },
+  ],
+};
 const parseProductFields = (body) => {
   const name = String(body.name || "").trim();
   const price = Number(body.price);
@@ -338,6 +353,7 @@ router.get("/admin/list", protect, admin, async (req, res) => {
       filter.$or = [{ name: regex }, { baseSku: regex }, { "variants.sku": regex }];
     }
     if (["draft", "active", "archived"].includes(req.query.status)) filter.status = req.query.status;
+    if (req.query.inventory === "low") filter.$expr = lowStockExpression;
     const products = await Product.find(filter).select("-reviews").sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
     const total = await Product.countDocuments(filter);
     return res.json({ products, totalProducts: total, currentPage: page, totalPages: Math.max(Math.ceil(total / limit), 1) });
