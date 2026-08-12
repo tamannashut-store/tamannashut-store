@@ -58,9 +58,7 @@ function Contact() {
 
     } catch (error) {
 
-      console.log(error);
-
-      toast.error("Failed to send message");
+      toast.error(error.response?.data?.message || "Failed to send message");
 
     } finally {
 
@@ -104,32 +102,11 @@ function Contact() {
             className="space-y-4"
           >
 
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your Name"
-              className="w-full border p-4 rounded-xl"
-              required
-            />
+            <label className="field-label">Your name<input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="field-control mt-2" minLength="2" maxLength="80" autoComplete="name" required /></label>
 
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Your Email"
-              className="w-full border p-4 rounded-xl"
-              required
-            />
+            <label className="field-label">Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="field-control mt-2" maxLength="254" autoComplete="email" required /></label>
 
-            <textarea
-              rows="5"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Your Message"
-              className="w-full border p-4 rounded-xl"
-              required
-            />
+            <label className="field-label">How can we help?<textarea rows="5" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Tell us about your order or question" className="field-control mt-2" minLength="10" maxLength="2000" required /></label>
 
             <button
               type="submit"

@@ -1,9 +1,18 @@
 import express from "express";
+import rateLimit from "express-rate-limit";
 import { sendEmail } from "../utils/sendEmail.js";
 import Contact from "../models/Contact.js";
 import { admin, protect } from "../middleware/authMiddleware.js";
+import { escapeHtml } from "../utils/html.js";
 
 const router = express.Router();
+const contactLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 5,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { success: false, message: "Too many messages. Please try again later." },
+});
 
 router.get("/", protect, admin, async (req, res) => {
     try {
@@ -13,8 +22,6 @@ router.get("/", protect, admin, async (req, res) => {
         res.json(contacts);
 
     } catch (error) {
-        console.log(error);
-
         res.status(500).json({
             success: false,
             message: "Failed to fetch contacts",
@@ -31,13 +38,15 @@ router.patch("/read", protect, admin, async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 });
-router.post("/", async (req, res) => {
+router.post("/", contactLimiter, async (req, res) => {
     try {
-        const { name, email, message } = req.body;
-        if (!name || !email || !message) {
+        const name = String(req.body.name || "").trim();
+        const email = String(req.body.email || "").trim().toLowerCase();
+        const message = String(req.body.message || "").trim();
+        if (name.length < 2 || name.length > 80 || email.length > 254 || message.length < 10 || message.length > 2000) {
             return res.status(400).json({
                 success: false,
-                message: "All fields are required",
+                message: "Enter a valid name, email and message between 10 and 2000 characters",
             });
         }
         const emailRegex =
@@ -57,16 +66,16 @@ router.post("/", async (req, res) => {
 
         // Admin Email
         await sendEmail(
-            "support@tamannashut.com",
+            process.env.ADMIN_EMAIL || "support@tamannashut.com",
             "New Contact Form Message",
             `
         <h2>New Contact Form Message</h2>
   
-        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
   
-        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
   
-        <p><strong>Message:</strong> ${message}</p>
+        <p><strong>Message:</strong> ${escapeHtml(message).replaceAll("\n", "<br/>")}</p>
         `
         );
 
@@ -79,7 +88,7 @@ router.post("/", async (req, res) => {
   
         <h2>Thank You For Contacting Tamanna's Hut 💖</h2>
   
-        <p>Dear ${name},</p>
+        <p>Dear ${escapeHtml(name)},</p>
   
         <p>
         We have received your message successfully.
@@ -104,8 +113,6 @@ router.post("/", async (req, res) => {
         });
 
     } catch (error) {
-        console.log(error);
-
         res.status(500).json({
             success: false,
             message: "Failed to send message",

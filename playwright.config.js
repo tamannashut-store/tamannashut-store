@@ -23,9 +23,9 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
   webServer: localTarget ? {
-    command: "npm.cmd run dev --prefix client -- --host 127.0.0.1 --port 4173",
+    command: "node client/node_modules/vite/bin/vite.js preview client --host 127.0.0.1 --port 4173",
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120000,
     env: { ...process.env, VITE_API_URL: `${baseURL}/mock-api` },
   } : undefined,

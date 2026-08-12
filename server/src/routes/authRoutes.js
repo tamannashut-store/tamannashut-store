@@ -7,6 +7,7 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
 
 const router = express.Router();
 
@@ -71,7 +72,7 @@ router.post("/login", async (req, res) => {
         const password = String(req.body.password || "");
         if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
 
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).select("+password");
 
         if (!user) {
 
@@ -207,23 +208,21 @@ router.put("/profile/:id", protect, async (req, res) => {
 
         }
 
-        user.name =
-            req.body.name || user.name;
-
-        user.phone =
-            req.body.phone || user.phone;
-
-        user.address =
-            req.body.address || user.address;
-
-        user.city =
-            req.body.city || user.city;
-
-        user.state =
-            req.body.state || user.state || user.State;
-
-        user.pincode =
-            req.body.pincode || user.pincode;
+        const name = String(req.body.name || "").trim();
+        const phone = String(req.body.phone || "").trim();
+        const address = String(req.body.address || "").trim();
+        const pincode = String(req.body.pincode || "").trim();
+        if (name.length < 2 || name.length > 80) return res.status(400).json({ message: "Enter a valid full name" });
+        if (!/^[+]?[0-9]{10,13}$/.test(phone)) return res.status(400).json({ message: "Enter a valid phone number" });
+        if (address.length < 10 || address.length > 300) return res.status(400).json({ message: "Enter a complete delivery address" });
+        if (!/^\d{6}$/.test(pincode)) return res.status(400).json({ message: "Enter a valid 6-digit pincode" });
+        const locality = await verifyShiprocketDeliveryPostcode(pincode, false);
+        user.name = name;
+        user.phone = phone;
+        user.address = address;
+        user.city = locality.city;
+        user.state = locality.state;
+        user.pincode = locality.pincode;
 
         if (typeof req.body.marketingConsent === "boolean") {
             user.marketingConsent = req.body.marketingConsent;
@@ -245,7 +244,7 @@ router.put("/profile/:id", protect, async (req, res) => {
 router.delete("/profile/:id", protect, async (req, res) => {
     try {
         if (String(req.user._id) !== req.params.id) return res.status(403).json({ message: "Access denied" });
-        const user = await User.findById(req.params.id);
+        const user = await User.findById(req.params.id).select("+password");
         if (!user) return res.status(404).json({ message: "User not found" });
         if (user.isAdmin) return res.status(400).json({ message: "The seller administrator account cannot be deleted here" });
         const password = String(req.body.password || "");
@@ -279,7 +278,7 @@ router.put("/change-password/:id", protect, async (req, res) => {
 
         const user = await User.findById(
             req.params.id
-        );
+        ).select("+password");
 
         if (!user) {
 

@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema(
       maxlength: 254,
     },
 
-    password: { type: String, required: true },
+    password: { type: String, required: true, select: false },
     passwordChangedAt: { type: Date, default: null, select: false },
     sessionVersion: { type: Number, default: 0, min: 0 },
     passwordResetToken: { type: String, select: false, index: true },
@@ -68,6 +68,14 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: {
+      transform: (_document, value) => {
+        delete value.password;
+        delete value.passwordResetToken;
+        delete value.passwordResetExpires;
+        return value;
+      },
+    },
   }
 );
 

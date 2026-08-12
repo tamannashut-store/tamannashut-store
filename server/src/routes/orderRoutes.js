@@ -19,10 +19,11 @@ import upload from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 import { recordAudit } from "../utils/recordAudit.js";
+import { escapeHtml } from "../utils/html.js";
 
 const router = express.Router();
 const serializeOrder = (order) => { const value = order.toObject ? order.toObject() : order; return value.status === "Processing" ? { ...value, status: "Confirmed" } : value; };
-const sendStatusUpdate = (order) => sendEmail(order.email, "Order Update - Tamanna's Hut", `<h2>Order status updated</h2><p>Hello ${order.customerName || "Customer"},</p><p>Order <strong>${order._id}</strong> is now <strong>${order.status}</strong>.</p>${order.tracking?.trackingId ? `<p>Tracking: ${order.tracking.trackingId}</p>` : ""}`);
+const sendStatusUpdate = (order) => sendEmail(order.email, "Order Update - Tamanna's Hut", `<h2>Order status updated</h2><p>Hello ${escapeHtml(order.customerName || "Customer")},</p><p>Order <strong>${escapeHtml(order._id)}</strong> is now <strong>${escapeHtml(order.status)}</strong>.</p>${order.tracking?.trackingId ? `<p>Tracking: ${escapeHtml(order.tracking.trackingId)}</p>` : ""}`);
 
 router.post("/", protect, async (req, res) => {
   try {
