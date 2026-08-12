@@ -168,8 +168,14 @@ function ProductDetails() {
   };
 
   const addSelectedToCart = () => {
-    if (!selectedSize) return toast.error("Please select a size");
-    if (availableStock <= 0) return toast.error("This size is out of stock");
+    if (!selectedSize) {
+      toast.error("Please select a size");
+      return false;
+    }
+    if (availableStock <= 0) {
+      toast.error("This size is out of stock");
+      return false;
+    }
     const added = addToCart({ ...product, price: selectedPrice, selectedSize, selectedColor, selectedSku: selectedVariant?.sku || "", image: images[0]?.url });
     if (!added) return false;
     trackEvent("add_to_cart", { currency: "INR", value: selectedPrice, items: [{ item_id: product._id, item_name: product.name, item_variant: selectedColor, item_category: product.category, price: selectedPrice, quantity: 1 }] });
