@@ -51,7 +51,11 @@ function Register() {
 
             toast.success("Account Created");
 
-            if (guestCart.length > 0) {
+            const destination = sessionStorage.getItem("redirectAfterLogin");
+            sessionStorage.removeItem("redirectAfterLogin");
+            if (destination) {
+                navigate(destination);
+            } else if (guestCart.length > 0) {
                 navigate("/checkout");
             } else {
                 navigate("/profile");

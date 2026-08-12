@@ -63,7 +63,9 @@ function Login() {
                 new Event("cartUpdated")
             );
             toast.success("Login Successful");
-            navigate("/");
+            const destination = sessionStorage.getItem("redirectAfterLogin") || "/";
+            sessionStorage.removeItem("redirectAfterLogin");
+            navigate(destination);
 
         } catch (error) {
             toast.error(

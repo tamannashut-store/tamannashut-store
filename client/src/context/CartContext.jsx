@@ -113,7 +113,7 @@ function CartProvider({ children }) {
   const addToCart = (product) => {
     if (product.stock <= 0) {
       alert("Product Out Of Stock");
-      return;
+      return false;
     }
 
     const existingItem =
@@ -134,7 +134,7 @@ function CartProvider({ children }) {
         (sizeData?.stock || 0)
       ) {
         alert("Maximum stock reached");
-        return;
+        return false;
       }
 
       updatedCart = cartItems.map(
@@ -160,7 +160,11 @@ function CartProvider({ children }) {
     }
 
     setCartItems(updatedCart);
+    if (!readSession()?.token) {
+      localStorage.setItem("guest_cart", JSON.stringify(updatedCart));
+    }
     persistAccountCart(updatedCart);
+    return true;
   };
 
   // INCREASE QTY

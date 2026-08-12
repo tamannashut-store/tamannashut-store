@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { CartContext } from "../context/CartContext";
 import toast from "react-hot-toast";
@@ -51,6 +51,7 @@ function DiscoveryProducts({ title, products }) {
 
 function ProductDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { cartItems, addToCart } = useContext(CartContext);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -169,9 +170,19 @@ function ProductDetails() {
   const addSelectedToCart = () => {
     if (!selectedSize) return toast.error("Please select a size");
     if (availableStock <= 0) return toast.error("This size is out of stock");
-    addToCart({ ...product, price: selectedPrice, selectedSize, selectedColor, selectedSku: selectedVariant?.sku || "", image: images[0]?.url });
+    const added = addToCart({ ...product, price: selectedPrice, selectedSize, selectedColor, selectedSku: selectedVariant?.sku || "", image: images[0]?.url });
+    if (!added) return false;
     trackEvent("add_to_cart", { currency: "INR", value: selectedPrice, items: [{ item_id: product._id, item_name: product.name, item_variant: selectedColor, item_category: product.category, price: selectedPrice, quantity: 1 }] });
     toast.success("Added to your bag");
+    return true;
+  };
+
+  const buySelectedNow = () => {
+    if (!addSelectedToCart()) return;
+    sessionStorage.setItem("redirectAfterLogin", "/checkout");
+    let user;
+    try { user = JSON.parse(localStorage.getItem("user")); } catch { /* Invalid cached session is treated as signed out. */ }
+    navigate(user?.token ? "/checkout" : "/login");
   };
 
   return (
@@ -266,7 +277,10 @@ function ProductDetails() {
                 {selectedSize && <p className={`mt-3 text-sm ${availableStock > 0 ? "text-green-700" : "text-red-600"}`}>{availableStock > 0 ? `${availableStock} available for this size` : "No more available in this size"}</p>}
               </div>
 
-              <button type="button" onClick={addSelectedToCart} disabled={totalStock <= 0} className="mt-8 w-full rounded-xl bg-brand-primary py-4 text-lg font-semibold text-white transition hover:bg-[#2d4d33] disabled:bg-gray-400">{totalStock > 0 ? "Add to bag" : "Out of stock"}</button>
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                <button type="button" onClick={addSelectedToCart} disabled={totalStock <= 0} className="w-full rounded-xl border-2 border-brand-primary bg-white py-4 text-lg font-semibold text-brand-primary transition hover:bg-green-50 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400">{totalStock > 0 ? "Add to bag" : "Out of stock"}</button>
+                <button type="button" onClick={buySelectedNow} disabled={totalStock <= 0} className="w-full rounded-xl bg-brand-primary py-4 text-lg font-semibold text-white transition hover:bg-[#2d4d33] disabled:bg-gray-400">Buy now</button>
+              </div>
 
               <div className="mt-7 grid grid-cols-3 gap-3 border-t pt-6 text-center text-xs text-gray-600">
                 <div><span className="block text-xl">🚚</span><span className="mt-1 block">Free delivery*</span></div>
