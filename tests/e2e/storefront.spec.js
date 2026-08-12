@@ -12,6 +12,20 @@ const product = {
   variants: [{ sku: "TEST-MAR-03", size: "0-3M", color: "Maroon", price: 299, stock: 8 }],
   sizeStock: [{ size: "0-3M", stock: 8 }],
 };
+const codOrder = {
+  _id: "77bb22cc33dd44ee55ff6600",
+  userId: "test-user",
+  customerName: "Test Customer",
+  email: "test@example.com",
+  phone: "9876543210",
+  totalAmount: 299,
+  paymentMethod: "COD",
+  paymentStatus: "Pending",
+  status: "Confirmed",
+  createdAt: "2026-08-12T10:00:00.000Z",
+  products: [{ _id: product._id, name: product.name, price: 299, qty: 1, selectedColor: "Maroon", selectedSize: "0-3M", sku: "TEST-MAR-03", image }],
+  statusHistory: [{ status: "Pending", note: "Order placed", createdAt: "2026-08-12T10:00:00.000Z" }, { status: "Confirmed", note: "Status updated by admin", createdAt: "2026-08-12T10:05:00.000Z" }],
+};
 
 async function mockApi(page) {
   // Intercept every API host so a developer's local .env can never make this
@@ -32,7 +46,8 @@ async function mockApi(page) {
       paymentMix: [{ method: "COD", count: 1 }],
       topProducts: [], couponPerformance: [], recentOrders: [],
     };
-    else if (pathname.endsWith("/api/orders")) body = [];
+    else if (pathname.endsWith("/api/orders/my-orders")) body = [codOrder];
+    else if (pathname.endsWith("/api/orders")) body = [codOrder];
     else if (pathname.endsWith("/api/cart")) body = { items: [] };
     else if (pathname.endsWith("/api/auth/login")) body = { token: "safe-local-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } };
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
@@ -140,6 +155,32 @@ test("COD confirmation says order placed and payment pending", async ({ page }) 
   await expect(page.getByRole("heading", { name: "Your order is placed" })).toBeVisible();
   await expect(page.getByText("Cash on delivery · Payment pending")).toBeVisible();
   await expect(page.getByText("Payment successful")).toHaveCount(0);
+});
+
+test("customer orders identify COD as unpaid until delivery collection", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-customer-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } })));
+  await page.goto("/my-orders");
+  await expect(page.getByText("Cash on delivery · Payment pending")).toBeVisible();
+  await expect(page.getByText("Paid online")).toHaveCount(0);
+  const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
+  expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+});
+
+test("cancelled COD orders say that no payment was collected", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-customer-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } })));
+  await page.route("**/api/orders/my-orders", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([{ ...codOrder, status: "Cancelled" }]) }));
+  await page.goto("/my-orders");
+  await expect(page.getByText("Cash on delivery · No payment collected")).toBeVisible();
+  await expect(page.getByText("Cash on delivery · Payment pending")).toHaveCount(0);
+});
+
+test("seller orders distinguish COD collection from online payment", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
+  await page.goto("/admin/orders");
+  await expect(page.getByText("Cash on delivery", { exact: true })).toBeVisible();
+  await expect(page.getByText("Collect on delivery")).toBeVisible();
+  await expect(page.getByText("Online payment")).toHaveCount(0);
 });
 
 test("direct confirmation visits never claim a successful payment", async ({ page }) => {
