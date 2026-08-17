@@ -37,7 +37,7 @@ xmlns:g="http://base.google.com/ns/1.0">
 
 <g:description>${xmlText(product.description || product.name)}</g:description>
 
-<g:link>https://www.tamannashut.com/product/${xmlText(product._id)}</g:link>
+<g:link>https://www.tamannashut.com/product/${xmlText(product.slug || product._id)}</g:link>
 
 <g:image_link>${xmlText(imageUrl)}</g:image_link>
 

@@ -8,6 +8,7 @@ import { admin, protect } from "../middleware/authMiddleware.js";
 import InventoryLog from "../models/InventoryLog.js";
 import Order from "../models/Order.js";
 import { recordAudit } from "../utils/recordAudit.js";
+import { createUniqueProductSlug, productIdentifierFilter } from "../utils/productSlug.js";
 
 const router = express.Router();
 const approvedReviews = (reviews = []) => reviews.filter((review) => !review.status || review.status === "approved");
@@ -190,6 +191,7 @@ router.post("/", protect, admin, upload.array("images", 30), async (req, res) =>
     }
 
     const product = new Product({ ...fields, images });
+    product.slug = await createUniqueProductSlug(Product, product.name, product._id);
 
     await product.save();
 
@@ -331,14 +333,14 @@ router.get("/suggestions/search", async (req, res) => {
       regex = buildSearchRegex(query, { fuzzy: true });
       suggestionFilter = { ...baseFilter, $or: [{ name: regex }, { tags: regex }, { category: regex }, { color: regex }, { "variants.color": regex }] };
     }
-    const products = await Product.find(suggestionFilter).select("name category images price").sort({ averageRating: -1, createdAt: -1 }).limit(6).lean();
-    return res.set("Cache-Control", "public, max-age=60").json({ suggestions: products.map((product) => ({ id: product._id, name: product.name, category: product.category, image: product.images?.[0]?.url || "", price: product.price })) });
+    const products = await Product.find(suggestionFilter).select("name slug category images price").sort({ averageRating: -1, createdAt: -1 }).limit(6).lean();
+    return res.set("Cache-Control", "public, max-age=60").json({ suggestions: products.map((product) => ({ id: product._id, slug: product.slug, name: product.name, category: product.category, image: product.images?.[0]?.url || "", price: product.price })) });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 
 router.get("/:id/related", async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).select("category tags").lean();
+    const product = await Product.findOne(productIdentifierFilter(req.params.id)).select("category tags").lean();
     if (!product) return res.status(404).json({ message: "Product not found" });
     const related = await Product.find({ _id: { $ne: product._id }, status: { $nin: ["draft", "archived"] }, $or: [{ category: product.category }, { tags: { $in: product.tags || [] } }] }).select("-reviews").sort({ averageRating: -1, createdAt: -1 }).limit(8).lean();
     return res.json({ products: related });
@@ -425,7 +427,7 @@ router.patch("/admin/:productId/reviews/:reviewId", protect, admin, async (req, 
 
 router.get("/:id", async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).lean();
+    const product = await Product.findOne(productIdentifierFilter(req.params.id)).lean();
 
     if (!product) {
       return res.status(404).json({
@@ -469,6 +471,7 @@ router.put(
         ? product.variants.map((variant) => ({ sku: variant.sku, size: variant.size, stock: variant.stock }))
         : product.sizeStock.map((item) => ({ sku: `${product.baseSku || product._id}-${item.size}`, size: item.size, stock: item.stock }));
       const fields = parseProductFields(req.body);
+      if (!product.slug) product.slug = await createUniqueProductSlug(Product, fields.name, product._id);
       product.name = fields.name;
       product.price = fields.price;
       product.description = fields.description;
@@ -661,7 +664,7 @@ const hasDeliveredPurchase = (userId, productId) => Order.exists({ userId, statu
 
 router.get("/:id/review-eligibility", protect, async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).select("reviews.userId");
+    const product = await Product.findOne(productIdentifierFilter(req.params.id)).select("reviews.userId");
     if (!product) return res.status(404).json({ message: "Product not found" });
     if (product.reviews.some((review) => review.userId === String(req.user._id))) return res.json({ eligible: false, reason: "You have already reviewed this product" });
     const verifiedPurchase = await hasDeliveredPurchase(req.user._id, product._id);
@@ -673,10 +676,7 @@ router.post("/:id/review", protect, async (req, res) => {
 
   try {
 
-    const product =
-      await Product.findById(
-        req.params.id
-      );
+    const product = await Product.findOne(productIdentifierFilter(req.params.id));
 
     if (!product) {
 

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { orderEmailTemplate, passwordResetEmailTemplate } from "../server/src/utils/emailTemplates.js";
+import { adminNewOrderEmailTemplate, orderEmailTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate } from "../server/src/utils/emailTemplates.js";
 
 const baseOrder = {
   _id: "order-123",
@@ -36,4 +36,17 @@ test("password reset email uses the branded secure layout and escapes content", 
   assert.match(html, /Create new password/);
   assert.match(html, /HUT OF PURITY/);
   assert.doesNotMatch(html, /<Admin>/);
+});
+
+test("seller order alert has a useful inbox preview", () => {
+  const html = adminNewOrderEmailTemplate({ ...baseOrder, _id: "6a837939a75b0eb2b068fe07", paymentMethod: "COD", paymentStatus: "Pending" });
+  assert.match(html, /Order #B068FE07 from Test Parent/);
+  assert.match(html, /A new order is ready/);
+});
+
+test("seller invitation explains verification and expiry", () => {
+  const html = sellerInvitationEmailTemplate("https://www.tamannashut.com/seller/register/token");
+  assert.match(html, /Complete seller onboarding/);
+  assert.match(html, /expires in 48 hours/i);
+  assert.match(html, /access remains locked/i);
 });

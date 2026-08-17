@@ -49,6 +49,8 @@ import shippingRoutes from "./routes/shippingRoutes.js";
 import socialRoutes from "./routes/socialRoutes.js";
 import crypto from "crypto";
 import * as Sentry from "@sentry/node";
+import Product from "./models/Product.js";
+import { backfillProductSlugs } from "./utils/productSlug.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -123,6 +125,8 @@ const start = async () => {
   if (!process.env.MONGO_URI || !process.env.JWT_SECRET) throw new Error("Required server configuration is missing");
   await mongoose.connect(process.env.MONGO_URI);
   console.log("MongoDB connected");
+  const migratedSlugs = await backfillProductSlugs(Product);
+  if (migratedSlugs) console.log(`Product URLs prepared: ${migratedSlugs}`);
   server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 };
 const shutdown = async (signal) => {

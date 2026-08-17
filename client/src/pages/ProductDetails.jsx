@@ -13,10 +13,11 @@ import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
+import { productPath } from "../utils/productUrl";
 
 function DiscoveryCard({ item }) {
   return (
-    <Link to={`/product/${item._id}`} className="group block h-full overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+    <Link to={productPath(item)} className="group block h-full overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
       <div className="aspect-[4/5] overflow-hidden bg-gray-50">
         <img src={item.images?.[0]?.url || "/placeholder.png"} alt={item.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
       </div>
@@ -72,6 +73,7 @@ function ProductDetails() {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`, { signal });
       setProduct(data);
+      if (data.slug && id !== data.slug) window.history.replaceState(window.history.state, "", productPath(data));
       trackEvent("view_item", { currency: "INR", value: Number(data.price || 0), items: [{ item_id: data._id, item_name: data.name, item_category: data.category, price: Number(data.price || 0) }] });
       setSelectedColor(data.variants?.find((variant) => variant.active !== false)?.color || data.color || "");
       setSelectedSize("");
@@ -80,7 +82,7 @@ function ProductDetails() {
         const stored = JSON.parse(localStorage.getItem("recently_viewed_products") || "[]");
         const previous = Array.isArray(stored) ? stored.filter((item) => item?._id && item._id !== data._id) : [];
         setRecentlyViewed(previous.slice(0, 8));
-        const compactProduct = { _id: data._id, name: data.name, price: data.price, mrp: data.mrp, category: data.category, images: data.images?.slice(0, 1) || [] };
+        const compactProduct = { _id: data._id, slug: data.slug, name: data.name, price: data.price, mrp: data.mrp, category: data.category, images: data.images?.slice(0, 1) || [] };
         localStorage.setItem("recently_viewed_products", JSON.stringify([compactProduct, ...previous].slice(0, 8)));
       } catch {
         setRecentlyViewed([]);
@@ -200,7 +202,7 @@ function ProductDetails() {
         <meta property="og:description" content={product.description} />
         <meta property="og:image" content={images[0].url} />
         <meta property="og:type" content="product" />
-        <link rel="canonical" href={`https://www.tamannashut.com/product/${id}`} />
+        <link rel="canonical" href={`https://www.tamannashut.com${productPath(product)}`} />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
@@ -211,7 +213,7 @@ function ProductDetails() {
             brand: { "@type": "Brand", name: "Tamanna's Hut" },
             offers: {
               "@type": "Offer",
-              url: `https://www.tamannashut.com/product/${id}`,
+              url: `https://www.tamannashut.com${productPath(product)}`,
               priceCurrency: "INR",
               price: product.price,
               availability: totalStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",

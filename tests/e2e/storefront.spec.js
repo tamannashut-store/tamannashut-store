@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 const image = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='750'%3E%3Crect width='100%25' height='100%25' fill='%23d9e6dc'/%3E%3C/svg%3E";
 const product = {
   _id: "66aa11bb22cc33dd44ee55ff",
+  slug: "regression-test-baby-outfit",
   name: "Regression Test Baby Outfit",
   category: "girls",
   price: 299,
@@ -46,6 +47,7 @@ async function mockApi(page) {
       paymentMix: [{ method: "COD", count: 1 }],
       topProducts: [], couponPerformance: [], recentOrders: [],
     };
+    else if (pathname.endsWith("/api/auth/seller-team")) body = { sellers: [{ _id: "admin-test", name: "Store Owner", email: "admin@example.com", sellerRole: "owner", sellerAccessStatus: "active", profile: null }], invitations: [] };
     else if (pathname.endsWith("/api/orders/my-orders")) body = [codOrder];
     else if (pathname.endsWith("/api/orders")) body = [codOrder];
     else if (pathname.endsWith("/api/cart")) body = { items: [] };
@@ -62,8 +64,23 @@ test("storefront renders catalogue data without horizontal overflow", async ({ p
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Beautiful clothes for their biggest little moments." })).toBeVisible();
   await expect(page.getByRole("heading", { name: product.name }).first()).toBeVisible();
+  await expect(page.locator(`a[href="/product/${product.slug}"]`).first()).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+});
+
+test("seller registration is invitation-only", async ({ page }) => {
+  await page.goto("/seller/register");
+  await expect(page.getByRole("heading", { name: "Invitation required" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to seller sign in" })).toHaveAttribute("href", "/admin-login");
+});
+
+test("store owner can open the seller invitation workspace", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true, sellerRole: "owner" } })));
+  await page.goto("/admin/team");
+  await expect(page.getByRole("heading", { name: "Seller team" })).toBeVisible();
+  await expect(page.getByPlaceholder("seller@example.com")).toBeVisible();
+  await expect(page.getByText("Primary store-owner account")).toBeVisible();
 });
 
 test("mobile navigation exposes storefront and account destinations", async ({ page }) => {

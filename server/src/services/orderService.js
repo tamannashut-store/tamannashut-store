@@ -213,8 +213,9 @@ export const sendOrderNotifications = async (order) => {
     `${cod ? "COD Order Received" : "Payment Confirmed"} - Tamanna's Hut`,
     orderEmailTemplate(order)
   );
+  const shortId = String(order._id || "").slice(-8).toUpperCase();
   const adminEmail = process.env.ADMIN_EMAIL
-    ? sendEmail(process.env.ADMIN_EMAIL, `New Order Received - ${order._id}`, adminNewOrderEmailTemplate(order))
+    ? sendEmail(process.env.ADMIN_EMAIL, `New ${cod ? "COD" : "online"} order #${shortId} - Rs. ${Number(order.totalAmount || 0).toLocaleString("en-IN")}`, adminNewOrderEmailTemplate(order))
     : Promise.resolve();
   const phone = order.phone.startsWith("+") ? order.phone : `+91${order.phone}`;
   const whatsapp = sendWhatsApp(phone, `${cod ? "COD order received. No payment has been collected yet." : "Payment verified and order received."}\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`);

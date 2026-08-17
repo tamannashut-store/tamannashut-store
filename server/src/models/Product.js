@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
+    slug: { type: String, trim: true, lowercase: true },
     price: { type: Number, required: true },
     mrp: { type: Number },
     baseSku: { type: String, trim: true, uppercase: true },
@@ -84,6 +85,7 @@ const productSchema = new mongoose.Schema(
   }
 );
 productSchema.index({ createdAt: -1 });
+productSchema.index({ slug: 1 }, { unique: true, sparse: true });
 productSchema.index({ category: 1 });
 productSchema.index({ price: 1 });
 productSchema.index({ averageRating: -1 });

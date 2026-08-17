@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { productPath } from "../utils/productUrl";
 
 const itemKey = (item) => `${item._id}-${item.selectedSku || item.selectedSize}`;
 const itemImage = (item) => item.image || item.images?.[0]?.url || "/placeholder.png";
@@ -70,13 +71,13 @@ function Cart() {
               return (
                 <article key={itemKey(item)} className={`rounded-3xl border bg-white p-4 shadow-sm transition sm:p-5 ${invalid ? "border-red-300" : "border-gray-100"}`}>
                   <div className="flex gap-4 sm:gap-6">
-                    <Link to={`/product/${item._id}`} className="shrink-0">
+                    <Link to={productPath(item)} className="shrink-0">
                       <img src={itemImage(item)} alt={item.name} className="h-32 w-24 rounded-2xl bg-gray-100 object-cover sm:h-40 sm:w-32" />
                     </Link>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <Link to={`/product/${item._id}`} className="line-clamp-2 text-lg font-semibold hover:text-brand-primary sm:text-xl">{item.name}</Link>
+                          <Link to={productPath(item)} className="line-clamp-2 text-lg font-semibold hover:text-brand-primary sm:text-xl">{item.name}</Link>
                           <p className="mt-2 text-sm text-gray-500">Size: <span className="font-medium text-gray-700">{item.selectedSize}</span>{item.selectedColor && <> · Colour: <span className="font-medium text-gray-700">{item.selectedColor}</span></>}</p>
                         </div>
                         <button onClick={() => removeFromCart(item._id, item.selectedSize, item.selectedSku)} className="text-sm text-gray-500 underline hover:text-red-600">Remove</button>

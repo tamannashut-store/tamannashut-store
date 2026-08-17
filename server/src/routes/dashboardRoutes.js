@@ -86,6 +86,7 @@ router.get("/operations", protect, admin, async (_req, res) => {
         { key: "shipping", label: "Shiprocket", ready: configured("SHIPROCKET_EMAIL", "SHIPROCKET_PASSWORD", "SHIPROCKET_PICKUP_LOCATION", "SHIPROCKET_PICKUP_POSTCODE", "SHIPROCKET_WEBHOOK_SECRET"), required: true },
         { key: "images", label: "Cloudinary", ready: configured("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"), required: true },
         { key: "email", label: "Order email", ready: configured("RESEND_API_KEY", "EMAIL_FROM"), required: true },
+        { key: "seller-security", label: "Seller data encryption", ready: String(process.env.SELLER_DATA_ENCRYPTION_KEY || "").length >= 32, required: true },
         { key: "whatsapp", label: "Twilio WhatsApp", ready: configured("TWILIO_SID", "TWILIO_AUTH"), required: false },
         { key: "instagram", label: "Instagram feed", ready: configured("INSTAGRAM_ACCESS_TOKEN"), required: false },
         { key: "monitoring", label: "Sentry monitoring", ready: configured("SENTRY_DSN"), required: false },

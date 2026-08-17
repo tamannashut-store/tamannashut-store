@@ -16,6 +16,8 @@ const EditProduct = lazy(() => import("./pages/EditProduct")); const AdminDashbo
 const AdminContacts = lazy(() => import("./pages/AdminContacts")); const AdminLogin = lazy(() => import("./pages/AdminLogin")); const AdminLayout = lazy(() => import("./components/AdminLayout"));
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
 const AdminOperations = lazy(() => import("./pages/AdminOperations"));
+const AdminTeam = lazy(() => import("./pages/AdminTeam"));
+const SellerRegister = lazy(() => import("./pages/SellerRegister"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => <div className="grid min-h-[55vh] place-items-center bg-brand-background text-sm font-medium text-slate-500">Loading…</div>;
@@ -50,12 +52,15 @@ function App() {
         </Route>
 
         <Route path="/admin-login" element={<AdminLogin />} />
+        <Route path="/seller/register" element={<SellerRegister />} />
+        <Route path="/seller/register/:token" element={<SellerRegister />} />
         <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
           <Route path="/admin/operations" element={<AdminOperations />} />
+          <Route path="/admin/team" element={<AdminTeam />} />
           <Route path="/admin/edit/:id" element={<EditProduct />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/contacts" element={<AdminContacts />} />

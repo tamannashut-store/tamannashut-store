@@ -1,6 +1,7 @@
 ﻿import { useContext } from "react";
 import WishlistContext from "../context/wishlistState";
 import { Link } from "react-router-dom";
+import { productPath } from "../utils/productUrl";
 
 function Wishlist() {
 
@@ -62,7 +63,7 @@ function Wishlist() {
             <div className="mt-6 flex flex-col gap-3 min-[380px]:flex-row">
 
               <Link
-                to={`/product/${product._id}`}
+                to={productPath(product)}
                 className="flex-1 bg-brand-primary hover:bg-brand-primary-dark text-white py-3 rounded-2xl text-center font-semibold"
               >
                 View
