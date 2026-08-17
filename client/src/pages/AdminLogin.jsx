@@ -27,11 +27,7 @@ function AdminLogin() {
     setError("");
     setLoading(true);
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, { email: email.trim(), password });
-      if (!data.user?.isAdmin) {
-        setError("This is a customer account and does not have Seller Centre access. Use the administrator account instead.");
-        return;
-      }
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/admin-login`, { email: email.trim(), password });
       localStorage.setItem("user", JSON.stringify(data));
       axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
       navigate("/admin/dashboard", { replace: true });

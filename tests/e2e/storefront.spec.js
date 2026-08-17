@@ -96,13 +96,25 @@ test("corrupted browser storage is cleared without crashing the storefront", asy
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]"))).toEqual([]);
 });
 
+test("an expired saved session does not block the public storefront", async ({ page }) => {
+  await page.addInitScript(() => {
+    const encode = (value) => btoa(JSON.stringify(value));
+    const token = `${encode({ alg: "none" })}.${encode({ exp: 1 })}.signature`;
+    localStorage.setItem("user", JSON.stringify({ token, user: { id: "expired-user", email: "expired@example.com", isAdmin: false } }));
+  });
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Beautiful clothes for their biggest little moments." })).toBeVisible();
+  await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
+});
+
 test("login offers recovery and registration and accepts a safe mocked session", async ({ page }) => {
   await page.goto("/login");
   await expect(page.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");
   await expect(page.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/register");
-  await page.getByPlaceholder("Email").fill("test@example.com");
-  await page.getByPlaceholder("Password").fill("safe-password");
-  await page.getByRole("button", { name: "Login" }).click();
+  await page.getByPlaceholder("you@example.com").fill("test@example.com");
+  await page.getByPlaceholder("Enter your password").fill("safe-password");
+  await page.getByRole("button", { name: "Sign in securely" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("user") || "null")?.user?.email)).toBe("test@example.com");
 });

@@ -17,12 +17,28 @@ if (storedUser?.token) {
   axios.defaults.headers.common["Authorization"] = `Bearer ${storedUser.token}`;
 }
 
+let handlingExpiredSession = false;
+const customerProtectedPaths = ["/checkout", "/profile", "/my-orders", "/change-password", "/dashboard"];
+
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      delete axios.defaults.headers.common.Authorization;
+      if (!handlingExpiredSession) {
+        handlingExpiredSession = true;
+        window.dispatchEvent(new CustomEvent("sessionExpired"));
+        const path = window.location.pathname;
+        if (path.startsWith("/admin")) {
+          window.location.replace("/admin-login?reason=session-expired");
+        } else if (customerProtectedPaths.some((protectedPath) => path === protectedPath || path.startsWith(`${protectedPath}/`))) {
+          sessionStorage.setItem("redirectAfterLogin", `${path}${window.location.search}`);
+          window.location.replace("/login?reason=session-expired");
+        } else {
+          window.setTimeout(() => { handlingExpiredSession = false; }, 0);
+        }
+      }
     }
     if (error.response?.status >= 500) Sentry.captureException(error, { tags: { source: "api" } });
 

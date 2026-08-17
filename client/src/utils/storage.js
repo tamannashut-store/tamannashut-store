@@ -16,9 +16,21 @@ export function readStoredArray(key) {
   return [];
 }
 
+export function isExpiredJwt(token, now = Date.now()) {
+  if (typeof token !== "string" || token.split(".").length !== 3) return false;
+  try {
+    const encoded = token.split(".")[1].replaceAll("-", "+").replaceAll("_", "/");
+    const payload = JSON.parse(atob(encoded));
+    return Number.isFinite(Number(payload.exp)) && Number(payload.exp) * 1000 <= now;
+  } catch {
+    // Opaque or malformed tokens are left for the server to validate.
+    return false;
+  }
+}
+
 export function readSession() {
   const session = readStoredJson("user");
-  if (session?.token && session?.user && typeof session.user === "object") return session;
+  if (session?.token && session?.user && typeof session.user === "object" && !isExpiredJwt(session.token)) return session;
   if (session !== null) localStorage.removeItem("user");
   return null;
 }

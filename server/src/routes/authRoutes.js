@@ -8,6 +8,7 @@ import Product from "../models/Product.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
+import { loginPortalError } from "../utils/loginPortal.js";
 
 const router = express.Router();
 
@@ -62,36 +63,20 @@ router.post("/register", async (req, res) => {
 });
 
 
-// LOGIN
-
-router.post("/login", async (req, res) => {
-
+// CUSTOMER AND SELLER LOGIN
+const loginForPortal = (adminPortal = false) => async (req, res) => {
     try {
-
         const email = String(req.body.email || "").trim().toLowerCase();
         const password = String(req.body.password || "");
         if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
 
         const user = await User.findOne({ email }).select("+password");
-
-        if (!user) {
-
-            return res.status(400).json({
-                message: "Invalid email or password",
-            });
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(400).json({ message: "Invalid email or password" });
         }
 
-        const isMatch = await bcrypt.compare(
-            password,
-            user.password
-        );
-
-        if (!isMatch) {
-
-            return res.status(400).json({
-                message: "Invalid email or password",
-            });
-        }
+        const portalError = loginPortalError(user, adminPortal);
+        if (portalError) return res.status(403).json({ message: portalError });
 
         const token = jwt.sign(
             {
@@ -115,12 +100,12 @@ router.post("/login", async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: error.message,
-        });
+        res.status(500).json({ message: error.message });
     }
-});
+};
+
+router.post("/login", loginForPortal(false));
+router.post("/admin-login", loginForPortal(true));
 
 router.post("/forgot-password", async (req, res) => {
     const response = { message: "If an account exists for that email, a password reset link has been sent" };
