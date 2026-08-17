@@ -5,6 +5,7 @@ import { FiChevronRight, FiHeart, FiLogOut, FiMenu, FiPackage, FiSearch, FiShopp
 import logo from "../assets/logo.png";
 import { CartContext } from "../context/CartContext";
 import { trackEvent } from "../utils/analytics";
+import { productPath } from "../utils/productUrl";
 
 const navItems = [["/shop?category=girls","Girls"],["/shop?category=boys","Boys"],["/shop?category=new-arrivals","New arrivals"],["/about","About"],["/contact","Contact"]];
 
@@ -30,7 +31,7 @@ function Navbar() {
     return () => { document.body.style.overflow = previousOverflow; window.removeEventListener("keydown", closeOnEscape); };
   }, [menuOpen]);
   useEffect(() => { const query = search.trim(); if (query.length < 2) return undefined; const controller = new AbortController(); const timer = setTimeout(() => { axios.get(`${import.meta.env.VITE_API_URL}/api/products/suggestions/search`, { params: { q: query }, signal: controller.signal }).then(({ data }) => setSuggestions(data.suggestions || [])).catch(() => {}); }, 250); return () => { clearTimeout(timer); controller.abort(); }; }, [search]);
-  const chooseSuggestion = (item) => { trackEvent("select_item", { item_list_name: "search_suggestions", items: [{ item_id: item.id, item_name: item.name, price: item.price }] }); setSearch(""); setSuggestions([]); setSearchOpen(false); setMenuOpen(false); navigate(`/product/${item.id}`); };
+  const chooseSuggestion = (item) => { trackEvent("select_item", { item_list_name: "search_suggestions", items: [{ item_id: item.id, item_name: item.name, price: item.price }] }); setSearch(""); setSuggestions([]); setSearchOpen(false); setMenuOpen(false); navigate(productPath(item)); };
   const suggestionList = search.trim().length >= 2 && suggestions.length > 0 && <div className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">{suggestions.map((item) => <button type="button" key={item.id} onClick={() => chooseSuggestion(item)} className="flex w-full items-center gap-3 border-b border-slate-100 p-3 text-left last:border-0 hover:bg-slate-50">{item.image ? <img src={item.image} alt="" className="h-12 w-10 rounded-lg object-cover"/> : <span className="h-12 w-10 rounded-lg bg-slate-100"/>}<span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-800">{item.name}</span><span className="text-xs capitalize text-slate-500">{String(item.category || "Kidswear").replace(/-/g, " ")} · ₹{Number(item.price).toLocaleString("en-IN")}</span></span></button>)}</div>;
 
   return <>

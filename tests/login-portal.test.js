@@ -14,3 +14,7 @@ test("each account type can use its intended portal", () => {
   assert.equal(loginPortalError({ isAdmin: false }, false), "");
   assert.equal(loginPortalError({ isAdmin: true }, true), "");
 });
+
+test("pending sellers cannot enter Seller Centre before verification", () => {
+  assert.equal(loginPortalError({ isAdmin: true, sellerAccessStatus: "pending" }, true), "Your Seller Centre access is awaiting business verification");
+});

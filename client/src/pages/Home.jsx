@@ -13,6 +13,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { imageSrcSet, optimizedImage } from "../utils/image";
+import { productPath } from "../utils/productUrl";
 
 const categories = [
   { key: "girls", label: "Girls", copy: "Dresses and sets for celebrations and everyday moments." },
@@ -40,7 +41,7 @@ function ProductCard({ product, onWishlist }) {
           <span className="text-xl font-bold text-[#183d2b]">₹{price.toLocaleString("en-IN")}</span>
           {mrp > price && <span className="text-sm text-slate-600 line-through">₹{mrp.toLocaleString("en-IN")}</span>}
         </div>
-        <Link to={`/product/${product._id}`} className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-semibold text-[#183d2b]">
+        <Link to={productPath(product)} className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-semibold text-[#183d2b]">
           View details <FiArrowRight />
         </Link>
       </div>
@@ -105,7 +106,7 @@ function Home() {
             </div>
             <div className="min-w-0 overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_75%_25%,#dce9df_0,#8dab96_65%,#52705b_100%)]">
               {heroProducts.length ? <Swiper modules={[Autoplay, Navigation, Pagination]} navigation pagination={{ clickable: true }} autoplay={{ delay: 4200, disableOnInteraction: false }} loop={heroProducts.length > 1} className="commerce-slider hero-slider h-[480px] lg:h-[620px]">
-                {heroProducts.map((product, index) => <SwiperSlide key={product._id}><Link to={`/product/${product._id}`} className="relative block h-full"><img src={optimizedImage(product.images?.[0]?.url, 900)} srcSet={imageSrcSet(product.images?.[0]?.url)} sizes="(min-width: 1024px) 55vw, 100vw" alt={product.name} width="900" height="1125" loading={index === 0 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10"><p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p><h2 className="mt-2 font-serif text-3xl md:text-4xl">{product.name}</h2><p className="mt-2 text-lg">From ₹{Number(product.price).toLocaleString("en-IN")}</p></div></Link></SwiperSlide>)}
+                {heroProducts.map((product, index) => <SwiperSlide key={product._id}><Link to={productPath(product)} className="relative block h-full"><img src={optimizedImage(product.images?.[0]?.url, 900)} srcSet={imageSrcSet(product.images?.[0]?.url)} sizes="(min-width: 1024px) 55vw, 100vw" alt={product.name} width="900" height="1125" loading={index === 0 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10"><p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p><h2 className="mt-2 font-serif text-3xl md:text-4xl">{product.name}</h2><p className="mt-2 text-lg">From ₹{Number(product.price).toLocaleString("en-IN")}</p></div></Link></SwiperSlide>)}
               </Swiper> : <Link to="/shop" className="flex h-[480px] items-end p-8 text-white lg:h-[620px]"><div><p className="text-xs font-semibold uppercase tracking-[0.22em]">Tamanna&apos;s Hut</p><h2 className="mt-3 font-serif text-4xl">Our collection is being prepared</h2></div></Link>}
             </div>
           </div>

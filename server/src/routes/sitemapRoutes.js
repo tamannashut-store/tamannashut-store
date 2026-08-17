@@ -40,7 +40,7 @@ router.get("/sitemap.xml", async (req, res) => {
         products.forEach((product) => {
             xml += `
 <url>
-<loc>https://www.tamannashut.com/product/${product._id}</loc>
+<loc>https://www.tamannashut.com/product/${product.slug || product._id}</loc>
 <lastmod>${product.updatedAt.toISOString()}</lastmod>
 </url>
 `;
