@@ -25,9 +25,9 @@ function ReturnPolicy() {
             At Tamanna's Hut, customer satisfaction is our priority.
           </p>
 
-          <h2 className="text-2xl font-semibold">
-            Returns
-          </h2>
+          <p>Last updated: 18 August 2026</p>
+
+          <h2 className="text-2xl font-semibold">Returns</h2>
 
           <p>
             We accept returns within 7 days of delivery for both
@@ -36,8 +36,11 @@ function ReturnPolicy() {
 
           <p>
             Returned items must be unused, unwashed, and in their
-            original packaging with all tags attached.
+            original packaging with all tags attached. For hygiene and safety, an item that has been worn, washed, altered, stained or damaged after delivery is not eligible unless it arrived defective.
           </p>
+
+          <h2 className="text-2xl font-semibold">How to request a return</h2>
+          <p>Email <a className="text-brand-primary underline" href="mailto:support@tamannashut.com">support@tamannashut.com</a> within 7 days of delivery with your order number, item, reason and photographs where relevant. Do not send an item before receiving return instructions. We will confirm eligibility and provide the return address or pickup instructions.</p>
 
           <h2 className="text-2xl font-semibold">
             Exchanges
@@ -53,7 +56,7 @@ function ReturnPolicy() {
 
           <p>
             If you receive a damaged, defective, or incorrect item,
-            please contact us within 48 hours of delivery.
+            please contact us within 48 hours of delivery with clear photographs. Tamanna Enterprise will bear the approved return shipping cost for a damaged, defective or incorrect item. For a non-defective return or size exchange, the customer bears the return shipping cost.
           </p>
 
           <h2 className="text-2xl font-semibold">
@@ -61,19 +64,18 @@ function ReturnPolicy() {
           </h2>
 
           <p>
-            Once the returned item is received and inspected,
-            eligible refunds will be processed within 5–7
-            business days.
+            Once the returned item is received and inspected, eligible refunds will be initiated within 5–7 business days. Prepaid orders are refunded to the original payment method. For cash-on-delivery orders, we will request bank or UPI details through our official support channel. Banks and payment providers may require additional time to credit the refund.
           </p>
+
+          <h2 className="text-2xl font-semibold">Cancellations</h2>
+          <p>To request cancellation, contact us as soon as possible with your order number. An order can be cancelled before it is dispatched. After dispatch, it must follow the return process above. If Tamanna Enterprise cancels an order that was prepaid, the full amount will be refunded to the original payment method.</p>
 
           <h2 className="text-2xl font-semibold">
             Contact Us
           </h2>
 
           <p>
-            Email: support@tamannashut.com
-            <br />
-            Website: https://www.tamannashut.com
+            Tamanna Enterprise<br />Email: <a className="text-brand-primary underline" href="mailto:support@tamannashut.com">support@tamannashut.com</a><br />Phone: <a className="text-brand-primary underline" href="tel:+919874328578">+91 98743 28578</a><br />House No. N0072, Ground Floor, Raghudebbati West, Sankrail, Howrah, West Bengal 711310
           </p>
         </div>
       </div>

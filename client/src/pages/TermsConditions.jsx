@@ -27,6 +27,7 @@ function TermsConditions() {
             Welcome to Tamanna's Hut. By using our website,
             you agree to the following terms and conditions.
           </p>
+          <p>Tamanna&apos;s Hut is owned and operated by Tamanna Enterprise, House No. N0072, Ground Floor, Raghudebbati West, Sankrail, Howrah, West Bengal 711310. GSTIN: 19BKDPB6636D1ZE.</p>
 
           <h2 className="text-2xl font-semibold">
             Products & Pricing
@@ -43,8 +44,7 @@ function TermsConditions() {
           </h2>
 
           <p>
-            All orders are subject to availability and
-            confirmation of payment.
+            All orders are subject to availability and confirmation. Cash on delivery and online payment options are shown at checkout when available. The complete payable amount is displayed before an order is placed.
           </p>
 
           <h2 className="text-2xl font-semibold">
@@ -79,7 +79,7 @@ function TermsConditions() {
           </h2>
 
           <p>
-            Email: support@tamannashut.com
+            Email: <a className="text-brand-primary underline" href="mailto:support@tamannashut.com">support@tamannashut.com</a><br />Phone: <a className="text-brand-primary underline" href="tel:+919874328578">+91 98743 28578</a>
           </p>
         </div>
       </div>

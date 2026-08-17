@@ -1,11 +1,19 @@
 import express from "express";
 import Product from "../models/Product.js";
+import { inventoryItems } from "../utils/inventory.js";
 
 const router = express.Router();
 
 router.get("/google-feed.xml", async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find({ status: "active" }).lean();
+
+    const xmlText = (value) => String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&apos;");
 
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
@@ -18,32 +26,31 @@ xmlns:g="http://base.google.com/ns/1.0">
     products.forEach((product) => {
 
       const imageUrl = product.images?.[0]?.url || "";
+      const stock = inventoryItems(product).reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
+      const availability = stock > 0 ? "in_stock" : "out_of_stock";
 
       xml += `
 <item>
-<g:id>${product._id}</g:id>
+<g:id>${xmlText(product._id)}</g:id>
 
-<g:title><![CDATA[${product.name || ""}]]></g:title>
+<g:title>${xmlText(product.name)}</g:title>
 
-<g:description><![CDATA[
-${product.description || product.name || ""}
-]]></g:description>
+<g:description>${xmlText(product.description || product.name)}</g:description>
 
-<g:link>https://www.tamannashut.com/product/${product._id}</g:link>
+<g:link>https://www.tamannashut.com/product/${xmlText(product._id)}</g:link>
 
-<g:image_link>${imageUrl}</g:image_link>
+<g:image_link>${xmlText(imageUrl)}</g:image_link>
 
-<g:availability>in_stock</g:availability>
+<g:availability>${availability}</g:availability>
 
 <g:condition>new</g:condition>
 
 <g:price>${product.price} INR</g:price>
 
-<g:brand><![CDATA[Tamanna's Hut]]></g:brand>
+<g:brand>Tamanna&apos;s Hut</g:brand>
 <g:identifier_exists>false</g:identifier_exists>
-<g:google_product_category><![CDATA[
-Apparel & Accessories > Clothing
-]]></g:google_product_category>
+<g:shipping><g:country>IN</g:country><g:service>Standard</g:service><g:price>0 INR</g:price></g:shipping>
+<g:google_product_category>Apparel &amp; Accessories &gt; Clothing</g:google_product_category>
 
 </item>`;
     });

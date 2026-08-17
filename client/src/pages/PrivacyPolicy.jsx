@@ -47,6 +47,9 @@ function PrivacyPolicy() {
                         customer support and improve our services.
                     </p>
 
+                    <h2 className="text-2xl font-semibold">Service Providers</h2>
+                    <p>We share only the information needed to fulfil orders or operate the store with service providers such as payment processors, delivery partners, website hosting and customer-support providers. We do not sell customer personal information.</p>
+
                     <h2 className="text-2xl font-semibold">
                         Data Security
                     </h2>
@@ -61,7 +64,7 @@ function PrivacyPolicy() {
                     </h2>
 
                     <p>
-                        Email: support@tamannashut.com
+                        This website is operated by Tamanna Enterprise. For privacy questions or requests, email <a className="text-brand-primary underline" href="mailto:support@tamannashut.com">support@tamannashut.com</a> or call <a className="text-brand-primary underline" href="tel:+919874328578">+91 98743 28578</a>.
                     </p>
                 </div>
             </div>

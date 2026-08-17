@@ -31,17 +31,14 @@ function ShippingPolicy() {
             Processing Time
           </h2>
 
-          <p>
-            Orders are usually processed within 1 business day.
-          </p>
+          <p>Orders are usually processed within 1 business day after order confirmation. Orders placed on Sundays or public holidays are processed on the next business day.</p>
 
           <h2 className="text-2xl font-semibold">
             Delivery Time
           </h2>
 
           <p>
-            Delivery generally takes 3–7 business days depending
-            on the destination and courier availability.
+            Delivery generally takes 3–7 business days after dispatch, depending on the destination, serviceability and courier conditions. Remote locations may take longer. These are estimates, not guaranteed delivery dates.
           </p>
 
           <h2 className="text-2xl font-semibold">
@@ -49,7 +46,7 @@ function ShippingPolicy() {
           </h2>
 
           <p>
-            Shipping charges, if applicable, are displayed during checkout.
+            Standard shipping is currently free for orders delivered within India. Any future paid shipping option will be clearly displayed before the customer places the order.
           </p>
 
           <h2 className="text-2xl font-semibold">
@@ -57,8 +54,7 @@ function ShippingPolicy() {
           </h2>
 
           <p>
-            Customers will receive tracking details once the order
-            has been dispatched.
+            Customers receive tracking details after dispatch. Please provide a complete address and reachable phone number. If a parcel is returned because of an incorrect address, repeated failed delivery attempts or refusal, contact support before placing a replacement order.
           </p>
 
           <h2 className="text-2xl font-semibold">
@@ -66,7 +62,7 @@ function ShippingPolicy() {
           </h2>
 
           <p>
-            Email: support@tamannashut.com
+            For delivery questions, email <a className="text-brand-primary underline" href="mailto:support@tamannashut.com">support@tamannashut.com</a> or call <a className="text-brand-primary underline" href="tel:+919874328578">+91 98743 28578</a>.
           </p>
         </div>
       </div>

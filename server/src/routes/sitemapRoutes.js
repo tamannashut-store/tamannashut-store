@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get("/sitemap.xml", async (req, res) => {
     try {
-        const products = await Product.find();
+        const products = await Product.find({ status: "active" });
 
         let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

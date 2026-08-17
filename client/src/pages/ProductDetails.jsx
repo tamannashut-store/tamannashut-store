@@ -289,8 +289,8 @@ function ProductDetails() {
               </div>
 
               <div className="mt-7 grid grid-cols-3 gap-3 border-t pt-6 text-center text-xs text-gray-600">
-                <div><span className="block text-xl">🚚</span><span className="mt-1 block">Free delivery*</span></div>
-                <div><span className="block text-xl">↩</span><span className="mt-1 block">Easy returns</span></div>
+                <div><span className="block text-xl">🚚</span><span className="mt-1 block">Free India delivery</span></div>
+                <div><span className="block text-xl">↩</span><span className="mt-1 block">7-day returns</span></div>
                 <div><span className="block text-xl">🔒</span><span className="mt-1 block">Secure payment</span></div>
               </div>
             </section>

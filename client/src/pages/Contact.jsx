@@ -95,6 +95,8 @@ function Contact() {
             <p className="mb-3">
               <a href="tel:+919874328578" className="hover:underline">+91 98743 28578</a>
             </p>
+            <p className="mb-3 text-sm leading-6 text-gray-600">Customer support: Monday–Saturday, 10:00 AM–6:00 PM IST. We normally respond within 1–2 business days.</p>
+            <address className="mt-5 not-italic leading-7 text-gray-700"><strong>Legal seller: Tamanna Enterprise</strong><br />House No. N0072, Ground Floor<br />Raghudebbati West, Sankrail<br />Howrah, West Bengal 711310, India<br />GSTIN: 19BKDPB6636D1ZE</address>
           </div>
 
           <form
