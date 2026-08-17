@@ -19,7 +19,7 @@ function EditProduct() {
 
   useEffect(() => {
     const urls = previewUrls.current;
-    axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`)
+    axios.get(`${import.meta.env.VITE_API_URL}/api/products/admin/item/${id}`)
       .then(({ data }) => {
         setForm({
           name: data.name || "", price: data.price ?? "", mrp: data.mrp ?? data.price ?? "", baseSku: data.baseSku || "", hsnCode: data.hsnCode || "",
@@ -68,7 +68,8 @@ function EditProduct() {
       newImages.forEach((image) => data.append("images", image.file));
       await axios.put(`${import.meta.env.VITE_API_URL}/api/products/${id}`, data);
       toast.success("Product updated");
-      navigate("/admin");
+      const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
+      navigate(sellerAccount ? "/seller/products" : "/admin");
     } catch (error) { toast.error(error.response?.data?.message || "Update failed"); }
     finally { setSaving(false); }
   };
@@ -82,9 +83,10 @@ function EditProduct() {
 
   if (loading) return <div className="p-10 text-slate-500">Loading product…</div>;
 
+  const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
   return (
     <div className="p-5 md:p-8 xl:p-10">
-      <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1></div><button onClick={() => navigate("/admin")} className="btn-secondary">Back to products</button></header>
+      <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1></div><button onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")} className="btn-secondary">Back to products</button></header>
       <form onSubmit={submit} className="mt-8">
         <ListingWizardNav current={editStep} onChange={setEditStep} />
         {editStep === 0 && <div className="mx-auto max-w-4xl">

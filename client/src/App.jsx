@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import StoreLayout from "./components/StoreLayout";
 import AdminRoute from "./components/AdminRoute";
 import PrivateRoute from "./components/PrivateRoute";
+import SellerRoute from "./components/SellerRoute";
 
 const Home = lazy(() => import("./pages/Home")); const Login = lazy(() => import("./pages/Login")); const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword")); const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -17,7 +18,11 @@ const AdminContacts = lazy(() => import("./pages/AdminContacts")); const AdminLo
 const AdminReviews = lazy(() => import("./pages/AdminReviews"));
 const AdminOperations = lazy(() => import("./pages/AdminOperations"));
 const AdminTeam = lazy(() => import("./pages/AdminTeam"));
+const AdminSellerListings = lazy(() => import("./pages/AdminSellerListings"));
 const SellerRegister = lazy(() => import("./pages/SellerRegister"));
+const SellerDashboard = lazy(() => import("./pages/SellerDashboard"));
+const SellerOrders = lazy(() => import("./pages/SellerOrders"));
+const SellerAccount = lazy(() => import("./pages/SellerAccount"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => <div className="grid min-h-[55vh] place-items-center bg-brand-background text-sm font-medium text-slate-500">Loading…</div>;
@@ -61,9 +66,17 @@ function App() {
           <Route path="/admin/reviews" element={<AdminReviews />} />
           <Route path="/admin/operations" element={<AdminOperations />} />
           <Route path="/admin/team" element={<AdminTeam />} />
+          <Route path="/admin/listing-approvals" element={<AdminSellerListings />} />
           <Route path="/admin/edit/:id" element={<EditProduct />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/contacts" element={<AdminContacts />} />
+        </Route>
+        <Route element={<SellerRoute><AdminLayout /></SellerRoute>}>
+          <Route path="/seller/dashboard" element={<SellerDashboard />} />
+          <Route path="/seller/products" element={<Admin />} />
+          <Route path="/seller/products/edit/:id" element={<EditProduct />} />
+          <Route path="/seller/orders" element={<SellerOrders />} />
+          <Route path="/seller/profile" element={<SellerAccount />} />
         </Route>
         <Route path="/admin-coupons" element={<Navigate to="/admin/coupons" replace />} />
       </Routes></Suspense>

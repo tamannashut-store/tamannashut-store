@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { hasActiveSellerCentreAccess, isMarketplaceSeller, isPlatformAdmin } from "../utils/accountRoles.js";
 
 export const protect = async (req, res, next) => {
 
@@ -64,10 +65,7 @@ export const protect = async (req, res, next) => {
 };
 
 export const admin = (req, res, next) => {
-    if (
-        req.user &&
-        req.user.isAdmin
-    ) {
+    if (req.user && isPlatformAdmin(req.user)) {
         return next();
     }
 
@@ -75,4 +73,14 @@ export const admin = (req, res, next) => {
         message: "Admin only",
     });
 
+};
+
+export const sellerCentre = (req, res, next) => {
+    if (req.user && hasActiveSellerCentreAccess(req.user)) return next();
+    return res.status(403).json({ message: "Active Seller Centre account required" });
+};
+
+export const seller = (req, res, next) => {
+    if (req.user && isMarketplaceSeller(req.user) && req.user.sellerAccessStatus === "active") return next();
+    return res.status(403).json({ message: "Active seller account required" });
 };

@@ -6,7 +6,7 @@ import { invoiceTemplate } from "../utils/invoiceTemplate.js";
 import { generateInvoice } from "../utils/generateInvoice.js";
 import { generatePackingSlip } from "../utils/generatePackingSlip.js";
 import { ORDER_STATUSES, canTransitionOrder, getNextOrderStatuses, restoresStockAt, syncCodPaymentStatus } from "../utils/orderLifecycle.js";
-import { protect, admin } from "../middleware/authMiddleware.js";
+import { protect, admin, seller } from "../middleware/authMiddleware.js";
 import {
   calculateCart,
   createOrderWithReservedStock,
@@ -19,6 +19,7 @@ import upload from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 import { recordAudit } from "../utils/recordAudit.js";
+import { isPlatformAdmin } from "../utils/accountRoles.js";
 
 const router = express.Router();
 const serializeOrder = (order) => { const value = order.toObject ? order.toObject() : order; return value.status === "Processing" ? { ...value, status: "Confirmed" } : value; };
@@ -50,7 +51,7 @@ router.get("/invoice/:id", protect, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
-    if (!req.user.isAdmin && String(order.userId) !== String(req.user._id)) {
+    if (!isPlatformAdmin(req.user) && String(order.userId) !== String(req.user._id)) {
       return res.status(403).json({ message: "Access denied" });
     }
     generateInvoice(order, res);
@@ -80,6 +81,30 @@ router.post("/resend-invoice/:id", protect, admin, async (req, res) => {
   }
 });
 
+router.get("/seller/mine", protect, seller, async (req, res) => {
+  try {
+    const orders = await Order.find({ "products.sellerId": req.user._id }).sort({ createdAt: -1 }).limit(200).lean();
+    const scoped = orders.map((order) => {
+      const products = (order.products || []).filter((item) => String(item.sellerId || "") === String(req.user._id));
+      const sellerTotal = products.reduce((sum, item) => sum + Number(item.lineTotal ?? Number(item.price || 0) * Number(item.qty || 0)), 0);
+      return {
+        _id: order._id,
+        createdAt: order.createdAt,
+        customerName: order.customerName,
+        city: order.city,
+        state: order.state,
+        pincode: order.pincode,
+        products,
+        sellerTotal,
+        paymentMethod: order.paymentMethod,
+        paymentStatus: order.paymentStatus,
+        status: order.status,
+      };
+    });
+    return res.json({ orders: scoped });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
 router.get("/", protect, admin, async (_req, res) => {
   try {
     const orders = await Order.find().sort({ createdAt: -1 });
@@ -93,7 +118,7 @@ router.put("/cancel/:id", protect, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
-    if (!req.user.isAdmin && String(order.userId) !== String(req.user._id)) {
+    if (!isPlatformAdmin(req.user) && String(order.userId) !== String(req.user._id)) {
       return res.status(403).json({ message: "Access denied" });
     }
     const nextStatus = order.status === "Pending" ? "Cancelled" : ["Processing", "Confirmed"].includes(order.status) ? "Cancellation Requested" : null;
@@ -102,7 +127,7 @@ router.put("/cancel/:id", protect, async (req, res) => {
     const cancellationReason = String(req.body.reason || "Requested by customer").trim().slice(0, 300);
     order.status = nextStatus;
     syncCodPaymentStatus(order, nextStatus);
-    order.cancellationRequest = { reason: cancellationReason, requestedAt: new Date(), requestedBy: req.user.isAdmin ? "Admin" : "Customer" };
+    order.cancellationRequest = { reason: cancellationReason, requestedAt: new Date(), requestedBy: isPlatformAdmin(req.user) ? "Admin" : "Customer" };
     order.statusHistory.push({ status: nextStatus, note: cancellationReason });
     await order.save();
     await Promise.allSettled([sendStatusUpdate(order)]);
@@ -121,7 +146,7 @@ router.post("/return/:id", protect, upload.array("images", 3), async (req, res) 
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
-    if (!req.user.isAdmin && String(order.userId) !== String(req.user._id)) return res.status(403).json({ message: "Access denied" });
+    if (!isPlatformAdmin(req.user) && String(order.userId) !== String(req.user._id)) return res.status(403).json({ message: "Access denied" });
     if (order.status !== "Delivered") return res.status(400).json({ message: "Returns can be requested after delivery" });
     const deliveredAt = [...order.statusHistory].reverse().find((item) => item.status === "Delivered")?.createdAt;
     if (deliveredAt && Date.now() - new Date(deliveredAt).getTime() > 7 * 86400000) return res.status(400).json({ message: "The 7-day return window has closed" });

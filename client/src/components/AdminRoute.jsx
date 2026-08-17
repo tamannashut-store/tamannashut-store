@@ -5,7 +5,9 @@ function AdminRoute({ children }) {
 
     const userData = readSession();
 
-    if (!userData?.user?.isAdmin) {
+    const platformAdmin = userData?.user?.accountType === "platform_admin"
+      || (userData?.user?.isAdmin && userData?.user?.sellerRole !== "member");
+    if (!platformAdmin) {
 
         return <Navigate to="/admin-login" />;
     }

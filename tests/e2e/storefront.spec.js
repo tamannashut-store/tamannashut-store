@@ -244,6 +244,23 @@ test("seller sidebar shows actionable notification counts", async ({ page }) => 
   await expect(page.getByRole("link", { name: /Messages 1 items need attention/ })).toBeVisible();
 });
 
+test("Seller Centre navigation scrolls on a short desktop viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 420 });
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true, accountType: "platform_admin" } })));
+  await page.goto("/admin/orders");
+  const navigation = page.getByRole("navigation", { name: "Seller Centre navigation" });
+  await expect(navigation).toBeVisible();
+  const dimensions = await navigation.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+    overflowY: getComputedStyle(element).overflowY,
+  }));
+  expect(dimensions.overflowY).toBe("auto");
+  expect(dimensions.scrollHeight).toBeGreaterThan(dimensions.clientHeight);
+  await page.getByRole("link", { name: "Seller team" }).scrollIntoViewIfNeeded();
+  await expect(page.getByRole("link", { name: "Seller team" })).toBeVisible();
+});
+
 test("seller overview renders analytics without a runtime error", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
   await page.goto("/admin/dashboard");

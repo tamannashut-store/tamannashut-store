@@ -8,6 +8,7 @@ import { adminNewOrderEmailTemplate, orderEmailTemplate } from "../utils/emailTe
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 import { nextInvoiceNumber } from "../utils/invoiceNumber.js";
 import { gstRateForApparelUnit } from "../utils/gst.js";
+import { storefrontProductFilter } from "../utils/productVisibility.js";
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -64,7 +65,7 @@ export const calculateCart = async (items, couponCode = "") => {
   }
 
   const productIds = [...new Set(normalized.map((item) => item.productId))];
-  const products = await Product.find({ _id: { $in: productIds } }).lean();
+  const products = await Product.find(storefrontProductFilter({ _id: { $in: productIds } })).lean();
   const productById = new Map(products.map((product) => [String(product._id), product]));
 
   const lines = normalized.map((item) => {
@@ -79,6 +80,7 @@ export const calculateCart = async (items, couponCode = "") => {
     const image = selectProductImage(product, variant, item.selectedSize);
     return {
       _id: product._id,
+      sellerId: product.sellerId || null,
       name: product.name,
       price,
       qty: item.qty,
@@ -154,6 +156,7 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       const result = await Product.updateOne(
         {
           _id: item._id,
+          ...storefrontProductFilter(),
           sizeStock: { $elemMatch: { size: item.selectedSize, stock: { $gte: item.qty } } },
         },
         { $inc: { "sizeStock.$.stock": -item.qty } }
