@@ -7,13 +7,14 @@ import SellerInvitation from "../models/SellerInvitation.js";
 import SellerProfile from "../models/SellerProfile.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
-import { admin, protect } from "../middleware/authMiddleware.js";
+import { admin, protect, seller } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { passwordResetEmailTemplate, sellerInvitationEmailTemplate, sellerVerificationEmailTemplate } from "../utils/emailTemplates.js";
 import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
 import { loginPortalError } from "../utils/loginPortal.js";
 import { decryptSellerValue, encryptedSellerProfile, normalizeSellerDetails } from "../utils/sellerOnboarding.js";
 import { recordAudit } from "../utils/recordAudit.js";
+import { accountTypeFor, isPlatformAdmin, publicAccount } from "../utils/accountRoles.js";
 
 const router = express.Router();
 
@@ -53,14 +54,7 @@ router.post("/register", async (req, res) => {
           
           return res.status(201).json({
             token,
-            user: {
-              id: user._id,
-              name: user.name,
-              email: user.email,
-              isAdmin: user.isAdmin,
-              sellerRole: user.sellerRole || "",
-              sellerAccessStatus: user.sellerAccessStatus || "active",
-            },
+            user: publicAccount(user),
           });
     } catch (error) {
         res.status(500).json({
@@ -98,14 +92,7 @@ const loginForPortal = (adminPortal = false) => async (req, res) => {
 
         return res.json({
             token,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                isAdmin: user.isAdmin,
-                sellerRole: user.sellerRole || "",
-                sellerAccessStatus: user.sellerAccessStatus || "active",
-            },
+            user: publicAccount(user),
         });
 
     } catch (error) {
@@ -117,7 +104,7 @@ router.post("/login", loginForPortal(false));
 router.post("/admin-login", loginForPortal(true));
 
 const ownerOnly = (req, res, next) => {
-    if (!req.user?.isAdmin || req.user.sellerRole === "member") return res.status(403).json({ message: "Only the store owner can manage seller accounts" });
+    if (!isPlatformAdmin(req.user)) return res.status(403).json({ message: "Only the platform administrator can manage seller accounts" });
     return next();
 };
 
@@ -166,7 +153,7 @@ router.post("/seller-invitations/:token/accept", async (req, res) => {
         if (name.length < 2 || name.length > 80 || password.length < 8 || password.length > 128) return res.status(400).json({ message: "Enter your full name and a password of at least 8 characters" });
         const details = normalizeSellerDetails(req.body);
         const securedProfile = encryptedSellerProfile(details);
-        createdUser = await User.create({ name, email: invitation.email, password: await bcrypt.hash(password, 10), isAdmin: true, sellerRole: "member", sellerAccessStatus: "pending" });
+        createdUser = await User.create({ name, email: invitation.email, password: await bcrypt.hash(password, 10), isAdmin: false, accountType: "seller", sellerRole: "member", sellerAccessStatus: "pending" });
         await SellerProfile.create({ userId: createdUser._id, ...securedProfile });
         invitation.acceptedAt = new Date();
         await invitation.save();
@@ -179,8 +166,9 @@ router.post("/seller-invitations/:token/accept", async (req, res) => {
 
 router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
     try {
+        res.set("Cache-Control", "no-store");
         const [users, profiles, invitations] = await Promise.all([
-            User.find({ isAdmin: true }).select("name email sellerRole sellerAccessStatus createdAt").sort({ createdAt: 1 }).lean(),
+            User.find({ $or: [{ isAdmin: true }, { accountType: "seller" }, { sellerRole: "member" }] }).select("name email isAdmin accountType sellerRole sellerAccessStatus createdAt").sort({ createdAt: 1 }).lean(),
             SellerProfile.find().select("+gstinEncrypted +panEncrypted +bankAccountEncrypted +ifscEncrypted").lean(),
             SellerInvitation.find({ acceptedAt: null, expiresAt: { $gt: new Date() } }).select("email expiresAt createdAt").sort({ createdAt: -1 }).lean(),
         ]);
@@ -189,11 +177,20 @@ router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
             const profile = profilesByUser.get(String(user._id));
             return { ...user, profile: profile ? {
                 legalBusinessName: profile.legalBusinessName,
+                tradeName: profile.tradeName,
+                businessType: profile.businessType,
+                businessPhone: profile.businessPhone,
+                authorizedSignatoryName: profile.authorizedSignatoryName,
+                registeredAddress: profile.registeredAddress,
+                pickupAddress: profile.pickupAddress,
                 gstin: decryptSellerValue(profile.gstinEncrypted),
                 pan: decryptSellerValue(profile.panEncrypted),
                 bankAccountHolder: profile.bankAccountHolder,
+                bankAccountType: profile.bankAccountType,
                 bankAccountNumber: decryptSellerValue(profile.bankAccountEncrypted),
                 ifsc: decryptSellerValue(profile.ifscEncrypted),
+                gstVerification: profile.gstVerification,
+                bankVerification: profile.bankVerification,
                 verificationStatus: profile.verificationStatus,
                 submittedAt: profile.submittedAt,
                 reviewedAt: profile.reviewedAt,
@@ -212,13 +209,18 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
         const note = String(req.body.note || "").trim().slice(0, 500);
         if (!['verified', 'rejected'].includes(status)) return res.status(400).json({ message: "Choose verified or rejected" });
         if (status === "rejected" && note.length < 5) return res.status(400).json({ message: "Explain what the seller needs to correct" });
-        const user = await User.findOne({ _id: req.params.userId, isAdmin: true });
+        if (status === "verified" && (req.body.gstVerified !== true || req.body.bankVerified !== true)) return res.status(400).json({ message: "Confirm both the official GST record and bank ownership proof before approval" });
+        const user = await User.findOne({ _id: req.params.userId, $or: [{ accountType: "seller" }, { sellerRole: "member" }] });
         const profile = await SellerProfile.findOne({ userId: req.params.userId });
         if (!user || !profile) return res.status(404).json({ message: "Seller verification record not found" });
         profile.verificationStatus = status;
         profile.reviewedAt = new Date();
         profile.reviewedBy = req.user._id;
         profile.reviewNote = note;
+        if (status === "verified") {
+            profile.gstVerification = { ...(profile.gstVerification?.toObject?.() || profile.gstVerification || {}), status: "verified", source: "official_portal_manual_review", checkedAt: new Date(), legalName: profile.legalBusinessName, registrationStatus: "Active" };
+            profile.bankVerification = { ...(profile.bankVerification?.toObject?.() || profile.bankVerification || {}), status: "verified", source: "bank_proof_manual_review", checkedAt: new Date(), beneficiaryName: profile.bankAccountHolder };
+        }
         user.sellerAccessStatus = status === "verified" ? "active" : "rejected";
         await Promise.all([profile.save(), user.save()]);
         await recordAudit({ user: req.user, action: `seller.${status}`, entityType: "seller", entityId: user._id, summary: `${status === "verified" ? "Approved" : "Rejected"} seller ${user.email}` });
@@ -227,6 +229,38 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
     } catch (error) {
         return res.status(error.status || 500).json({ message: process.env.NODE_ENV === "production" ? "Seller verification could not be updated" : error.message });
     }
+});
+
+router.get("/seller-profile/me", protect, seller, async (req, res) => {
+    try {
+        res.set("Cache-Control", "no-store");
+        const profile = await SellerProfile.findOne({ userId: req.user._id }).lean();
+        if (!profile) return res.status(404).json({ message: "Seller profile not found" });
+        return res.json({
+            account: publicAccount(req.user),
+            profile: {
+                legalBusinessName: profile.legalBusinessName,
+                tradeName: profile.tradeName,
+                businessType: profile.businessType,
+                businessPhone: profile.businessPhone,
+                authorizedSignatoryName: profile.authorizedSignatoryName,
+                registeredAddress: profile.registeredAddress,
+                pickupAddress: profile.pickupAddress,
+                gstinLast4: profile.gstinLast4,
+                panLast4: profile.panLast4,
+                bankAccountHolder: profile.bankAccountHolder,
+                bankAccountType: profile.bankAccountType,
+                bankAccountLast4: profile.bankAccountLast4,
+                ifscLast4: profile.ifscLast4,
+                gstVerification: profile.gstVerification,
+                bankVerification: profile.bankVerification,
+                verificationStatus: profile.verificationStatus,
+                submittedAt: profile.submittedAt,
+                reviewedAt: profile.reviewedAt,
+                reviewNote: profile.reviewNote,
+            },
+        });
+    } catch (error) { return res.status(500).json({ message: "Seller profile could not be loaded" }); }
 });
 
 router.post("/forgot-password", async (req, res) => {
@@ -276,7 +310,7 @@ router.get("/profile/:id", protect, async (req, res) => {
 
     try {
 
-        if (String(req.user._id) !== req.params.id && !req.user.isAdmin) {
+        if (String(req.user._id) !== req.params.id && !isPlatformAdmin(req.user)) {
             return res.status(403).json({ message: "Access denied" });
         }
 
@@ -299,7 +333,7 @@ router.put("/profile/:id", protect, async (req, res) => {
 
     try {
 
-        if (String(req.user._id) !== req.params.id && !req.user.isAdmin) {
+        if (String(req.user._id) !== req.params.id && !isPlatformAdmin(req.user)) {
             return res.status(403).json({ message: "Access denied" });
         }
 
@@ -353,7 +387,7 @@ router.delete("/profile/:id", protect, async (req, res) => {
         if (String(req.user._id) !== req.params.id) return res.status(403).json({ message: "Access denied" });
         const user = await User.findById(req.params.id).select("+password");
         if (!user) return res.status(404).json({ message: "User not found" });
-        if (user.isAdmin) return res.status(400).json({ message: "The seller administrator account cannot be deleted here" });
+        if (accountTypeFor(user) !== "customer") return res.status(400).json({ message: "Seller Centre accounts cannot be deleted from the customer profile" });
         const password = String(req.body.password || "");
         if (!password || !(await bcrypt.compare(password, user.password))) return res.status(400).json({ message: "Enter your current password to delete the account" });
         const activeStatuses = ["Pending", "Processing", "Confirmed", "Packed", "Shipped", "Cancellation Requested", "Return Requested", "Return Approved", "Return Picked Up", "Refund Pending", "RTO Initiated"];

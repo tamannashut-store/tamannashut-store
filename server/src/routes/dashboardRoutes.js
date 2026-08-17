@@ -4,7 +4,7 @@ import Product from "../models/Product.js";
 import User from "../models/User.js";
 import AuditLog from "../models/AuditLog.js";
 import Contact from "../models/Contact.js";
-import { admin, protect } from "../middleware/authMiddleware.js";
+import { admin, protect, seller } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { cartRecoveryEmailTemplate } from "../utils/emailTemplates.js";
 import { recordAudit } from "../utils/recordAudit.js";
@@ -22,9 +22,33 @@ const recoveryEligibleFilter = () => ({
 });
 const maskedEmail = (email) => { const [name, domain] = String(email || "").split("@"); return domain ? `${name.slice(0, 2)}***@${domain}` : "Customer"; };
 
+router.get("/seller", protect, seller, async (req, res) => {
+  try {
+    const sellerId = req.user._id;
+    const [products, recentOrders] = await Promise.all([
+      Product.find({ sellerId }).select("status approvalStatus variants sizeStock lowStockThreshold").lean(),
+      Order.find({ "products.sellerId": sellerId }).select("products status createdAt").sort({ createdAt: -1 }).limit(100).lean(),
+    ]);
+    const sellerLines = recentOrders.flatMap((order) => (order.products || [])
+      .filter((item) => String(item.sellerId || "") === String(sellerId))
+      .map((item) => ({ ...item, orderStatus: order.status, orderCreatedAt: order.createdAt })));
+    const deliveredRevenue = money(sellerLines.filter((line) => line.orderStatus === "Delivered").reduce((sum, line) => sum + Number(line.lineTotal ?? Number(line.price || 0) * Number(line.qty || 0)), 0));
+    return res.json({
+      summary: {
+        products: products.length,
+        activeProducts: products.filter((product) => product.status === "active" && !["pending", "rejected"].includes(product.approvalStatus)).length,
+        pendingListings: products.filter((product) => product.approvalStatus === "pending").length,
+        lowStockProducts: products.filter(isLowStockProduct).length,
+        orders: recentOrders.length,
+        deliveredRevenue,
+      },
+    });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
 router.get("/notifications", protect, admin, async (_req, res) => {
   try {
-    const [orders, reviewResult, messages, products] = await Promise.all([
+    const [orders, reviewResult, messages, products, listingApprovals] = await Promise.all([
       Order.countDocuments({ $or: [
         { status: { $in: ["Pending", "Cancellation Requested", "Return Requested", "Returned", "RTO Delivered"] } },
         { status: "Refund Pending", paymentMethod: "COD" },
@@ -37,8 +61,9 @@ router.get("/notifications", protect, admin, async (_req, res) => {
       ]),
       Contact.countDocuments({ readAt: null }),
       Product.find({ status: "active" }).select("variants sizeStock lowStockThreshold").lean(),
+      Product.countDocuments({ approvalStatus: "pending" }),
     ]);
-    return res.json({ orders, reviews: reviewResult[0]?.count || 0, messages, products: products.filter(isLowStockProduct).length });
+    return res.json({ orders, reviews: reviewResult[0]?.count || 0, messages, products: products.filter(isLowStockProduct).length, listingApprovals });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 
@@ -104,11 +129,15 @@ router.get("/analytics", protect, admin, async (req, res) => {
     const now = new Date();
     const periodStart = new Date(now.getTime() - days * 86400000);
     const previousStart = new Date(periodStart.getTime() - days * 86400000);
+    const customerAccounts = { $or: [
+      { accountType: "customer" },
+      { accountType: { $exists: false }, isAdmin: { $ne: true }, sellerRole: { $ne: "member" } },
+    ] };
     const [orders, products, activeCartUsers, totalUsers] = await Promise.all([
       Order.find({ createdAt: { $gte: previousStart } }).select("userId customerName city products totalAmount discount couponCode paymentMethod paymentStatus status refund createdAt").sort({ createdAt: -1 }).limit(5000).lean(),
       Product.find({ status: { $nin: ["draft", "archived"] } }).select("name variants sizeStock lowStockThreshold status").lean(),
-      User.countDocuments({ "cart.0": { $exists: true } }),
-      User.countDocuments({ isAdmin: { $ne: true } }),
+      User.countDocuments({ ...customerAccounts, "cart.0": { $exists: true } }),
+      User.countDocuments(customerAccounts),
     ]);
 
     const currentOrders = orders.filter((order) => new Date(order.createdAt) >= periodStart);

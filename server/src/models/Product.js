@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
   {
+    sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
     name: { type: String, required: true },
     slug: { type: String, trim: true, lowercase: true },
     price: { type: Number, required: true },
@@ -34,6 +35,15 @@ const productSchema = new mongoose.Schema(
       default: "active",
       index: true,
     },
+    approvalStatus: {
+      type: String,
+      enum: ["not_required", "pending", "approved", "rejected"],
+      default: "not_required",
+      index: true,
+    },
+    approvalNote: { type: String, default: "", trim: true, maxlength: 500 },
+    reviewedAt: { type: Date, default: null },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     lowStockThreshold: { type: Number, default: 3, min: 0 },
 
     sizeStock: [
@@ -91,6 +101,8 @@ productSchema.index({ price: 1 });
 productSchema.index({ averageRating: -1 });
 productSchema.index({ "variants.sku": 1 });
 productSchema.index({ status: 1, color: 1, fabric: 1, ageGroup: 1 });
+productSchema.index({ sellerId: 1, updatedAt: -1 });
+productSchema.index({ sellerId: 1, approvalStatus: 1, status: 1 });
 
 const Product = mongoose.model("Product", productSchema);
 

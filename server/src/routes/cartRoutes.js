@@ -2,6 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { protect } from "../middleware/authMiddleware.js";
 import Product from "../models/Product.js";
+import { storefrontProductFilter } from "../utils/productVisibility.js";
 import User from "../models/User.js";
 
 const router = express.Router();
@@ -24,7 +25,7 @@ const cartKey = (item) => `${item.productId}:${item.selectedSku || item.selected
 const cartTrackingUpdate = (cart) => ({ cart, cartUpdatedAt: cart.length ? new Date() : null });
 
 const expandCart = async (cart) => {
-  const products = await Product.find({ _id: { $in: cart.map((item) => item.productId) }, status: { $nin: ["draft", "archived"] } }).lean();
+  const products = await Product.find(storefrontProductFilter({ _id: { $in: cart.map((item) => item.productId) } })).lean();
   const byId = new Map(products.map((product) => [String(product._id), product]));
   return cart.flatMap((item) => {
     const product = byId.get(String(item.productId));

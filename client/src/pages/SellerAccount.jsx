@@ -1,0 +1,19 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { FiCheckCircle, FiShield } from "react-icons/fi";
+import { SellerHeader, SellerPage, StatusBadge } from "../components/SellerUI";
+
+const Address = ({ value }) => value ? <>{value.line1}{value.line2 ? `, ${value.line2}` : ""}<br/>{value.city}, {value.state} {value.pincode}</> : "Not available";
+
+function SellerAccount() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => { let active = true; axios.get(`${import.meta.env.VITE_API_URL}/api/auth/seller-profile/me`).then(({ data: result }) => { if (active) setData(result); }).catch((requestError) => { if (active) setError(requestError.response?.data?.message || "Seller profile could not be loaded"); }); return () => { active = false; }; }, []);
+  const profile = data?.profile;
+  return <SellerPage><SellerHeader eyebrow="Account and compliance" title="My seller profile" description="Sensitive identifiers are masked here. Only the platform administrator can review the complete encrypted record."/>
+    {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>}
+    {profile && <div className="grid gap-5 lg:grid-cols-2"><section className="rounded-2xl border bg-white p-6 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">Business identity</h2><StatusBadge value={profile.verificationStatus}/></div><dl className="mt-6 grid gap-5 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Legal name</dt><dd className="mt-1 font-semibold">{profile.legalBusinessName}</dd></div><div><dt className="text-slate-500">Trade name</dt><dd className="mt-1 font-semibold">{profile.tradeName}</dd></div><div><dt className="text-slate-500">Business type</dt><dd className="mt-1 font-semibold capitalize">{String(profile.businessType || "").replaceAll("_", " ")}</dd></div><div><dt className="text-slate-500">GSTIN / PAN</dt><dd className="mt-1 font-mono font-semibold">••••{profile.gstinLast4} / ••••{profile.panLast4}</dd></div><div className="sm:col-span-2"><dt className="text-slate-500">Registered address</dt><dd className="mt-1 leading-6"><Address value={profile.registeredAddress}/></dd></div><div className="sm:col-span-2"><dt className="text-slate-500">Pickup address</dt><dd className="mt-1 leading-6"><Address value={profile.pickupAddress}/></dd></div></dl></section><section className="rounded-2xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-bold">Settlement account</h2><div className="mt-6 rounded-xl bg-slate-50 p-4"><p className="text-sm text-slate-500">Account holder</p><p className="mt-1 font-semibold">{profile.bankAccountHolder}</p><p className="mt-4 font-mono text-lg">•••• •••• {profile.bankAccountLast4}</p><p className="mt-1 text-sm uppercase text-slate-500">{profile.bankAccountType} · IFSC ending {profile.ifscLast4}</p></div><div className="mt-5 space-y-3 text-sm"><div className="flex items-center justify-between rounded-xl border p-3"><span>GST check</span><StatusBadge value={profile.gstVerification?.status}/></div><div className="flex items-center justify-between rounded-xl border p-3"><span>Bank ownership check</span><StatusBadge value={profile.bankVerification?.status}/></div></div><p className="mt-5 flex gap-2 text-xs leading-5 text-slate-500"><FiShield className="mt-0.5 shrink-0"/>Changes to GST, PAN or settlement details require a new verification review.</p></section>{profile.reviewNote && <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 lg:col-span-2"><p className="flex items-center gap-2 font-semibold text-amber-950"><FiCheckCircle/> Verification note</p><p className="mt-2 text-sm text-amber-900">{profile.reviewNote}</p></section>}</div>}
+  </SellerPage>;
+}
+
+export default SellerAccount;

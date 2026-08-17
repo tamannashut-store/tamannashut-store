@@ -4,13 +4,16 @@ import Product from "../models/Product.js";
 import upload from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
-import { admin, protect } from "../middleware/authMiddleware.js";
+import { admin, protect, sellerCentre } from "../middleware/authMiddleware.js";
 import InventoryLog from "../models/InventoryLog.js";
 import Order from "../models/Order.js";
 import { recordAudit } from "../utils/recordAudit.js";
 import { createUniqueProductSlug, productIdentifierFilter } from "../utils/productSlug.js";
+import { isMarketplaceSeller, scopeSellerOwned } from "../utils/accountRoles.js";
+import { storefrontProductFilter } from "../utils/productVisibility.js";
 
 const router = express.Router();
+const sellerProductFilter = (req, filter = {}) => scopeSellerOwned(req.user, filter);
 const approvedReviews = (reviews = []) => reviews.filter((review) => !review.status || review.status === "approved");
 const refreshReviewSummary = (product) => {
   const visible = approvedReviews(product.reviews);
@@ -151,7 +154,7 @@ const uploadToCloudinary = (fileBuffer) => {
 //   }
 // });
 
-router.post("/", protect, admin, upload.array("images", 30), async (req, res) => {
+router.post("/", protect, sellerCentre, upload.array("images", 30), async (req, res) => {
   try {
     const fields = parseProductFields(req.body);
     let images = [];
@@ -190,7 +193,14 @@ router.post("/", protect, admin, upload.array("images", 30), async (req, res) =>
       return res.status(400).json({ message: "At least one product image is required" });
     }
 
-    const product = new Product({ ...fields, images });
+    const sellerSubmission = isMarketplaceSeller(req.user);
+    const product = new Product({
+      ...fields,
+      images,
+      sellerId: req.user._id,
+      status: sellerSubmission ? "draft" : fields.status,
+      approvalStatus: sellerSubmission ? "pending" : "not_required",
+    });
     product.slug = await createUniqueProductSlug(Product, product.name, product._id);
 
     await product.save();
@@ -206,8 +216,7 @@ router.get("/", async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 48);
-    const filter = {};
-    filter.status = { $nin: ["draft", "archived"] };
+    const filter = storefrontProductFilter();
 
     const search = String(req.query.search || "").trim().slice(0, 100);
     if (search) {
@@ -278,7 +287,7 @@ router.get("/", async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const activeFilter = { status: { $nin: ["draft", "archived"] } };
+    const activeFilter = storefrontProductFilter();
     const [products, total, variantSizes, legacySizes, colors, variantColors, fabrics, ageGroups, priceRange] = await Promise.all([
       Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       Product.countDocuments(filter),
@@ -327,7 +336,7 @@ router.get("/suggestions/search", async (req, res) => {
     const query = String(req.query.q || "").trim().slice(0, 60);
     if (query.length < 2) return res.json({ suggestions: [] });
     let regex = buildSearchRegex(query);
-    const baseFilter = { status: { $nin: ["draft", "archived"] } };
+    const baseFilter = storefrontProductFilter();
     let suggestionFilter = { ...baseFilter, $or: [{ name: regex }, { tags: regex }, { category: regex }, { color: regex }, { "variants.color": regex }] };
     if (await Product.countDocuments(suggestionFilter) === 0 && query.length >= 3) {
       regex = buildSearchRegex(query, { fuzzy: true });
@@ -340,18 +349,18 @@ router.get("/suggestions/search", async (req, res) => {
 
 router.get("/:id/related", async (req, res) => {
   try {
-    const product = await Product.findOne(productIdentifierFilter(req.params.id)).select("category tags").lean();
+    const product = await Product.findOne(storefrontProductFilter(productIdentifierFilter(req.params.id))).select("category tags").lean();
     if (!product) return res.status(404).json({ message: "Product not found" });
-    const related = await Product.find({ _id: { $ne: product._id }, status: { $nin: ["draft", "archived"] }, $or: [{ category: product.category }, { tags: { $in: product.tags || [] } }] }).select("-reviews").sort({ averageRating: -1, createdAt: -1 }).limit(8).lean();
+    const related = await Product.find(storefrontProductFilter({ _id: { $ne: product._id }, $or: [{ category: product.category }, { tags: { $in: product.tags || [] } }] })).select("-reviews").sort({ averageRating: -1, createdAt: -1 }).limit(8).lean();
     return res.json({ products: related });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 
-router.get("/admin/list", protect, admin, async (req, res) => {
+router.get("/admin/list", protect, sellerCentre, async (req, res) => {
   try {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
-    const filter = {};
+    const filter = sellerProductFilter(req, {});
     const search = String(req.query.search || "").trim().slice(0, 100);
     if (search) {
       const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -359,8 +368,9 @@ router.get("/admin/list", protect, admin, async (req, res) => {
       filter.$or = [{ name: regex }, { baseSku: regex }, { "variants.sku": regex }];
     }
     if (["draft", "active", "archived"].includes(req.query.status)) filter.status = req.query.status;
+    if (["pending", "approved", "rejected", "not_required"].includes(req.query.approval)) filter.approvalStatus = req.query.approval;
     if (req.query.inventory === "low") filter.$expr = lowStockExpression;
-    const products = await Product.find(filter).select("-reviews").sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+    const products = await Product.find(filter).select("-reviews").populate("sellerId", "name email").sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
     const total = await Product.countDocuments(filter);
     return res.json({ products, totalProducts: total, currentPage: page, totalPages: Math.max(Math.ceil(total / limit), 1) });
   } catch (error) {
@@ -368,22 +378,31 @@ router.get("/admin/list", protect, admin, async (req, res) => {
   }
 });
 
-router.patch("/admin/bulk-status", protect, admin, async (req, res) => {
+router.patch("/admin/bulk-status", protect, sellerCentre, async (req, res) => {
   try {
     const ids = Array.isArray(req.body.ids) ? req.body.ids.slice(0, 100) : [];
     const status = req.body.status;
     if (!ids.length || !["draft", "active", "archived"].includes(status)) {
       return res.status(400).json({ message: "Select products and a valid status" });
     }
-    const result = await Product.updateMany({ _id: { $in: ids } }, { $set: { status } });
+    if (isMarketplaceSeller(req.user) && status === "active") return res.status(403).json({ message: "Seller listings require platform approval before activation" });
+    const filter = sellerProductFilter(req, { _id: { $in: ids } });
+    const update = isMarketplaceSeller(req.user)
+      ? status === "archived"
+        ? { $set: { status: "archived" } }
+        : { $set: { status: "draft", approvalStatus: "pending", approvalNote: "" } }
+      : { $set: { status } };
+    const result = await Product.updateMany(filter, update);
     return res.json({ success: true, modifiedCount: result.modifiedCount });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 });
 
-router.get("/admin/:id/inventory-history", protect, admin, async (req, res) => {
+router.get("/admin/:id/inventory-history", protect, sellerCentre, async (req, res) => {
   try {
+    const product = await Product.findOne(sellerProductFilter(req, { _id: req.params.id })).select("_id").lean();
+    if (!product) return res.status(404).json({ message: "Product not found" });
     const logs = await InventoryLog.find({ productId: req.params.id }).sort({ createdAt: -1 }).limit(100).lean();
     return res.json(logs);
   } catch (error) {
@@ -425,9 +444,35 @@ router.patch("/admin/:productId/reviews/:reviewId", protect, admin, async (req, 
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 
+router.get("/admin/item/:id", protect, sellerCentre, async (req, res) => {
+  try {
+    const product = await Product.findOne(sellerProductFilter(req, productIdentifierFilter(req.params.id))).lean();
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    return res.json(product);
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
+router.patch("/admin/:id/approval", protect, admin, async (req, res) => {
+  try {
+    const approvalStatus = String(req.body.approvalStatus || "").toLowerCase();
+    const approvalNote = String(req.body.approvalNote || "").trim().slice(0, 500);
+    if (!["approved", "rejected"].includes(approvalStatus)) return res.status(400).json({ message: "Choose approved or rejected" });
+    if (approvalStatus === "rejected" && approvalNote.length < 5) return res.status(400).json({ message: "Explain what the seller must correct" });
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    product.approvalStatus = approvalStatus;
+    product.approvalNote = approvalNote;
+    product.reviewedAt = new Date();
+    product.reviewedBy = req.user._id;
+    product.status = approvalStatus === "approved" ? "active" : "draft";
+    await product.save();
+    return res.json({ message: approvalStatus === "approved" ? "Seller listing approved" : "Seller listing returned for correction", product });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
 router.get("/:id", async (req, res) => {
   try {
-    const product = await Product.findOne(productIdentifierFilter(req.params.id)).lean();
+    const product = await Product.findOne(storefrontProductFilter(productIdentifierFilter(req.params.id))).lean();
 
     if (!product) {
       return res.status(404).json({
@@ -447,15 +492,13 @@ router.get("/:id", async (req, res) => {
 router.put(
   "/:id",
   protect,
-  admin,
+  sellerCentre,
   upload.array("images", 30),
   async (req, res) => {
     let uploadedImages = [];
     try {
 
-      const product = await Product.findById(
-        req.params.id
-      );
+      const product = await Product.findOne(sellerProductFilter(req, { _id: req.params.id }));
 
 
       if (!product) {
@@ -483,7 +526,13 @@ router.put(
       product.fabric = fields.fabric;
       product.ageGroup = fields.ageGroup;
       product.tags = fields.tags;
-      product.status = fields.status;
+      product.status = isMarketplaceSeller(req.user) ? "draft" : fields.status;
+      if (isMarketplaceSeller(req.user)) {
+        product.approvalStatus = "pending";
+        product.approvalNote = "";
+        product.reviewedAt = null;
+        product.reviewedBy = null;
+      }
       product.lowStockThreshold = fields.lowStockThreshold;
       product.variants = fields.variants;
 
@@ -612,11 +661,11 @@ router.put(
   }
 );
 
-router.delete("/:id", protect, admin, async (req, res) => {
+router.delete("/:id", protect, sellerCentre, async (req, res) => {
 
   try {
 
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findOne(sellerProductFilter(req, { _id: req.params.id }));
 
     if (!product) {
       return res.status(404).json({

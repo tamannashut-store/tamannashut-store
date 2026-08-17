@@ -51,6 +51,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    accountType: {
+      type: String,
+      enum: ["customer", "platform_admin", "seller"],
+      default: "customer",
+      index: true,
+    },
     sellerRole: { type: String, enum: ["", "owner", "member"], default: "" },
     sellerAccessStatus: { type: String, enum: ["active", "pending", "rejected", "suspended"], default: "active" },
     marketingConsent: { type: Boolean, default: false },
