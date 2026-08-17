@@ -1,7 +1,7 @@
 import express from "express";
 import Order from "../models/Order.js";
 import { sendEmail } from "../utils/sendEmail.js";
-import { orderEmailTemplate } from "../utils/emailTemplates.js";
+import { orderStatusEmailTemplate } from "../utils/emailTemplates.js";
 import { invoiceTemplate } from "../utils/invoiceTemplate.js";
 import { generateInvoice } from "../utils/generateInvoice.js";
 import { generatePackingSlip } from "../utils/generatePackingSlip.js";
@@ -19,11 +19,10 @@ import upload from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 import { recordAudit } from "../utils/recordAudit.js";
-import { escapeHtml } from "../utils/html.js";
 
 const router = express.Router();
 const serializeOrder = (order) => { const value = order.toObject ? order.toObject() : order; return value.status === "Processing" ? { ...value, status: "Confirmed" } : value; };
-const sendStatusUpdate = (order) => sendEmail(order.email, "Order Update - Tamanna's Hut", `<h2>Order status updated</h2><p>Hello ${escapeHtml(order.customerName || "Customer")},</p><p>Order <strong>${escapeHtml(order._id)}</strong> is now <strong>${escapeHtml(order.status)}</strong>.</p>${order.tracking?.trackingId ? `<p>Tracking: ${escapeHtml(order.tracking.trackingId)}</p>` : ""}`);
+const sendStatusUpdate = (order) => sendEmail(order.email, `Order ${order.status} - Tamanna's Hut`, orderStatusEmailTemplate(order));
 
 router.post("/", protect, async (req, res) => {
   try {
@@ -74,7 +73,7 @@ router.post("/resend-invoice/:id", protect, admin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
-    await sendEmail(order.email, "Invoice - Tamanna's Hut", `${orderEmailTemplate(order)}<hr/>${invoiceTemplate(order)}`);
+    await sendEmail(order.email, `Invoice ${String(order._id).slice(-8).toUpperCase()} - Tamanna's Hut`, invoiceTemplate(order));
     return res.json({ success: true, message: "Invoice sent" });
   } catch (error) {
     return res.status(500).json({ message: error.message });

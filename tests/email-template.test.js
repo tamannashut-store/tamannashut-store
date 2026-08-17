@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { orderEmailTemplate } from "../server/src/utils/emailTemplates.js";
+import { orderEmailTemplate, passwordResetEmailTemplate } from "../server/src/utils/emailTemplates.js";
 
 const baseOrder = {
   _id: "order-123",
@@ -28,4 +28,12 @@ test("transactional email escapes customer and catalogue HTML", () => {
   assert.doesNotMatch(html, /<script>|<img src=x/);
   assert.match(html, /&lt;script&gt;/);
   assert.match(html, /&lt;img/);
+});
+
+test("password reset email uses the branded secure layout and escapes content", () => {
+  const html = passwordResetEmailTemplate({ name: "<Admin>" }, "https://www.tamannashut.com/reset-password/token");
+  assert.match(html, /ACCOUNT SECURITY/);
+  assert.match(html, /Create new password/);
+  assert.match(html, /HUT OF PURITY/);
+  assert.doesNotMatch(html, /<Admin>/);
 });

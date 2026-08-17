@@ -7,6 +7,7 @@ import { shouldRecordOrderTransition, syncCodPaymentStatus } from "../utils/orde
 import { shiprocketWebhookContext } from "../utils/webhookMonitoring.js";
 import { restoreOrderStock } from "../services/orderService.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { orderStatusEmailTemplate } from "../utils/emailTemplates.js";
 import {
   assignShiprocketAwb, cancelShiprocketShipment, createShiprocketOrder, createShiprocketReturn,
   generateShiprocketLabel, getShiprocketCouriers, resolveShiprocketPostcode, scheduleShiprocketPickup, verifyShiprocketDeliveryPostcode,
@@ -62,7 +63,7 @@ router.post("/events", async (req, res) => {
       transitioned = true;
     }
     await order.save();
-    if (transitioned) await Promise.allSettled([sendEmail(order.email, "Order Update - Tamanna's Hut", `<h2>Your order is ${mapped}</h2><p>Order <strong>${order._id}</strong> received a courier update.</p>`)]);
+    if (transitioned) await Promise.allSettled([sendEmail(order.email, `Order ${mapped} - Tamanna's Hut`, orderStatusEmailTemplate(order, `Courier update: ${order.shipping.externalStatus || mapped}`))]);
     return res.status(200).json({ received: true });
   } catch (error) {
     Sentry.withScope((scope) => {

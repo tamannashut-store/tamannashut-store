@@ -121,9 +121,26 @@ test("login offers recovery and registration and accepts a safe mocked session",
 
 test("registration makes shopping email consent optional", async ({ page }) => {
   await page.goto("/register");
+  await expect(page.getByRole("heading", { name: "Join Tamanna's Hut" })).toBeVisible();
+  await expect(page.getByLabel("Full name")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
   const consent = page.getByRole("checkbox", { name: /Helpful shopping emails/ });
   await expect(consent).toBeVisible();
   await expect(consent).not.toBeChecked();
+});
+
+test("password recovery screens provide clear safe paths", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/forgot-password");
+  await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
+  await expect(page.getByLabel("Email address")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Back to sign in/ })).toHaveAttribute("href", "/login");
+
+  await page.goto("/reset-password/sample-token");
+  await page.getByPlaceholder("At least 8 characters").fill("secure-password");
+  await page.getByPlaceholder("Enter it again").fill("different-password");
+  await page.getByRole("button", { name: "Set new password" }).click();
+  await expect(page.getByRole("alert")).toContainText("do not match");
 });
 
 test("changing a password clears the current browser session", async ({ page }) => {

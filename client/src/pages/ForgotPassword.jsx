@@ -1,18 +1,31 @@
 import { useState } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
+import { FiArrowLeft, FiMail } from "react-icons/fi";
 import toast from "react-hot-toast";
+import AuthShell from "../components/AuthShell";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [accountMissing, setAccountMissing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
   const submit = async (event) => {
-    event.preventDefault(); setSubmitting(true); setAccountMissing(false);
-    try { await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, { email }); setSent(true); }
-    catch (error) { if (error.response?.data?.code === "ACCOUNT_NOT_FOUND") setAccountMissing(true); else toast.error(error.response?.data?.message || "Reset request could not be submitted"); }
-    finally { setSubmitting(false); }
+    event.preventDefault();
+    setSubmitting(true);
+    setAccountMissing(false);
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/forgot-password`, { email: email.trim() });
+      setSent(true);
+    } catch (error) {
+      if (error.response?.data?.code === "ACCOUNT_NOT_FOUND") setAccountMissing(true);
+      else toast.error(error.response?.data?.message || "Reset request could not be submitted");
+    } finally { setSubmitting(false); }
   };
-  return <main className="mx-auto max-w-md px-6 py-20"><form onSubmit={submit} className="space-y-6 rounded-3xl bg-white p-8 shadow-2xl sm:p-10"><div><h1 className="text-center text-3xl font-bold">Reset your password</h1><p className="mt-3 text-center text-sm leading-6 text-slate-600">Enter your account email and we will send a secure link valid for 30 minutes.</p></div>{sent ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">A reset link has been sent to <strong>{email}</strong>. Check your inbox and spam folder.</div> : <><input type="email" value={email} onChange={(event) => { setEmail(event.target.value); setAccountMissing(false); }} placeholder="Email address" autoComplete="email" className="field-control" required/>{accountMissing && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p className="font-semibold">No account found</p><p className="mt-1">There is no Tamanna&apos;s Hut account registered with <strong>{email}</strong>.</p><div className="mt-4 flex flex-wrap gap-2"><Link to="/register" className="rounded-lg bg-red-700 px-4 py-2 font-semibold text-white">Create account</Link><button type="button" onClick={() => { setEmail(""); setAccountMissing(false); }} className="rounded-lg border border-red-200 bg-white px-4 py-2 font-semibold">Try another email</button></div></div>}<button disabled={submitting} className="btn-primary w-full disabled:opacity-60">{submitting ? "Checking…" : "Send reset link"}</button></>}<p className="text-center text-sm"><Link to="/login" className="font-semibold text-brand-primary hover:underline">Back to sign in</Link></p></form></main>;
+
+  return <AuthShell eyebrow="Account recovery" title={sent ? "Check your inbox" : "Reset your password"} description={sent ? "We sent a secure reset link if delivery was successful." : "Enter your customer account email. The secure link remains valid for 30 minutes."} asideTitle="A secure way back to your account." asideCopy="Password reset links are single-use and expire automatically." asideItems={["Secure 30-minute reset link", "Existing sessions close after reset", "Your account details remain protected"]} icon={FiMail}>
+    {sent ? <div className="mt-7"><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm leading-6 text-emerald-800"><p className="font-semibold">Reset email requested</p><p className="mt-1">Check <strong className="break-all">{email}</strong>, including the spam folder.</p></div><button type="button" onClick={() => { setSent(false); setEmail(""); }} className="btn-secondary mt-5 w-full">Use another email</button></div> : <form onSubmit={submit} className="mt-7"><label className="block text-sm font-semibold text-slate-700">Email address<input type="email" value={email} onChange={(event) => { setEmail(event.target.value); setAccountMissing(false); }} placeholder="you@example.com" autoComplete="email" className="field-control mt-2" required /></label>{accountMissing && <div role="alert" className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p className="font-semibold">No customer account found</p><p className="mt-1 leading-6">There is no customer account registered with <strong className="break-all">{email}</strong>.</p><Link to="/register" className="mt-4 inline-flex rounded-xl bg-red-700 px-4 py-2 font-semibold text-white">Create an account</Link></div>}<button disabled={submitting} className="btn-primary mt-6 w-full py-4 disabled:cursor-wait disabled:opacity-60">{submitting ? "Sending secure link…" : "Send reset link"}</button></form>}
+    <p className="mt-7 border-t pt-6 text-center text-sm"><Link to="/login" className="inline-flex items-center gap-2 font-semibold text-brand-primary hover:underline"><FiArrowLeft /> Back to sign in</Link></p>
+  </AuthShell>;
 }

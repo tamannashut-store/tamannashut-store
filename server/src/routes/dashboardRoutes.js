@@ -6,6 +6,7 @@ import AuditLog from "../models/AuditLog.js";
 import Contact from "../models/Contact.js";
 import { admin, protect } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { cartRecoveryEmailTemplate } from "../utils/emailTemplates.js";
 import { recordAudit } from "../utils/recordAudit.js";
 import { isLowStockProduct } from "../utils/inventory.js";
 
@@ -19,7 +20,6 @@ const recoveryEligibleFilter = () => ({
   marketingConsent: true,
   $expr: { $ne: ["$cartRecovery.lastCartUpdatedAt", "$cartUpdatedAt"] },
 });
-const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 const maskedEmail = (email) => { const [name, domain] = String(email || "").split("@"); return domain ? `${name.slice(0, 2)}***@${domain}` : "Customer"; };
 
 router.get("/notifications", protect, admin, async (_req, res) => {
@@ -58,7 +58,7 @@ router.post("/cart-recoveries/:id/send", protect, admin, async (req, res) => {
     );
     if (!user) return res.status(409).json({ message: "This cart is no longer eligible or has already received a reminder" });
     const cartUrl = `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/cart`;
-    const delivery = await sendEmail(user.email, "Your saved Tamanna's Hut cart", `<h2>Your saved items are waiting</h2><p>Hello ${escapeHtml(user.name || "Customer")},</p><p>You left ${user.cart.reduce((sum, item) => sum + Number(item.qty || 0), 0)} item(s) in your cart.</p><p><a href="${cartUrl}">Return to your cart</a></p><p>This is an optional shopping reminder. You can turn these emails off from your profile.</p>`);
+    const delivery = await sendEmail(user.email, "Your saved Tamanna's Hut cart", cartRecoveryEmailTemplate(user, cartUrl));
     if (!delivery?.sent) {
       await User.updateOne({ _id: user._id, "cartRecovery.lastCartUpdatedAt": user.cartUpdatedAt }, { $set: { "cartRecovery.lastSentAt": null, "cartRecovery.lastCartUpdatedAt": null } });
       return res.status(502).json({ message: "The recovery email could not be delivered" });

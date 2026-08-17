@@ -21,7 +21,7 @@ function Admin() {
   const [selected, setSelected] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", price: "", mrp: "", baseSku: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
+  const [form, setForm] = useState({ name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
   const [variants, setVariants] = useState(initialVariants);
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -84,7 +84,7 @@ function Admin() {
   const resetCreate = () => {
     previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
     previewUrls.current = [];
-    setForm({ name: "", price: "", mrp: "", baseSku: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
+    setForm({ name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
     setVariants(initialVariants);
     setImages([]);
     setPreviews([]);
@@ -142,7 +142,7 @@ function Admin() {
     } catch (error) { toast.error(error.response?.data?.message || "Bulk update failed"); }
   };
   const nextCreateStep = () => {
-    if (createStep === 0 && (!form.name.trim() || !form.price || !form.mrp || !form.baseSku.trim() || !form.category || !form.description.trim())) return toast.error("Complete the required product information");
+    if (createStep === 0 && (!form.name.trim() || !form.price || !form.mrp || !form.baseSku.trim() || !/^\d{4,8}$/.test(form.hsnCode) || !form.category || !form.description.trim())) return toast.error("Complete the required product information, including the correct HSN code");
     if (createStep === 1 && (!variants.length || variants.some((variant) => !variant.color?.trim() || !variant.size?.trim()))) return toast.error("Add at least one complete colour style");
     if (createStep === 2 && !images.length) return toast.error("Upload at least one product photo");
     setCreateStep((step) => Math.min(step + 1, 3));
@@ -164,6 +164,7 @@ function Admin() {
               <label><span className="field-label">Selling price (₹)</span><input required min="0" type="number" name="price" value={form.price} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">MRP (₹)</span><input required min="0" type="number" name="mrp" value={form.mrp} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} placeholder="TH-DRESS-001" className="field-control uppercase" /></label>
+              <label><span className="field-label">HSN code *</span><input required inputMode="numeric" pattern="[0-9]{4,8}" name="hsnCode" value={form.hsnCode} onChange={changeForm} placeholder="Confirm with your tax adviser" className="field-control" /><span className="mt-1 block text-xs text-slate-500">Use the exact 4–8 digit apparel classification; do not guess between knitted and non-knitted garments.</span></label>
               <label><span className="field-label">Category</span><select required name="category" value={form.category} onChange={changeForm} className="field-control"><option value="">Select</option><option value="girls">Girls</option><option value="boys">Boys</option><option value="new-arrivals">New arrivals</option></select></label>
               <label><span className="field-label">Fabric</span><input name="fabric" value={form.fabric} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">Age group</span><input name="ageGroup" value={form.ageGroup} onChange={changeForm} placeholder="0–12 months" className="field-control" /></label>

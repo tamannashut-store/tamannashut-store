@@ -1,219 +1,121 @@
 import PDFDocument from "pdfkit";
 import { paymentMethodLabel, paymentStatusLabel } from "./paymentPresentation.js";
+import { calculateInvoiceTotals } from "./invoiceTemplate.js";
+
+const green = "#123b29";
+const mutedGreen = "#397153";
+const ink = "#172033";
+const muted = "#64748b";
+const line = "#dfe6e1";
+const cream = "#f7f5ef";
+const currency = (value) => `Rs. ${Number(value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const safe = (value, fallback = "-") => String(value ?? "").trim() || fallback;
 
 export const generateInvoice = (order, res) => {
-  const doc = new PDFDocument({
-    size: "A4",
-    margin: 40,
-  });
-
+  const doc = new PDFDocument({ size: "A4", margin: 40, bufferPages: true, info: { Title: `Tamanna's Hut invoice ${order._id}`, Author: "Tamanna's Hut" } });
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename=invoice-${String(order._id)}.pdf`
-  );
-
+  res.setHeader("Content-Disposition", `attachment; filename=invoice-${String(order._id)}.pdf`);
   doc.pipe(res);
 
-  const invoiceNo = `TH-${new Date(order.createdAt)
-    .getFullYear()}-${String(order._id).slice(-6).toUpperCase()}`;
+  const totals = calculateInvoiceTotals(order);
+  const invoiceNo = order.invoiceNumber || `TH-${new Date(order.createdAt).getFullYear()}-${String(order._id).slice(-6).toUpperCase()}`;
+  const orderShort = String(order._id).slice(-8).toUpperCase();
 
-  const subtotal = order.products.reduce(
-    (acc, item) => acc + item.price * item.qty,
-    0
-  );
+  const pageHeader = (continued = false) => {
+    doc.rect(0, 0, 595.28, 92).fill(green);
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(24).text("Tamanna's Hut", 40, 28);
+    doc.fillColor("#c9d8ce").font("Helvetica").fontSize(8).text("HUT OF PURITY  |  PREMIUM KIDSWEAR", 40, 59, { characterSpacing: 1.2 });
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(14).text(continued ? "TAX INVOICE · CONTINUED" : "TAX INVOICE", 335, 31, { width: 220, align: "right" });
+    doc.fillColor("#c9d8ce").font("Helvetica").fontSize(8).text(invoiceNo, 335, 56, { width: 220, align: "right" });
+  };
 
-  const gstRate = 18;
-  const taxableValue = (subtotal / 1.18).toFixed(2);
-  const gstAmount = (subtotal - taxableValue).toFixed(2);
-  const cgst = (gstAmount / 2).toFixed(2);
-  const sgst = (gstAmount / 2).toFixed(2);
+  const tableHeader = (y) => {
+    doc.roundedRect(40, y, 515, 28, 5).fill("#eef5f0");
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(8)
+      .text("ITEM", 50, y + 10, { width: 245 })
+      .text("QTY", 310, y + 10, { width: 38, align: "center" })
+      .text("RATE", 365, y + 10, { width: 80, align: "right" })
+      .text("NET AMOUNT", 465, y + 10, { width: 80, align: "right" });
+    return y + 36;
+  };
 
-  // Header
-  doc
-    .fillColor("#ec4899")
-    .fontSize(22)
-    .text("Tamanna's Hut", 40, 40);
+  pageHeader();
+  doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text("INVOICE DETAILS", 40, 118);
+  doc.fillColor(muted).font("Helvetica").fontSize(9)
+    .text(`Invoice number: ${invoiceNo}`, 40, 138)
+    .text(`Invoice date: ${new Date(order.createdAt).toLocaleDateString("en-IN")}`, 40, 154)
+    .text(`Order reference: #${orderShort}`, 40, 170);
 
-  doc
-    .fillColor("#444444")
-    .fontSize(10)
-    .text("Premium Kids Fashion", 40, 68);
+  doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text("SUPPLIER", 340, 118);
+  doc.fillColor(muted).font("Helvetica").fontSize(9)
+    .text("Tamanna Enterprise", 340, 138)
+    .text("House No. N0072, Ground Floor", 340, 154)
+    .text("Raghudebbati West, Sankrail", 340, 170)
+    .text("Howrah, West Bengal 711310", 340, 186)
+    .text("GSTIN: 19BKDPB6636D1ZE | State code: 19", 340, 202)
+    .text("support@tamannashut.com", 340, 218);
 
-  doc
-    .fillColor("#111111")
-    .fontSize(16)
-    .text("TAX INVOICE", 400, 40, { align: "right" });
+  doc.roundedRect(40, 240, 515, 95, 10).fill(cream);
+  doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text("BILL TO", 55, 257);
+  const customerLines = [safe(order.customerName, "Customer"), safe(order.address), `${safe(order.city)}${order.state ? `, ${safe(order.state)}` : ""} - ${safe(order.pincode)}`, safe(order.phone), safe(order.email)];
+  doc.fillColor(muted).font("Helvetica").fontSize(9).text(customerLines.join("\n"), 55, 277, { width: 460, lineGap: 2 });
 
-  doc
-    .fontSize(10)
-    .text(`Invoice No: ${invoiceNo}`, 400, 65, { align: "right" })
-    .text(`Invoice Date: ${new Date(order.createdAt).toLocaleDateString()}`, 400, 80, {
-      align: "right",
-    });
-
-  doc.moveDown(2);
-
-  // Divider
-  doc.moveTo(40, 110).lineTo(555, 110).strokeColor("#e5e7eb").stroke();
-
-  // Billing + Supplier
-  doc.moveDown(1.5);
-
-  doc
-    .fillColor("#111111")
-    .fontSize(12)
-    .text("Bill To", 40, 130);
-
-  doc
-    .fontSize(10)
-    .fillColor("#333333")
-    .text(`${order.customerName || "Customer"}`, 40, 150)
-    .text(`${order.email || ""}`, 40, 165)
-    .text(`${order.phone || ""}`, 40, 180)
-    .text(`${order.address || ""}`, 40, 195)
-    .text(`${order.city || ""} - ${order.pincode || ""}`, 40, 210);
-
-  doc
-    .fillColor("#111111")
-    .fontSize(12)
-    .text("Supplier", 360, 130);
-
-  doc
-    .fontSize(10)
-    .fillColor("#333333")
-    .text("Tamanna's Hut", 360, 150)
-    .text("GSTIN: 19BKDPB6636D1ZE", 360, 165)
-    .text("West Bengal, India", 360, 180)
-    .text("support@tamannashut.com", 360, 195);
-
-  // Table header
-  const tableTop = 255;
-  const startX = 40;
-  const colWidths = [200, 80, 50, 90, 90];
-
-  doc
-    .rect(startX, tableTop, 515, 24)
-    .fill("#f3f4f6");
-
-  doc
-    .fillColor("#111111")
-    .fontSize(10)
-    .text("Product", startX + 6, tableTop + 8, { width: colWidths[0] })
-    .text("Size", startX + colWidths[0] + 6, tableTop + 8, { width: colWidths[1], align: "center" })
-    .text("Qty", startX + colWidths[0] + colWidths[1] + 6, tableTop + 8, {
-      width: colWidths[2],
-      align: "center",
-    })
-    .text("Price", startX + colWidths[0] + colWidths[1] + colWidths[2] + 6, tableTop + 8, {
-      width: colWidths[3],
-      align: "right",
-    })
-    .text("Amount", startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 6, tableTop + 8, {
-      width: colWidths[4],
-      align: "right",
-    });
-
-  let y = tableTop + 24;
-
-  order.products.forEach((item) => {
-    const rowHeight = 26;
-
-    doc
-      .rect(startX, y, 515, rowHeight)
-      .strokeColor("#e5e7eb")
-      .stroke();
-
-    doc
-      .fillColor("#333333")
-      .fontSize(9)
-      .text(item.name || "-", startX + 6, y + 8, { width: colWidths[0] })
-      .text(item.selectedSize || "-", startX + colWidths[0] + 6, y + 8, {
-        width: colWidths[1],
-        align: "center",
-      })
-      .text(String(item.qty || 0), startX + colWidths[0] + colWidths[1] + 6, y + 8, {
-        width: colWidths[2],
-        align: "center",
-      })
-      .text(`₹${item.price || 0}`, startX + colWidths[0] + colWidths[1] + colWidths[2] + 6, y + 8, {
-        width: colWidths[3],
-        align: "right",
-      })
-      .text(
-        `₹${(item.price || 0) * (item.qty || 0)}`,
-        startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + 6,
-        y + 8,
-        {
-          width: colWidths[4],
-          align: "right",
-        }
-      );
-
+  let y = tableHeader(356);
+  for (const item of totals.lines) {
+    const details = [item.selectedColor && `Colour: ${item.selectedColor}`, item.selectedSize && `Size: ${item.selectedSize}`, (item.selectedSku || item.sku) && `SKU: ${item.selectedSku || item.sku}`, item.hsnCode && `HSN: ${item.hsnCode}`, `GST: ${item.rate}%`].filter(Boolean).join("  |  ");
+    const nameHeight = doc.font("Helvetica-Bold").fontSize(9).heightOfString(safe(item.name, "Product"), { width: 245 });
+    const detailsHeight = details ? doc.font("Helvetica").fontSize(8).heightOfString(details, { width: 245 }) + 3 : 0;
+    const rowHeight = Math.max(42, nameHeight + detailsHeight + 18);
+    if (y + rowHeight > 692) {
+      doc.addPage();
+      pageHeader(true);
+      y = tableHeader(118);
+    }
+    doc.moveTo(40, y + rowHeight).lineTo(555, y + rowHeight).strokeColor(line).lineWidth(0.7).stroke();
+    doc.fillColor(ink).font("Helvetica-Bold").fontSize(9).text(safe(item.name, "Product"), 50, y + 8, { width: 245 });
+    if (details) doc.fillColor(muted).font("Helvetica").fontSize(8).text(details, 50, y + 12 + nameHeight, { width: 245 });
+    doc.fillColor(ink).font("Helvetica").fontSize(9)
+      .text(String(Number(item.qty || 0)), 310, y + 12, { width: 38, align: "center" })
+      .text(currency(item.price), 365, y + 12, { width: 80, align: "right" })
+      .text(currency(item.inclusiveValue), 465, y + 12, { width: 80, align: "right" });
     y += rowHeight;
-  });
+  }
 
-  // Totals
+  if (y + 210 > 710) { doc.addPage(); pageHeader(true); y = 120; }
+  const totalsX = 330;
+  const valueX = 455;
   y += 20;
+  const totalRow = (label, value, options = {}) => {
+    doc.fillColor(options.color || muted).font(options.bold ? "Helvetica-Bold" : "Helvetica").fontSize(options.size || 9).text(label, totalsX, y, { width: 125 });
+    doc.text(value, valueX, y, { width: 100, align: "right" });
+    y += options.gap || 18;
+  };
+  totalRow("Item subtotal", currency(totals.itemSubtotal));
+  if (totals.discount) totalRow("Discount", `- ${currency(totals.discount)}`, { color: mutedGreen });
+  totalRow("Taxable value", currency(totals.taxable));
+  if (totals.intraState) {
+    totalRow("CGST", currency(totals.cgst));
+    totalRow("SGST", currency(totals.sgst));
+  } else {
+    totalRow("IGST", currency(totals.igst));
+  }
+  doc.moveTo(totalsX, y).lineTo(555, y).strokeColor(line).stroke();
+  y += 11;
+  totalRow("TOTAL", currency(totals.total), { color: green, bold: true, size: 13, gap: 28 });
 
-  doc
-    .fillColor("#111111")
-    .fontSize(10)
-    .text("Taxable Value", 350, y)
-    .text(`₹${taxableValue}`, 490, y, { align: "right" });
+  doc.roundedRect(40, y, 515, 66, 9).fill("#eef5f0");
+  doc.fillColor(ink).font("Helvetica-Bold").fontSize(9).text("PAYMENT DETAILS", 55, y + 14);
+  doc.fillColor(muted).font("Helvetica").fontSize(9)
+    .text(`Method: ${paymentMethodLabel(order)}`, 55, y + 34, { width: 220 })
+    .text(`Status: ${paymentStatusLabel(order)} | Place of supply: ${totals.destinationState}`, 260, y + 34, { width: 275, align: "right" });
 
-  y += 16;
-  doc.text("CGST (9%)", 350, y).text(`₹${cgst}`, 490, y, { align: "right" });
-
-  y += 16;
-  doc.text("SGST (9%)", 350, y).text(`₹${sgst}`, 490, y, { align: "right" });
-
-  y += 16;
-  doc.moveTo(350, y).lineTo(555, y).strokeColor("#e5e7eb").stroke();
-
-  y += 12;
-  doc
-    .fillColor("#ec4899")
-    .fontSize(14)
-    .text("Total", 350, y)
-    .text(`₹${order.totalAmount}`, 490, y, { align: "right" });
-
-  y += 30;
-
-  // Payment details
-  doc
-    .fillColor("#111111")
-    .fontSize(11)
-    .text("Payment Details", 40, y);
-
-  y += 16;
-  doc
-    .fillColor("#333333")
-    .fontSize(10)
-    .text(`Payment Method: ${paymentMethodLabel(order)}`, 40, y);
-
-  y += 14;
-  doc.text(`Payment Status: ${paymentStatusLabel(order)}`, 40, y);
-
-  y += 14;
-  doc.text(`Order Status: ${order.status || "Processing"}`, 40, y);
-
-  // Footer
-  doc
-    .fillColor("#666666")
-    .fontSize(9)
-    .text(
-      "Thank you for shopping with Tamanna's Hut 💖",
-      40,
-      760,
-      { align: "center", width: 515 }
-    )
-    .text(
-      "This is a computer-generated GST invoice and does not require a signature.",
-      40,
-      775,
-      { align: "center", width: 515 }
-    );
-
+  const range = doc.bufferedPageRange();
+  for (let index = range.start; index < range.start + range.count; index += 1) {
+    doc.switchToPage(index);
+    doc.moveTo(40, 774).lineTo(555, 774).strokeColor(line).lineWidth(0.5).stroke();
+    doc.fillColor(muted).font("Helvetica").fontSize(7.5)
+      .text("This is a computer-generated GST invoice and does not require a signature.", 40, 783, { width: 420, lineBreak: false })
+      .text(`Page ${index - range.start + 1} of ${range.count}`, 465, 783, { width: 90, align: "right", lineBreak: false });
+  }
   doc.end();
 };

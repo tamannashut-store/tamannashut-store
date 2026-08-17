@@ -3,7 +3,7 @@ import rateLimit from "express-rate-limit";
 import { sendEmail } from "../utils/sendEmail.js";
 import Contact from "../models/Contact.js";
 import { admin, protect } from "../middleware/authMiddleware.js";
-import { escapeHtml } from "../utils/html.js";
+import { contactAdminEmailTemplate, contactCustomerEmailTemplate } from "../utils/emailTemplates.js";
 
 const router = express.Router();
 const contactLimiter = rateLimit({
@@ -68,43 +68,14 @@ router.post("/", contactLimiter, async (req, res) => {
         await sendEmail(
             process.env.ADMIN_EMAIL || "support@tamannashut.com",
             "New Contact Form Message",
-            `
-        <h2>New Contact Form Message</h2>
-  
-        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
-  
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-  
-        <p><strong>Message:</strong> ${escapeHtml(message).replaceAll("\n", "<br/>")}</p>
-        `
+            contactAdminEmailTemplate({ name, email, message })
         );
 
         // Customer Email
         await sendEmail(
             email,
             "Thank you for contacting Tamanna's Hut",
-            `
-        <div style="font-family:Arial;padding:20px">
-  
-        <h2>Thank You For Contacting Tamanna's Hut 💖</h2>
-  
-        <p>Dear ${escapeHtml(name)},</p>
-  
-        <p>
-        We have received your message successfully.
-        Our team will get back to you shortly.
-        </p>
-  
-        <p>
-        Thank you for choosing Tamanna's Hut.
-        </p>
-  
-        <br>
-  
-        <strong>Team Tamanna's Hut</strong>
-  
-        </div>
-        `
+            contactCustomerEmailTemplate(name)
         );
 
         res.json({

@@ -39,6 +39,7 @@ const parseProductFields = (body) => {
   const category = String(body.category || "").trim().toLowerCase().replace(/\s+/g, "-");
   const sizeStock = JSON.parse(body.sizeStock || "[]");
   const baseSku = String(body.baseSku || "").trim().toUpperCase().slice(0, 60);
+  const hsnCode = String(body.hsnCode || "").trim().replace(/\s/g, "").slice(0, 8);
   const color = String(body.color || "").trim().slice(0, 80);
   const fabric = String(body.fabric || "").trim().slice(0, 120);
   const ageGroup = String(body.ageGroup || "").trim().slice(0, 80);
@@ -63,6 +64,9 @@ const parseProductFields = (body) => {
   }
   if (!Array.isArray(sizeStock) || sizeStock.length > 30) {
     throw Object.assign(new Error("Invalid size inventory"), { status: 400 });
+  }
+  if (!/^\d{4,8}$/.test(hsnCode)) {
+    throw Object.assign(new Error("Enter the correct 4 to 8 digit HSN code for this garment"), { status: 400 });
   }
 
   const normalizedStock = sizeStock.map((item) => {
@@ -110,7 +114,7 @@ const parseProductFields = (body) => {
   const syncedSizeStock = [...stockBySize].map(([size, stock]) => ({ size, stock }));
 
   return {
-    name, price, mrp, baseSku, description, category, color: color || normalizedVariants[0]?.color || "", fabric, ageGroup,
+    name, price, mrp, baseSku, hsnCode, description, category, color: color || normalizedVariants[0]?.color || "", fabric, ageGroup,
     tags, status, lowStockThreshold, variants: normalizedVariants, sizeStock: syncedSizeStock,
   };
 };
