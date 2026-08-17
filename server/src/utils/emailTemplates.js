@@ -1,34 +1,23 @@
 import { escapeHtml } from "./html.js";
 import { paymentMethodLabel, paymentStatusLabel } from "./paymentPresentation.js";
+import { detailBox, emailButton, emailLayout, money } from "./emailLayout.js";
+
+const orderUrl = (order) => `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/my-orders#${escapeHtml(String(order._id || ""))}`;
+const itemsHtml = (order) => (order.products || []).map((item) => `<tr><td style="padding:12px 0;border-bottom:1px solid #e5e7eb"><strong style="color:#172033">${escapeHtml(item.name || "Product")}</strong><br><span style="color:#64748b;font-size:13px">${item.selectedColor ? `Colour: ${escapeHtml(item.selectedColor)} &nbsp;·&nbsp; ` : ""}Size: ${escapeHtml(item.selectedSize || "-")} &nbsp;·&nbsp; Qty: ${Number(item.qty || 0)}</span></td><td align="right" style="padding:12px 0;border-bottom:1px solid #e5e7eb;color:#172033;font-weight:700">${money(Number(item.price || 0) * Number(item.qty || 0))}</td></tr>`).join("");
 
 export const orderEmailTemplate = (order) => {
   const cod = order.paymentMethod === "COD";
-  const paymentMessage = cod
-    ? "No payment has been collected. Please pay the order total when your parcel is delivered."
-    : "Your online payment has been verified successfully.";
-  return `
-<div style="font-family:Arial,sans-serif;padding:20px;background:#f6f6f6;color:#1f2937">
-  <div style="max-width:600px;margin:auto;background:#fff;padding:24px;border-radius:12px">
-    <h2 style="color:#183d2b;margin-top:0">Order received</h2>
-    <p>Hi <b>${escapeHtml(order.customerName || "Customer")}</b>,</p>
-    <p>Thank you for shopping with <b>Tamanna's Hut</b>. We have received your order and will notify you when it ships.</p>
-    <div style="margin:20px 0;padding:16px;background:#f4f7f5;border-radius:10px">
-      <p style="margin:0 0 8px"><b>Payment method:</b> ${paymentMethodLabel(order)}</p>
-      <p style="margin:0 0 8px"><b>Payment status:</b> ${paymentStatusLabel(order)}</p>
-      <p style="margin:0">${paymentMessage}</p>
-    </div>
-    <h3>Order details</h3>
-    <p><b>Order ID:</b> ${escapeHtml(order._id)}</p>
-    <p><b>Total:</b> ₹${Number(order.totalAmount || 0).toLocaleString("en-IN")}</p>
-    <p><b>Order status:</b> ${escapeHtml(order.status || "Pending")}</p>
-    <h3>Items</h3>
-    ${(order.products || []).map((item) => `
-      <div style="border-bottom:1px solid #e5e7eb;padding:10px 0">
-        <p style="margin:0 0 6px"><b>${escapeHtml(item.name)}</b></p>
-        <p style="margin:0;color:#64748b">${item.selectedColor ? `Colour: ${escapeHtml(item.selectedColor)} | ` : ""}Size: ${escapeHtml(item.selectedSize)} | Qty: ${Number(item.qty || 0)}</p>
-      </div>
-    `).join("")}
-    <p style="margin-top:24px">— Tamanna's Hut Team</p>
-  </div>
-</div>`;
+  return emailLayout({ preheader: cod ? "Your cash-on-delivery order has been placed" : "Your online payment and order are confirmed", eyebrow: "ORDER CONFIRMATION", title: cod ? "Your order has been placed" : "Payment confirmed — order received", body: `<p style="margin-top:0">Hello <strong>${escapeHtml(order.customerName || "Customer")}</strong>,</p><p>Thank you for shopping with Tamanna's Hut. ${cod ? "No payment has been collected yet; please pay when the parcel is delivered." : "Your online payment has been verified."}</p>${detailBox(`<table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td><strong>Order</strong><br><span style="font-size:13px">#${escapeHtml(String(order._id || "").slice(-8).toUpperCase())}</span></td><td align="right"><strong>${money(order.totalAmount)}</strong><br><span style="font-size:13px">${escapeHtml(paymentMethodLabel(order))} · ${escapeHtml(paymentStatusLabel(order))}</span></td></tr></table>`)}<table role="presentation" width="100%" cellspacing="0" cellpadding="0">${itemsHtml(order)}</table>${emailButton("View and track order", orderUrl(order))}<p style="margin-bottom:0;color:#64748b;font-size:13px">We will email you again when your order status changes.</p>` });
 };
+
+export const passwordResetEmailTemplate = (user, resetUrl) => emailLayout({ preheader: "Your secure password reset link expires in 30 minutes", eyebrow: "ACCOUNT SECURITY", title: "Reset your password", body: `<p style="margin-top:0">Hello <strong>${escapeHtml(user.name || "Customer")}</strong>,</p><p>We received a request to create a new password for your account. This private, single-use link expires in 30 minutes.</p>${emailButton("Create new password", resetUrl)}${detailBox("If you did not request this, you can safely ignore this email. Your existing password will continue to work.")}` });
+
+export const orderStatusEmailTemplate = (order, note = "") => emailLayout({ preheader: `Order ${String(order._id || "").slice(-8).toUpperCase()} is now ${order.status}`, eyebrow: "ORDER UPDATE", title: `Your order is ${order.status}`, body: `<p style="margin-top:0">Hello <strong>${escapeHtml(order.customerName || "Customer")}</strong>,</p><p>Order <strong>#${escapeHtml(String(order._id || "").slice(-8).toUpperCase())}</strong> has moved to <strong>${escapeHtml(order.status || "Updated")}</strong>.</p>${note ? detailBox(escapeHtml(note)) : ""}${order.tracking?.trackingId ? detailBox(`<strong>Courier:</strong> ${escapeHtml(order.tracking.courier || "Courier partner")}<br><strong>AWB / tracking number:</strong> ${escapeHtml(order.tracking.trackingId)}`) : ""}${emailButton("View order timeline", orderUrl(order))}` });
+
+export const adminNewOrderEmailTemplate = (order) => emailLayout({ eyebrow: "SELLER ALERT", title: "New order received", body: `<p>A new ${escapeHtml(paymentMethodLabel(order).toLowerCase())} order is ready for review.</p>${detailBox(`<strong>Order:</strong> #${escapeHtml(String(order._id || "").slice(-8).toUpperCase())}<br><strong>Customer:</strong> ${escapeHtml(order.customerName || "Customer")}<br><strong>Total:</strong> ${money(order.totalAmount)}<br><strong>Payment:</strong> ${escapeHtml(paymentStatusLabel(order))}`)}${emailButton("Open seller orders", `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/admin/orders`)}` });
+
+export const cartRecoveryEmailTemplate = (user, cartUrl) => emailLayout({ eyebrow: "YOUR SAVED BAG", title: "Your items are still waiting", body: `<p style="margin-top:0">Hello <strong>${escapeHtml(user.name || "Customer")}</strong>,</p><p>You saved ${Number((user.cart || []).reduce((sum, item) => sum + Number(item.qty || 0), 0))} item(s) in your bag. Stock is not reserved until checkout.</p>${emailButton("Return to your bag", cartUrl)}<p style="font-size:13px;color:#64748b">This optional reminder can be switched off from your profile.</p>` });
+
+export const contactCustomerEmailTemplate = (name) => emailLayout({ eyebrow: "MESSAGE RECEIVED", title: "We have received your message", body: `<p style="margin-top:0">Hello <strong>${escapeHtml(name || "Customer")}</strong>,</p><p>Thank you for contacting Tamanna's Hut. Our team will review your message and reply as soon as possible.</p>${detailBox("Keep this email for reference. You can reply directly if you need to add more information.")}` });
+
+export const contactAdminEmailTemplate = ({ name, email, message }) => emailLayout({ eyebrow: "SELLER ALERT", title: "New customer message", body: `${detailBox(`<strong>From:</strong> ${escapeHtml(name)}<br><strong>Email:</strong> ${escapeHtml(email)}`)}<p style="white-space:pre-wrap">${escapeHtml(message)}</p>` });

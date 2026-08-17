@@ -1,9 +1,9 @@
 import { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import { FiArrowRight, FiCheck, FiEye, FiEyeOff, FiLock, FiShoppingBag } from "react-icons/fi";
+import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiShoppingBag } from "react-icons/fi";
 import toast from "react-hot-toast";
-import logo from "../assets/logo.png";
+import AuthShell from "../components/AuthShell";
 
 const readCart = (key) => {
   try {
@@ -63,22 +63,8 @@ function Login() {
     }
   };
 
-  return <main className="bg-[#f7f5ef] px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
-    <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(25,55,37,.12)] lg:grid-cols-[.9fr_1.1fr]">
-      <section className="relative hidden overflow-hidden bg-[#123b29] p-10 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full border border-white/10" />
-        <img src={logo} alt="Tamanna's Hut" className="relative h-16 w-fit rounded-xl bg-white px-2 py-1" />
-        <div className="relative py-16"><p className="text-xs font-bold uppercase tracking-[.24em] text-white/55">Your account</p><h1 className="mt-4 font-serif text-5xl leading-tight">Continue your shopping journey.</h1><p className="mt-5 max-w-sm leading-7 text-white/65">Access saved bags, order tracking, returns and a faster checkout experience.</p><ul className="mt-8 space-y-3 text-sm text-white/75"><li className="flex items-center gap-3"><FiCheck /> Your bag follows you across devices</li><li className="flex items-center gap-3"><FiCheck /> Track every order in one place</li><li className="flex items-center gap-3"><FiCheck /> Secure account access</li></ul></div>
-        <p className="relative text-xs text-white/40">Comfort-first kidswear, thoughtfully delivered.</p>
-      </section>
-
-      <section className="flex items-center justify-center p-5 sm:p-10 lg:p-14">
-        <form onSubmit={handleSubmit} className="w-full max-w-md">
-          <div className="mb-8 lg:hidden"><img src={logo} alt="Tamanna's Hut" className="h-16 rounded-xl bg-white px-2 py-1 shadow-sm" /></div>
-          <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#eef5f0] text-xl text-brand-primary"><FiShoppingBag /></span>
-          <p className="mt-6 text-xs font-bold uppercase tracking-[.2em] text-[#397153]">Customer account</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Welcome back</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-500">Sign in to view orders, manage your profile and continue checkout.</p>
+  return <AuthShell eyebrow="Customer account" title="Welcome back" description="Sign in to view orders, manage your profile and continue checkout." asideTitle="Continue your shopping journey." asideCopy="Access saved bags, order tracking, returns and a faster checkout experience." asideItems={["Your bag follows you across devices", "Track every order in one place", "Secure account access"]} icon={FiShoppingBag}>
+        <form onSubmit={handleSubmit}>
 
           {error && <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">{error}{error.includes("Seller Centre") && <Link to="/admin-login" className="mt-2 flex items-center gap-2 font-semibold underline">Open Seller Centre <FiArrowRight /></Link>}</div>}
 
@@ -91,9 +77,7 @@ function Login() {
           <button type="submit" disabled={loading} className="btn-primary mt-6 w-full py-4 text-base disabled:cursor-wait disabled:opacity-60"><FiLock className="mr-2" />{loading ? "Signing in…" : "Sign in securely"}</button>
           <p className="mt-7 border-t pt-6 text-center text-sm text-slate-600">New to Tamanna&apos;s Hut? <Link to="/register" className="font-semibold text-brand-primary hover:underline">Create an account</Link></p>
         </form>
-      </section>
-    </div>
-  </main>;
+  </AuthShell>;
 }
 
 export default Login;

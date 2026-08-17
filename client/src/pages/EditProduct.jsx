@@ -10,7 +10,7 @@ function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
   const previewUrls = useRef([]);
-  const [form, setForm] = useState({ name: "", price: "", mrp: "", baseSku: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
+  const [form, setForm] = useState({ name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
   const [variants, setVariants] = useState([]);
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,7 +22,7 @@ function EditProduct() {
     axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`)
       .then(({ data }) => {
         setForm({
-          name: data.name || "", price: data.price ?? "", mrp: data.mrp ?? data.price ?? "", baseSku: data.baseSku || "",
+          name: data.name || "", price: data.price ?? "", mrp: data.mrp ?? data.price ?? "", baseSku: data.baseSku || "", hsnCode: data.hsnCode || "",
           category: String(data.category || "").toLowerCase().replace(/\s+/g, "-"), color: data.color || "", fabric: data.fabric || "",
           ageGroup: data.ageGroup || "", tags: (data.tags || []).join(", "), status: data.status || "active",
           lowStockThreshold: data.lowStockThreshold ?? 3, description: data.description || "",
@@ -74,7 +74,7 @@ function EditProduct() {
   };
 
   const nextEditStep = () => {
-    if (editStep === 0 && (!form.name.trim() || !form.price || !form.mrp || !form.baseSku.trim() || !form.category || !form.description.trim())) return toast.error("Complete the required product information");
+    if (editStep === 0 && (!form.name.trim() || !form.price || !form.mrp || !form.baseSku.trim() || !/^\d{4,8}$/.test(form.hsnCode) || !form.category || !form.description.trim())) return toast.error("Complete the required product information, including the correct HSN code");
     if (editStep === 1 && (!variants.length || variants.some((variant) => !variant.color?.trim() || !variant.size?.trim() || !variant.sku?.trim()))) return toast.error("Complete every colour, size and SKU");
     if (editStep === 2 && !images.length) return toast.error("Keep at least one product photo");
     setEditStep((step) => Math.min(step + 1, 3));
@@ -93,6 +93,7 @@ function EditProduct() {
             <label><span className="field-label">Selling price (₹)</span><input required type="number" min="0" name="price" value={form.price} onChange={changeForm} className="field-control" /></label>
             <label><span className="field-label">MRP (₹)</span><input required type="number" min={form.price || 0} name="mrp" value={form.mrp} onChange={changeForm} className="field-control" /></label>
             <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} className="field-control uppercase" /></label>
+            <label><span className="field-label">HSN code *</span><input required inputMode="numeric" pattern="[0-9]{4,8}" name="hsnCode" value={form.hsnCode} onChange={changeForm} placeholder="Confirm with your tax adviser" className="field-control" /><span className="mt-1 block text-xs text-slate-500">Use the exact apparel classification for this product.</span></label>
             <label><span className="field-label">Category</span><select required name="category" value={form.category} onChange={changeForm} className="field-control"><option value="girls">Girls</option><option value="boys">Boys</option><option value="new-arrivals">New arrivals</option></select></label>
             <label><span className="field-label">Fabric</span><input name="fabric" value={form.fabric} onChange={changeForm} className="field-control" /></label>
             <label><span className="field-label">Age group</span><input name="ageGroup" value={form.ageGroup} onChange={changeForm} className="field-control" /></label>

@@ -7,6 +7,7 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { passwordResetEmailTemplate } from "../utils/emailTemplates.js";
 import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
 import { loginPortalError } from "../utils/loginPortal.js";
 
@@ -119,7 +120,7 @@ router.post("/forgot-password", async (req, res) => {
         user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
         await user.save();
         const resetUrl = `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/reset-password/${token}`;
-        const delivery = await sendEmail(user.email, "Reset your Tamanna's Hut password", `<h2>Reset your password</h2><p>Use the secure link below within 30 minutes:</p><p><a href="${resetUrl}">Reset password</a></p><p>If you did not request this, you can ignore this email.</p>`);
+        const delivery = await sendEmail(user.email, "Reset your Tamanna's Hut password", passwordResetEmailTemplate(user, resetUrl));
         if (!delivery?.sent) {
             user.passwordResetToken = undefined;
             user.passwordResetExpires = undefined;

@@ -4,10 +4,10 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 import { sendEmail } from "../utils/sendEmail.js";
-import { orderEmailTemplate } from "../utils/emailTemplates.js";
-import { invoiceTemplate } from "../utils/invoiceTemplate.js";
-import { escapeHtml } from "../utils/html.js";
+import { adminNewOrderEmailTemplate, orderEmailTemplate } from "../utils/emailTemplates.js";
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
+import { nextInvoiceNumber } from "../utils/invoiceNumber.js";
+import { gstRateForApparelUnit } from "../utils/gst.js";
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -85,6 +85,7 @@ export const calculateCart = async (items, couponCode = "") => {
       selectedSize: item.selectedSize,
       selectedColor: variant?.color || "",
       sku: variant?.sku || "",
+      hsnCode: product.hsnCode || "",
       image: image?.url || "",
       lineTotal: money(price * item.qty),
     };
@@ -103,6 +104,10 @@ export const calculateCart = async (items, couponCode = "") => {
     if (!coupon) throw Object.assign(new Error("Coupon is invalid or expired"), { status: 400 });
     discount = money(subtotal * (Number(coupon.discount) / 100));
   }
+  const discountRatio = subtotal > 0 ? discount / subtotal : 0;
+  lines.forEach((line) => {
+    line.gstRate = gstRateForApparelUnit(line.price * (1 - discountRatio));
+  });
 
   return {
     products: lines,
@@ -164,6 +169,7 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       reservedItems.push(item);
     }
 
+    const invoiceNumber = await nextInvoiceNumber();
     const order = await Order.create({
       userId: user._id,
       customerName: cleanCustomer.name,
@@ -184,6 +190,7 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       paymentStatus: payment.status,
       status: "Pending",
       idempotencyKey: safeKey,
+      invoiceNumber,
       inventoryRestored: false,
       statusHistory: [{ status: "Pending", note: "Order placed" }],
     });
@@ -204,10 +211,10 @@ export const sendOrderNotifications = async (order) => {
   const customerEmail = sendEmail(
     order.email,
     `${cod ? "COD Order Received" : "Payment Confirmed"} - Tamanna's Hut`,
-    `${orderEmailTemplate(order)}<hr />${invoiceTemplate(order)}`
+    orderEmailTemplate(order)
   );
   const adminEmail = process.env.ADMIN_EMAIL
-    ? sendEmail(process.env.ADMIN_EMAIL, `New Order Received - ${order._id}`, `<h2>New order received</h2><p>Order: ${escapeHtml(order._id)}</p><p>Customer: ${escapeHtml(order.customerName)}</p><p>Total: ₹${Number(order.totalAmount || 0).toLocaleString("en-IN")}</p>`)
+    ? sendEmail(process.env.ADMIN_EMAIL, `New Order Received - ${order._id}`, adminNewOrderEmailTemplate(order))
     : Promise.resolve();
   const phone = order.phone.startsWith("+") ? order.phone : `+91${order.phone}`;
   const whatsapp = sendWhatsApp(phone, `${cod ? "COD order received. No payment has been collected yet." : "Payment verified and order received."}\n\nOrder ID: ${order._id}\nAmount: ₹${order.totalAmount}\nStatus: ${order.status}`);
