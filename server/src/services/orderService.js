@@ -3,12 +3,14 @@ import Coupon from "../models/Coupon.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
+import SellerProfile from "../models/SellerProfile.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { adminNewOrderEmailTemplate, orderEmailTemplate } from "../utils/emailTemplates.js";
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 import { nextInvoiceNumber } from "../utils/invoiceNumber.js";
 import { gstRateForApparelUnit } from "../utils/gst.js";
 import { storefrontProductFilter } from "../utils/productVisibility.js";
+import { groupSellerLines, syncOrderSettlementsSafely } from "./sellerSettlementService.js";
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -173,6 +175,18 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
     }
 
     const invoiceNumber = await nextInvoiceNumber();
+    const sellerGroups = groupSellerLines({ products: cart.products });
+    const candidateSellerIds = [...sellerGroups.keys()];
+    const profiles = candidateSellerIds.length ? await SellerProfile.find({ userId: { $in: candidateSellerIds }, verificationStatus: "verified" }).select("userId pickupAddress").lean() : [];
+    const sellerIds = profiles.map((profile) => String(profile.userId));
+    const profileBySeller = new Map(profiles.map((profile) => [String(profile.userId), profile]));
+    const sellerFulfillments = sellerIds.map((sellerId) => ({
+      sellerId,
+      status: "pending",
+      itemSkus: sellerGroups.get(sellerId).map((item) => item.sku || String(item._id)),
+      pickupAddress: profileBySeller.get(sellerId)?.pickupAddress || {},
+      provider: "platform_managed",
+    }));
     const order = await Order.create({
       userId: user._id,
       customerName: cleanCustomer.name,
@@ -196,7 +210,9 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       invoiceNumber,
       inventoryRestored: false,
       statusHistory: [{ status: "Pending", note: "Order placed" }],
+      sellerFulfillments,
     });
+    await syncOrderSettlementsSafely(order);
     await User.updateOne({ _id: user._id }, { $set: { cart: [], cartUpdatedAt: null } });
     return { order, created: true };
   } catch (error) {

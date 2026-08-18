@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FiBarChart2, FiBox, FiCheckSquare, FiExternalLink, FiLogOut, FiMenu, FiMessageSquare, FiPercent, FiSettings, FiShoppingBag, FiStar, FiUsers, FiX } from "react-icons/fi";
+import { FiBarChart2, FiBox, FiCheckSquare, FiDollarSign, FiExternalLink, FiLogOut, FiMenu, FiMessageSquare, FiPercent, FiSettings, FiShoppingBag, FiStar, FiUsers, FiX } from "react-icons/fi";
 import logo from "../assets/logo.png";
 
 const adminLinks = [
@@ -9,6 +9,7 @@ const adminLinks = [
   ["/admin", "Products", FiBox, "products"],
   ["/admin/listing-approvals", "Listing approvals", FiCheckSquare, "listingApprovals"],
   ["/admin/orders", "Orders", FiShoppingBag, "orders"],
+  ["/admin/settlements", "Seller settlements", FiDollarSign, "settlements"],
   ["/admin/reviews", "Reviews", FiStar, "reviews"],
   ["/admin/coupons", "Coupons", FiPercent],
   ["/admin/contacts", "Messages", FiMessageSquare, "messages"],
@@ -20,6 +21,7 @@ const sellerLinks = [
   ["/seller/dashboard", "Overview", FiBarChart2],
   ["/seller/products", "My products", FiBox],
   ["/seller/orders", "My orders", FiShoppingBag],
+  ["/seller/settlements", "Settlements", FiDollarSign],
   ["/seller/profile", "Business profile", FiUsers],
 ];
 
@@ -29,7 +31,7 @@ function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState({ products: 0, orders: 0, reviews: 0, messages: 0, listingApprovals: 0 });
+  const [notifications, setNotifications] = useState({ products: 0, orders: 0, reviews: 0, messages: 0, listingApprovals: 0, settlements: 0 });
   let sessionUser = null;
   try { sessionUser = JSON.parse(localStorage.getItem("user"))?.user || null; } catch { /* Invalid cached session is handled by the route guard. */ }
   const sellerAccount = sessionUser?.accountType === "seller" || sessionUser?.sellerRole === "member";
@@ -50,7 +52,7 @@ function AdminLayout() {
     let active = true;
     const refresh = () => {
       if (sellerAccount) return;
-      axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/notifications`).then(({ data }) => { if (active) setNotifications({ products: Number(data.products || 0), orders: Number(data.orders || 0), reviews: Number(data.reviews || 0), messages: Number(data.messages || 0), listingApprovals: Number(data.listingApprovals || 0) }); }).catch(() => {});
+      axios.get(`${import.meta.env.VITE_API_URL}/api/dashboard/notifications`).then(({ data }) => { if (active) setNotifications({ products: Number(data.products || 0), orders: Number(data.orders || 0), reviews: Number(data.reviews || 0), messages: Number(data.messages || 0), listingApprovals: Number(data.listingApprovals || 0), settlements: Number(data.settlements || 0) }); }).catch(() => {});
     };
     refresh();
     const timer = window.setInterval(refresh, 30000);

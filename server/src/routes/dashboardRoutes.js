@@ -9,6 +9,7 @@ import { sendEmail } from "../utils/sendEmail.js";
 import { cartRecoveryEmailTemplate } from "../utils/emailTemplates.js";
 import { recordAudit } from "../utils/recordAudit.js";
 import { isLowStockProduct } from "../utils/inventory.js";
+import SellerSettlement from "../models/SellerSettlement.js";
 
 const router = express.Router();
 const money = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
@@ -48,7 +49,7 @@ router.get("/seller", protect, seller, async (req, res) => {
 
 router.get("/notifications", protect, admin, async (_req, res) => {
   try {
-    const [orders, reviewResult, messages, products, listingApprovals] = await Promise.all([
+    const [orders, reviewResult, messages, products, listingApprovals, settlements] = await Promise.all([
       Order.countDocuments({ $or: [
         { status: { $in: ["Pending", "Cancellation Requested", "Return Requested", "Returned", "RTO Delivered"] } },
         { status: "Refund Pending", paymentMethod: "COD" },
@@ -62,8 +63,9 @@ router.get("/notifications", protect, admin, async (_req, res) => {
       Contact.countDocuments({ readAt: null }),
       Product.find({ status: "active" }).select("variants sizeStock lowStockThreshold").lean(),
       Product.countDocuments({ approvalStatus: "pending" }),
+      SellerSettlement.countDocuments({ status: { $in: ["eligible", "held"] } }),
     ]);
-    return res.json({ orders, reviews: reviewResult[0]?.count || 0, messages, products: products.filter(isLowStockProduct).length, listingApprovals });
+    return res.json({ orders, reviews: reviewResult[0]?.count || 0, messages, products: products.filter(isLowStockProduct).length, listingApprovals, settlements });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 

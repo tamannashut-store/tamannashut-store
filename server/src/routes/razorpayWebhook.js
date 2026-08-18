@@ -5,6 +5,7 @@ import PaymentAttempt from "../models/PaymentAttempt.js";
 import User from "../models/User.js";
 import { createOrderWithReservedStock, sendOrderNotifications } from "../services/orderService.js";
 import { razorpayWebhookContext } from "../utils/webhookMonitoring.js";
+import { syncOrderSettlementsSafely } from "../services/sellerSettlementService.js";
 
 export const razorpayWebhook = async (req, res) => {
   let event;
@@ -51,6 +52,7 @@ export const razorpayWebhook = async (req, res) => {
           if (order.status === "Refund Pending") { order.status = order.refund.previousOrderStatus || "Cancelled"; order.statusHistory.push({ status: order.status, note: "Refund failed; admin action required" }); }
         } else { order.refund.status = "Pending"; }
         await order.save();
+        await syncOrderSettlementsSafely(order);
       }
     }
     return res.status(200).json({ received: true });
