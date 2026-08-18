@@ -125,6 +125,20 @@ const orderSchema = new mongoose.Schema(
       },
       lastEventAt: Date,
     },
+    sellerFulfillments: [{
+      sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+      status: { type: String, enum: ["pending", "ready", "shipped", "delivered", "cancelled", "returned"], default: "pending" },
+      itemSkus: [{ type: String }],
+      pickupAddress: {
+        line1: String, line2: String, city: String, state: String, pincode: String,
+      },
+      provider: { type: String, default: "platform_managed" },
+      shipmentId: { type: String, default: "" },
+      awbCode: { type: String, default: "" },
+      courierName: { type: String, default: "" },
+      labelUrl: { type: String, default: "" },
+      updatedAt: { type: Date, default: Date.now },
+    }],
   },
   {
     timestamps: true,
@@ -138,6 +152,7 @@ orderSchema.index({ userId: 1, idempotencyKey: 1 }, { unique: true, sparse: true
 orderSchema.index({ invoiceNumber: 1 }, { unique: true, sparse: true });
 orderSchema.index({ userId: 1, status: 1, "products._id": 1 });
 orderSchema.index({ "products.sellerId": 1, createdAt: -1 });
+orderSchema.index({ "sellerFulfillments.sellerId": 1, createdAt: -1 });
 const Order = mongoose.model("Order", orderSchema);
 
 export default Order;

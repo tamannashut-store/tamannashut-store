@@ -20,6 +20,7 @@ import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 import { recordAudit } from "../utils/recordAudit.js";
 import { isPlatformAdmin } from "../utils/accountRoles.js";
+import { fulfillmentStatusForOrder, syncOrderSettlementsSafely } from "../services/sellerSettlementService.js";
 
 const router = express.Router();
 const serializeOrder = (order) => { const value = order.toObject ? order.toObject() : order; return value.status === "Processing" ? { ...value, status: "Confirmed" } : value; };
@@ -99,6 +100,7 @@ router.get("/seller/mine", protect, seller, async (req, res) => {
         paymentMethod: order.paymentMethod,
         paymentStatus: order.paymentStatus,
         status: order.status,
+        fulfillment: (() => { const item = (order.sellerFulfillments || []).find((entry) => String(entry.sellerId || "") === String(req.user._id)); return item ? { ...item, status: fulfillmentStatusForOrder(order.status) } : null; })(),
       };
     });
     return res.json({ orders: scoped });
@@ -130,6 +132,7 @@ router.put("/cancel/:id", protect, async (req, res) => {
     order.cancellationRequest = { reason: cancellationReason, requestedAt: new Date(), requestedBy: isPlatformAdmin(req.user) ? "Admin" : "Customer" };
     order.statusHistory.push({ status: nextStatus, note: cancellationReason });
     await order.save();
+    await syncOrderSettlementsSafely(order);
     await Promise.allSettled([sendStatusUpdate(order)]);
     return res.json({ success: true, message: nextStatus === "Cancelled" ? "Order cancelled" : "Cancellation requested", order });
   } catch (error) {
@@ -157,6 +160,7 @@ router.post("/return/:id", protect, upload.array("images", 3), async (req, res) 
     order.returnRequest = { reason, requestedAt: new Date(), reviewStatus: "Pending", evidence };
     order.statusHistory.push({ status: "Return Requested", note: reason });
     await order.save();
+    await syncOrderSettlementsSafely(order);
     await Promise.allSettled([sendStatusUpdate(order)]);
     return res.json({ success: true, order });
   } catch (error) { return res.status(500).json({ message: error.message }); }
@@ -179,6 +183,7 @@ router.post("/:id/refund", protect, admin, async (req, res) => {
     order.refund = { ...order.refund?.toObject?.(), status: "Pending", amount, reason, idempotencyKey, requestedAt: new Date(), previousOrderStatus, failedReason: "" };
     if (order.status !== "Refund Pending") { order.status = "Refund Pending"; order.statusHistory.push({ status: "Refund Pending", note: "Refund initiated by admin" }); }
     await order.save();
+    await syncOrderSettlementsSafely(order);
     try {
       const refund = await createRazorpayRefund({ paymentId: order.paymentId, amount, reason, orderId: order._id, idempotencyKey });
       order.refund.status = refund.status === "processed" ? "Processed" : "Pending";
@@ -186,6 +191,7 @@ router.post("/:id/refund", protect, admin, async (req, res) => {
       order.refund.arn = refund.acquirer_data?.arn || refund.acquirer_data?.rrn || "";
       if (refund.status === "processed") { order.paymentStatus = "Refunded"; order.status = "Refunded"; order.refund.processedAt = new Date(); order.statusHistory.push({ status: "Refunded", note: "Refund processed by Razorpay" }); }
       await order.save();
+      await syncOrderSettlementsSafely(order);
       await recordAudit({ user: req.user, action: "order.refund_requested", entityType: "order", entityId: order._id, summary: `Refund ${amount} requested`, metadata: { amount, reference: order.refund.reference || "" } });
       await Promise.allSettled([sendStatusUpdate(order)]);
       return res.json({ success: true, order });
@@ -193,6 +199,7 @@ router.post("/:id/refund", protect, admin, async (req, res) => {
       order.refund.failedReason = String(error.message || "Refund request failed").slice(0, 300);
       if (error.status === 400) { order.refund.status = "Failed"; order.refund.idempotencyKey = ""; order.status = previousOrderStatus; order.statusHistory.push({ status: previousOrderStatus, note: "Refund attempt failed; no refund was created" }); }
       await order.save();
+      await syncOrderSettlementsSafely(order);
       return res.status(error.status || 500).json({ message: error.message });
     }
   } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
@@ -226,6 +233,7 @@ router.post("/:id/refund/complete-cod", protect, admin, async (req, res) => {
     order.status = "Refunded";
     order.statusHistory.push({ status: "Refunded", note: `COD refund completed via ${method}${reference ? ` (reference ${reference})` : ""}` });
     await order.save();
+    await syncOrderSettlementsSafely(order);
     await recordAudit({ user: req.user, action: "order.cod_refund_completed", entityType: "order", entityId: order._id, summary: `COD refund ${amount} completed`, metadata: { amount, method, reference } });
     await Promise.allSettled([sendStatusUpdate(order)]);
     return res.json({ success: true, order });
@@ -269,6 +277,7 @@ router.put("/:id", protect, admin, async (req, res) => {
       order.statusHistory.push({ status: nextStatus, note: String(req.body.note || "Status updated by admin").slice(0, 300) });
     }
     const updatedOrder = await order.save();
+    await syncOrderSettlementsSafely(updatedOrder);
 
     if (previousStatus !== order.status) await recordAudit({ user: req.user, action: "order.status_changed", entityType: "order", entityId: order._id, summary: `${previousStatus} to ${order.status}`, metadata: { from: previousStatus, to: order.status } });
     if (previousTrackingId !== order.tracking?.trackingId) await recordAudit({ user: req.user, action: "order.tracking_changed", entityType: "order", entityId: order._id, summary: "Tracking information updated", metadata: { courier: order.tracking?.courier || "" } });

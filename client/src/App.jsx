@@ -23,6 +23,8 @@ const SellerRegister = lazy(() => import("./pages/SellerRegister"));
 const SellerDashboard = lazy(() => import("./pages/SellerDashboard"));
 const SellerOrders = lazy(() => import("./pages/SellerOrders"));
 const SellerAccount = lazy(() => import("./pages/SellerAccount"));
+const SellerSettlements = lazy(() => import("./pages/SellerSettlements"));
+const AdminSettlements = lazy(() => import("./pages/AdminSettlements"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => <div className="grid min-h-[55vh] place-items-center bg-brand-background text-sm font-medium text-slate-500">Loading…</div>;
@@ -66,6 +68,7 @@ function App() {
           <Route path="/admin/reviews" element={<AdminReviews />} />
           <Route path="/admin/operations" element={<AdminOperations />} />
           <Route path="/admin/team" element={<AdminTeam />} />
+          <Route path="/admin/settlements" element={<AdminSettlements />} />
           <Route path="/admin/listing-approvals" element={<AdminSellerListings />} />
           <Route path="/admin/edit/:id" element={<EditProduct />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
@@ -77,6 +80,7 @@ function App() {
           <Route path="/seller/products/edit/:id" element={<EditProduct />} />
           <Route path="/seller/orders" element={<SellerOrders />} />
           <Route path="/seller/profile" element={<SellerAccount />} />
+          <Route path="/seller/settlements" element={<SellerSettlements />} />
         </Route>
         <Route path="/admin-coupons" element={<Navigate to="/admin/coupons" replace />} />
       </Routes></Suspense>
