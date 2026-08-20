@@ -48,9 +48,11 @@ function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState("online");
   const [coupon, setCoupon] = useState("");
   const [couponPercent, setCouponPercent] = useState(0);
+  const [pricing, setPricing] = useState(null);
   const [loading, setLoading] = useState(false);
   const [addressChecking, setAddressChecking] = useState(false);
   const [addressStatus, setAddressStatus] = useState("idle");
+  const [phoneVerified, setPhoneVerified] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -72,6 +74,7 @@ function Checkout() {
           country: "India",
           pincode: data.pincode || "",
         });
+        setPhoneVerified(Boolean(data.phoneVerifiedAt));
       })
       .catch((error) => {
         if (error.code !== "ERR_CANCELED") console.error(error);
@@ -80,14 +83,27 @@ function Checkout() {
   }, [navigate, user]);
 
   const subtotal = cartItems.reduce((sum, item) => sum + Number(item.price) * Number(item.qty), 0);
-  const discount = subtotal * (couponPercent / 100);
-  const displayedTotal = Math.max(subtotal - discount, 0);
-  const checkoutProducts = cartItems.map((item) => ({
+  const discount = Number(pricing?.discount ?? subtotal * (couponPercent / 100));
+  const displayedTotal = Number(pricing?.totalAmount ?? Math.max(subtotal - discount, 0));
+  const checkoutProducts = useMemo(() => cartItems.map((item) => ({
     _id: item._id,
     selectedSize: item.selectedSize,
     selectedSku: item.selectedSku || "",
     qty: item.qty,
-  }));
+  })), [cartItems]);
+
+  const refreshQuote = useCallback(async (phone, code = "") => {
+    const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/orders/quote`, { products: checkoutProducts, couponCode: code, customer: { phone } });
+    setPricing(data);
+    setCouponPercent(Number(data.couponPercent || data.promotionPercent || 0));
+    return data;
+  }, [checkoutProducts]);
+
+  useEffect(() => {
+    if (!/^\+?[0-9]{10,13}$/.test(formData.phone.replace(/\s/g, "")) || couponPercent > 0) return;
+    const timer = setTimeout(() => refreshQuote(formData.phone).catch(() => setPricing(null)), 250);
+    return () => clearTimeout(timer);
+  }, [formData.phone, couponPercent, refreshQuote]);
 
   const updateField = (event) => {
     const { name, value } = event.target;
@@ -119,10 +135,11 @@ function Checkout() {
   const applyCoupon = async () => {
     if (!coupon.trim()) return toast.error("Enter a coupon code");
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/coupons/validate`, { code: coupon });
-      setCouponPercent(Number(data.discount || 0));
-      setCoupon(coupon.trim().toUpperCase());
-      toast.success("Coupon applied");
+      const normalizedCode = coupon.trim().toUpperCase();
+      const data = await refreshQuote(formData.phone, normalizedCode);
+      setCouponPercent(Number(data.couponPercent || 0));
+      setCoupon(normalizedCode);
+      toast.success(data.promotionCode === "WELCOME10" ? "Your 10% welcome offer gives you the better price" : "Coupon applied");
     } catch (error) {
       setCouponPercent(0);
       toast.error(error.response?.data?.message || "Coupon is invalid or expired");
@@ -263,7 +280,8 @@ function Checkout() {
               ].map(([name, label, type]) => (
                 <label key={name} className="min-w-0">
                   <span className="mb-2 block text-sm font-medium">{label}</span>
-                  <input required name={name} type={type} value={formData[name]} onChange={updateField} minLength={name === "name" ? 2 : undefined} maxLength={name === "pincode" ? 6 : name === "phone" ? 13 : undefined} pattern={name === "pincode" ? "[0-9]{6}" : name === "phone" ? "[+]?[0-9]{10,13}" : undefined} inputMode={name === "pincode" ? "numeric" : name === "phone" ? "tel" : undefined} autoComplete={name === "name" ? "name" : name === "email" ? "email" : name === "phone" ? "tel" : name === "pincode" ? "postal-code" : name === "city" ? "address-level2" : name === "state" ? "address-level1" : name === "country" ? "country-name" : undefined} readOnly={["email", "city", "state", "country"].includes(name)} className="w-full min-w-0 max-w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
+                  <input required name={name} type={type} value={formData[name]} onChange={updateField} minLength={name === "name" ? 2 : undefined} maxLength={name === "pincode" ? 6 : name === "phone" ? 13 : undefined} pattern={name === "pincode" ? "[0-9]{6}" : name === "phone" ? "[+]?[0-9]{10,13}" : undefined} inputMode={name === "pincode" ? "numeric" : name === "phone" ? "tel" : undefined} autoComplete={name === "name" ? "name" : name === "email" ? "email" : name === "phone" ? "tel" : name === "pincode" ? "postal-code" : name === "city" ? "address-level2" : name === "state" ? "address-level1" : name === "country" ? "country-name" : undefined} readOnly={["email", "city", "state", "country"].includes(name) || (name === "phone" && phoneVerified)} className="w-full min-w-0 max-w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
+                  {name === "phone" && phoneVerified && <span className="mt-2 block text-xs font-medium text-emerald-700">✓ Verified phone · Change it from your profile</span>}
                 </label>
               ))}
               {addressChecking && <p className="text-sm text-brand-primary sm:col-span-2">Checking delivery location…</p>}
@@ -310,9 +328,10 @@ function Checkout() {
           </div>
 
           <div className="mt-6 border-t pt-5">
+            {!phoneVerified && <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><strong className="block">Get 10% off your first order</strong>Verify your mobile number in <Link to="/profile" className="font-semibold underline">your profile</Link>. This prevents the offer being claimed repeatedly with different email addresses.</div>}
             <label className="text-sm font-medium">Coupon code</label>
             <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
-              <input value={coupon} onChange={(event) => { setCoupon(event.target.value.toUpperCase()); setCouponPercent(0); }} placeholder="Enter code" className="min-w-0 flex-1 rounded-xl border px-3 py-2.5 uppercase" />
+              <input value={coupon} onChange={(event) => { setCoupon(event.target.value.toUpperCase()); setCouponPercent(0); setPricing(null); }} placeholder="Enter code" className="min-w-0 flex-1 rounded-xl border px-3 py-2.5 uppercase" />
               <button type="button" onClick={applyCoupon} className="rounded-xl border border-brand-primary px-4 font-medium text-brand-primary">Apply</button>
             </div>
           </div>
@@ -320,7 +339,7 @@ function Checkout() {
           <div className="mt-6 space-y-3 border-t pt-5 text-sm">
             <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span>₹{subtotal.toLocaleString("en-IN")}</span></div>
             <div className="flex justify-between"><span className="text-gray-500">Delivery</span><span className="text-green-700">Free</span></div>
-            {discount > 0 && <div className="flex justify-between text-green-700"><span>Coupon discount</span><span>−₹{discount.toLocaleString("en-IN")}</span></div>}
+            {discount > 0 && <div className="flex justify-between text-green-700"><span>{pricing?.promotionCode === "WELCOME10" ? "First-order offer (10%)" : "Coupon discount"}</span><span>−₹{discount.toLocaleString("en-IN")}</span></div>}
             <div className="flex justify-between border-t pt-4 text-xl font-bold"><span>Total</span><span>₹{displayedTotal.toLocaleString("en-IN")}</span></div>
           </div>
 

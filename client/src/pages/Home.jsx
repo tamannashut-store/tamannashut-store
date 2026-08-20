@@ -21,7 +21,7 @@ const categories = [
   { key: "new-arrivals", label: "New arrivals", copy: "The newest pieces added to our growing collection." },
 ];
 
-function ProductCard({ product, onWishlist }) {
+function ProductCard({ product, onWishlist, campaignId }) {
   const mrp = Number(product.mrp || product.price);
   const price = Number(product.price);
   const discount = mrp > price ? Math.round(((mrp - price) / mrp) * 100) : 0;
@@ -33,6 +33,7 @@ function ProductCard({ product, onWishlist }) {
           <FiHeart />
         </button>
         {discount > 0 && <span className="absolute left-3 top-3 z-10 rounded-full bg-[#183d2b] px-3 py-1 text-xs font-semibold text-white">{discount}% off</span>}
+        {campaignId && <span className="absolute bottom-3 left-3 z-10 rounded-full bg-white/95 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 shadow-sm">Sponsored</span>}
       </div>
       <div className="p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{String(product.category || "Kidswear").replace("-", " ")}</p>
@@ -41,7 +42,7 @@ function ProductCard({ product, onWishlist }) {
           <span className="text-xl font-bold text-[#183d2b]">₹{price.toLocaleString("en-IN")}</span>
           {mrp > price && <span className="text-sm text-slate-600 line-through">₹{mrp.toLocaleString("en-IN")}</span>}
         </div>
-        <Link to={productPath(product)} className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-semibold text-[#183d2b]">
+        <Link to={productPath(product)} onClick={() => campaignId && fetch(`${import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL}/api/ads/${campaignId}/click`, { method: "POST", keepalive: true }).catch(() => {})} className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4 text-sm font-semibold text-[#183d2b]">
           View details <FiArrowRight />
         </Link>
       </div>
@@ -55,6 +56,7 @@ function Home() {
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [instagramPosts, setInstagramPosts] = useState([]);
+  const [sponsored, setSponsored] = useState([]);
   const { addToWishlist } = useContext(WishlistContext);
 
   useEffect(() => {
@@ -72,6 +74,12 @@ function Home() {
       .then((response) => response.ok ? response.json() : { posts: [] })
       .then((data) => { if (active) setInstagramPosts(Array.isArray(data.posts) ? data.posts : []); })
       .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`${import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL}/api/ads/placements/home`).then((response) => response.ok ? response.json() : { campaigns: [] }).then((data) => { if (active) setSponsored(data.campaigns || []); }).catch(() => {});
     return () => { active = false; };
   }, []);
 
@@ -127,6 +135,8 @@ function Home() {
             ))}
           </div>
         </section>
+
+        {sponsored.length > 0 && <section className="border-y border-slate-200 bg-white"><div className="mx-auto max-w-[1400px] px-5 py-14 md:px-8"><div className="flex items-end justify-between gap-5"><div><p className="eyebrow">Sponsored</p><h2 className="mt-2 font-serif text-3xl text-slate-950 md:text-4xl">Promoted by our sellers</h2></div><p className="max-w-md text-right text-xs leading-5 text-slate-500">Paid placements are reviewed by Tamanna&apos;s Hut. Sponsorship does not change product reviews.</p></div><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{sponsored.map((item) => <ProductCard key={item.campaignId} product={item.product} campaignId={item.campaignId} onWishlist={addToWishlist}/>)}</div></div></section>}
 
         <section className="border-y border-slate-200 bg-white">
           <div className="mx-auto grid max-w-[1400px] gap-px bg-slate-200 md:grid-cols-3">

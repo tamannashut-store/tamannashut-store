@@ -30,6 +30,10 @@ const orderSchema = new mongoose.Schema(
 
     couponCode: { type: String, default: "" },
 
+    promotionCode: { type: String, default: "" },
+
+    welcomeDiscountPhoneHash: { type: String, default: undefined },
+
     totalAmount: Number,
 
     paymentId: String,
@@ -149,6 +153,7 @@ orderSchema.index({ status: 1 });
 orderSchema.index({ "shipping.awbCode": 1 }, { sparse: true });
 orderSchema.index({ "shipping.shipmentId": 1 }, { sparse: true });
 orderSchema.index({ userId: 1, idempotencyKey: 1 }, { unique: true, sparse: true });
+orderSchema.index({ welcomeDiscountPhoneHash: 1 }, { unique: true, sparse: true });
 orderSchema.index({ invoiceNumber: 1 }, { unique: true, sparse: true });
 orderSchema.index({ userId: 1, status: 1, "products._id": 1 });
 orderSchema.index({ "products.sellerId": 1, createdAt: -1 });

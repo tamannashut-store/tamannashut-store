@@ -4,6 +4,7 @@ import { passwordPolicyError } from "../server/src/utils/passwordPolicy.js";
 import { isRateLimitedAuthRequest } from "../server/src/utils/authRateLimit.js";
 import { accountTypeFromUser, homeForAccount, signInForAccount } from "../client/src/utils/accountSession.js";
 import { createEmailVerification, createTwoFactorCode, hashAuthSecret, maskEmail, safeSecretEqual } from "../server/src/utils/authSecurity.js";
+import { normalizeIndianPhone, phoneLookupValues } from "../server/src/utils/phone.js";
 
 test("password policy accepts strong passwords and rejects weak values", () => {
   assert.equal(passwordPolicyError("SecureShop42"), "");
@@ -17,10 +18,19 @@ test("auth throttling targets public credential endpoints only", () => {
   assert.equal(isRateLimitedAuthRequest("POST", "/reset-password/token"), true);
   assert.equal(isRateLimitedAuthRequest("POST", "/verify-email"), true);
   assert.equal(isRateLimitedAuthRequest("POST", "/admin-login/verify"), true);
+  assert.equal(isRateLimitedAuthRequest("POST", "/phone-verification/send"), true);
+  assert.equal(isRateLimitedAuthRequest("POST", "/phone-verification/check"), true);
   assert.equal(isRateLimitedAuthRequest("POST", "/seller-invitations/token/accept"), true);
   assert.equal(isRateLimitedAuthRequest("GET", "/seller/profile"), false);
   assert.equal(isRateLimitedAuthRequest("PUT", "/change-password"), false);
   assert.equal(isRateLimitedAuthRequest("POST", "/seller-invitations"), false);
+});
+
+test("Indian customer phone numbers normalize to one promotion identity", () => {
+  assert.equal(normalizeIndianPhone("98765 43210"), "+919876543210");
+  assert.equal(normalizeIndianPhone("+91-98765-43210"), "+919876543210");
+  assert.equal(normalizeIndianPhone("12345"), "");
+  assert.deepEqual(phoneLookupValues("+919876543210"), ["+919876543210", "919876543210", "9876543210"]);
 });
 
 test("account routing keeps customer, seller and administrator portals separate", () => {

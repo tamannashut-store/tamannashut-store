@@ -22,7 +22,7 @@ router.post("/create-order", protect, async (req, res) => {
   try {
     const locality = await verifyShiprocketDeliveryPostcode(req.body.customer?.pincode, false);
     const customer = normalizeCustomer({ ...req.body.customer, city: locality.city, state: locality.state, pincode: locality.pincode });
-    const cart = await calculateCart(req.body.products, req.body.couponCode);
+    const cart = await calculateCart(req.body.products, req.body.couponCode, { user: req.user, customer });
     if (cart.totalAmount <= 0) return res.status(400).json({ message: "Order amount must be greater than zero" });
     const idempotencyKey = String(req.body.idempotencyKey || "").trim().slice(0, 100);
     if (!idempotencyKey) return res.status(400).json({ message: "Missing checkout request identifier" });
@@ -66,7 +66,7 @@ router.post("/verify-payment", protect, async (req, res) => {
       razorpay.orders.fetch(razorpay_order_id),
       razorpay.payments.fetch(razorpay_payment_id),
     ]);
-    const cart = attempt?.cart || await calculateCart(req.body.products, req.body.couponCode);
+    const cart = attempt?.cart || await calculateCart(req.body.products, req.body.couponCode, { user: req.user, customer: req.body.customer });
     const expectedAmount = Math.round(cart.totalAmount * 100);
     if (
       razorpayOrder.notes?.userId !== String(req.user._id) ||

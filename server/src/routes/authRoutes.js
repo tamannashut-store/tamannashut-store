@@ -18,6 +18,8 @@ import { recordAudit } from "../utils/recordAudit.js";
 import { accountTypeFor, isPlatformAdmin, publicAccount } from "../utils/accountRoles.js";
 import { passwordPolicyError } from "../utils/passwordPolicy.js";
 import { createEmailVerification, createTwoFactorCode, hashAuthSecret, maskEmail, safeSecretEqual } from "../utils/authSecurity.js";
+import { normalizeIndianPhone } from "../utils/phone.js";
+import { checkPhoneVerification, phoneVerificationConfigured, sendPhoneVerification } from "../services/phoneVerificationService.js";
 
 const router = express.Router();
 
@@ -216,6 +218,51 @@ router.post("/verify-email/resend", async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Verification email could not be sent" : error.message });
     }
+});
+
+router.get("/phone-verification/status", protect, (req, res) => res.json({
+    configured: phoneVerificationConfigured(),
+    phone: req.user.phone || "",
+    verified: Boolean(req.user.phoneVerifiedAt),
+}));
+
+router.post("/phone-verification/send", protect, async (req, res) => {
+    try {
+        if (accountTypeFor(req.user) !== "customer") return res.status(403).json({ message: "Phone verification is available for customer accounts" });
+        const phone = normalizeIndianPhone(req.body.phone);
+        if (!phone) return res.status(400).json({ message: "Enter a valid Indian mobile number" });
+        const duplicate = await User.exists({ _id: { $ne: req.user._id }, phoneNormalized: phone, phoneVerifiedAt: { $ne: null } });
+        if (duplicate) return res.status(409).json({ message: "This phone number is already verified on another account" });
+        const user = await User.findById(req.user._id).select("+phoneNormalized +phoneVerificationSentAt");
+        if (user.phoneVerificationSentAt && Date.now() - user.phoneVerificationSentAt.getTime() < 60_000) return res.status(429).json({ message: "Please wait one minute before requesting another code" });
+        await sendPhoneVerification(phone);
+        if (user.phoneNormalized !== phone) user.phoneVerifiedAt = null;
+        user.phone = phone;
+        user.phoneNormalized = phone;
+        user.phoneVerificationSentAt = new Date();
+        await user.save();
+        return res.json({ message: "Verification code sent", phone });
+    } catch (error) { return res.status(error.status || 502).json({ message: error.status ? error.message : "Verification code could not be sent" }); }
+});
+
+router.post("/phone-verification/check", protect, async (req, res) => {
+    try {
+        if (accountTypeFor(req.user) !== "customer") return res.status(403).json({ message: "Phone verification is available for customer accounts" });
+        const phone = normalizeIndianPhone(req.body.phone);
+        const code = String(req.body.code || "").replace(/\D/g, "");
+        if (!phone || code.length < 4 || code.length > 10) return res.status(400).json({ message: "Enter the code sent to your phone" });
+        const duplicate = await User.exists({ _id: { $ne: req.user._id }, phoneNormalized: phone, phoneVerifiedAt: { $ne: null } });
+        if (duplicate) return res.status(409).json({ message: "This phone number is already verified on another account" });
+        const result = await checkPhoneVerification(phone, code);
+        if (result.status !== "approved") return res.status(400).json({ message: "The verification code is incorrect or expired" });
+        const user = await User.findById(req.user._id).select("+phoneNormalized +phoneVerificationSentAt");
+        user.phone = phone;
+        user.phoneNormalized = phone;
+        user.phoneVerifiedAt = new Date();
+        user.phoneVerificationSentAt = null;
+        await user.save();
+        return res.json({ message: "Phone number verified", phone, verified: true });
+    } catch (error) { return res.status(error?.code === 11000 ? 409 : error.status || 502).json({ message: error?.code === 11000 ? "This phone number is already verified on another account" : error.status ? error.message : "Phone number could not be verified" }); }
 });
 
 const ownerOnly = (req, res, next) => {
@@ -551,9 +598,7 @@ router.put("/profile/:id", protect, async (req, res) => {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        const user = await User.findById(
-            req.params.id
-        );
+        const user = await User.findById(req.params.id).select("+phoneNormalized");
 
         if (!user) {
 
@@ -568,12 +613,15 @@ router.put("/profile/:id", protect, async (req, res) => {
         const address = String(req.body.address || "").trim();
         const pincode = String(req.body.pincode || "").trim();
         if (name.length < 2 || name.length > 80) return res.status(400).json({ message: "Enter a valid full name" });
-        if (!/^[+]?[0-9]{10,13}$/.test(phone)) return res.status(400).json({ message: "Enter a valid phone number" });
+        const normalizedPhone = normalizeIndianPhone(phone);
+        if (!normalizedPhone) return res.status(400).json({ message: "Enter a valid Indian mobile number" });
         if (address.length < 10 || address.length > 300) return res.status(400).json({ message: "Enter a complete delivery address" });
         if (!/^\d{6}$/.test(pincode)) return res.status(400).json({ message: "Enter a valid 6-digit pincode" });
         const locality = await verifyShiprocketDeliveryPostcode(pincode, false);
         user.name = name;
-        user.phone = phone;
+        if (user.phoneNormalized && user.phoneNormalized !== normalizedPhone) user.phoneVerifiedAt = null;
+        user.phone = normalizedPhone;
+        user.phoneNormalized = normalizedPhone;
         user.address = address;
         user.city = locality.city;
         user.state = locality.state;
