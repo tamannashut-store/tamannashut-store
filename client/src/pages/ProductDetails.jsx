@@ -73,11 +73,15 @@ function ProductDetails() {
   const fetchProduct = useCallback(async (signal) => {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`, { signal });
+      const requested = new URLSearchParams(window.location.search);
       setProduct(data);
-      if (data.slug && id !== data.slug) window.history.replaceState(window.history.state, "", productPath(data));
+      if (data.slug && id !== data.slug) window.history.replaceState(window.history.state, "", `${productPath(data)}${window.location.search}`);
       trackEvent("view_item", { currency: "INR", value: Number(data.price || 0), items: [{ item_id: data._id, item_name: data.name, item_category: data.category, price: Number(data.price || 0) }] });
-      setSelectedColor(data.variants?.find((variant) => variant.active !== false)?.color || data.color || "");
-      setSelectedSize("");
+      const requestedColor = String(requested.get("color") || "").trim();
+      const requestedSize = String(requested.get("size") || "").trim();
+      const linkedVariant = data.variants?.find((variant) => variant.active !== false && (!requestedColor || variant.color?.toLowerCase() === requestedColor.toLowerCase()) && (!requestedSize || variant.size?.toLowerCase() === requestedSize.toLowerCase()));
+      setSelectedColor(linkedVariant?.color || data.variants?.find((variant) => variant.active !== false)?.color || data.color || "");
+      setSelectedSize(linkedVariant?.size || "");
       setSelectedImageIndex(0);
       try {
         const stored = JSON.parse(localStorage.getItem("recently_viewed_products") || "[]");
