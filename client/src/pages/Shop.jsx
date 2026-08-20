@@ -27,6 +27,7 @@ function Shop() {
   const [filterOptions, setFilterOptions] = useState({ colors: [], fabrics: [], ageGroups: [], price: { min: 0, max: 0 } });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchMode, setSearchMode] = useState("exact");
+  const [sponsored, setSponsored] = useState([]);
 
   const category = searchParams.get("category") || "";
   const selectedSize = searchParams.get("size") || "";
@@ -72,6 +73,8 @@ function Shop() {
     fetchProducts();
     return () => controller.abort();
   }, [queryString, reloadKey]);
+
+  useEffect(() => { let active = true; axios.get(`${import.meta.env.VITE_API_URL}/api/ads/placements/shop`).then(({ data }) => { if (active) setSponsored(data.campaigns || []); }).catch(() => {}); return () => { active = false; }; }, []);
 
   useEffect(() => { if (!filtersOpen) return undefined; const previous = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = previous; }; }, [filtersOpen]);
 
@@ -192,6 +195,7 @@ function Shop() {
           </aside>
 
           <section>
+            {sponsored.length > 0 && <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/40 p-4"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-amber-800">Sponsored listings</p><p className="mt-1 text-xs text-slate-500">Paid placements reviewed by Tamanna&apos;s Hut.</p></div></div><div className="mt-4 flex gap-4 overflow-x-auto pb-2">{sponsored.map((item) => <Link key={item.campaignId} to={productPath(item.product)} onClick={() => axios.post(`${import.meta.env.VITE_API_URL}/api/ads/${item.campaignId}/click`).catch(() => {})} className="flex min-w-[260px] gap-3 rounded-xl border bg-white p-3"><img src={item.product.images?.[0]?.url} alt="" className="h-20 w-16 rounded-lg object-cover"/><div><p className="line-clamp-2 text-sm font-semibold">{item.product.name}</p><p className="mt-2 font-bold text-brand-primary">₹{Number(item.product.price).toLocaleString("en-IN")}</p><span className="text-[10px] uppercase tracking-wider text-slate-400">Sponsored</span></div></Link>)}</div></div>}
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white p-4">
               <p className="text-sm text-gray-500">Page {page} of {totalPages}</p>
               <label className="flex items-center gap-3 text-sm">

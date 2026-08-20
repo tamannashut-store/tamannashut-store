@@ -6,6 +6,7 @@ import User from "../models/User.js";
 import { createOrderWithReservedStock, sendOrderNotifications } from "../services/orderService.js";
 import { razorpayWebhookContext } from "../utils/webhookMonitoring.js";
 import { syncOrderSettlementsSafely } from "../services/sellerSettlementService.js";
+import AdCampaign from "../models/AdCampaign.js";
 
 export const razorpayWebhook = async (req, res) => {
   let event;
@@ -23,6 +24,12 @@ export const razorpayWebhook = async (req, res) => {
     const refund = event.payload?.refund?.entity;
 
     if (event.event === "payment.captured" && payment?.order_id) {
+      const adCampaign = await AdCampaign.findOne({ razorpayOrderId: payment.order_id });
+      if (adCampaign) {
+        if (Number(payment.amount) !== Math.round(adCampaign.amount * 100)) throw new Error("Seller ad payment amount did not match its campaign");
+        if (["payment_pending", "cancelled"].includes(adCampaign.status)) await AdCampaign.updateOne({ _id: adCampaign._id, status: { $in: ["payment_pending", "cancelled"] } }, { $set: { status: "pending_review", razorpayPaymentId: payment.id, paidAt: new Date() } });
+        return res.status(200).json({ received: true });
+      }
       const existing = await Order.findOne({ $or: [{ razorpayOrderId: payment.order_id }, { paymentId: payment.id }] });
       if (!existing) {
         const attempt = await PaymentAttempt.findOne({ razorpayOrderId: payment.order_id });
@@ -36,8 +43,16 @@ export const razorpayWebhook = async (req, res) => {
         }
       }
     } else if (event.event === "payment.failed" && payment?.order_id) {
+      await AdCampaign.updateOne({ razorpayOrderId: payment.order_id, status: "payment_pending" }, { $set: { status: "cancelled" } });
       await PaymentAttempt.updateOne({ razorpayOrderId: payment.order_id }, { $set: { status: "failed", paymentId: payment.id || "", failureReason: payment.error_description || payment.error_reason || "Payment failed" } });
     } else if (["refund.created", "refund.processed", "refund.failed"].includes(event.event) && refund?.payment_id) {
+      const adCampaign = await AdCampaign.findOne({ razorpayPaymentId: refund.payment_id });
+      if (adCampaign) {
+        adCampaign.refundId = refund.id || adCampaign.refundId || "";
+        adCampaign.refundStatus = event.event === "refund.processed" ? "processed" : event.event === "refund.failed" ? "failed" : "submitted";
+        await adCampaign.save();
+        return res.status(200).json({ received: true });
+      }
       const order = await Order.findOne({ paymentId: refund.payment_id });
       if (order) {
         order.refund.amount = Number(refund.amount || 0) / 100;

@@ -33,7 +33,7 @@ router.post("/", protect, async (req, res) => {
     }
     const locality = await verifyShiprocketDeliveryPostcode(req.body.customer?.pincode, true);
     req.body.customer = { ...req.body.customer, city: locality.city, state: locality.state, pincode: locality.pincode };
-    const cart = await calculateCart(req.body.products, req.body.couponCode);
+    const cart = await calculateCart(req.body.products, req.body.couponCode, { user: req.user, customer: req.body.customer });
     const result = await createOrderWithReservedStock({
       user: req.user,
       customer: req.body.customer,
@@ -46,6 +46,14 @@ router.post("/", protect, async (req, res) => {
   } catch (error) {
     return res.status(error.status || 500).json({ success: false, message: error.message });
   }
+});
+
+router.post("/quote", protect, async (req, res) => {
+  try {
+    const customer = { ...req.body.customer, phone: req.body.customer?.phone || req.user.phone };
+    const cart = await calculateCart(req.body.products, req.body.couponCode, { user: req.user, customer });
+    return res.json({ subtotal: cart.subtotal, discount: cart.discount, totalAmount: cart.totalAmount, couponCode: cart.couponCode, couponPercent: cart.couponPercent, promotionCode: cart.promotionCode, promotionPercent: cart.promotionPercent });
+  } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
 });
 
 router.get("/invoice/:id", protect, async (req, res) => {

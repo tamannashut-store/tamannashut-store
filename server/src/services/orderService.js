@@ -11,6 +11,10 @@ import { nextInvoiceNumber } from "../utils/invoiceNumber.js";
 import { gstRateForApparelUnit } from "../utils/gst.js";
 import { storefrontProductFilter } from "../utils/productVisibility.js";
 import { groupSellerLines, syncOrderSettlementsSafely } from "./sellerSettlementService.js";
+import crypto from "crypto";
+import { accountTypeFor } from "../utils/accountRoles.js";
+import { normalizeIndianPhone, phoneLookupValues } from "../utils/phone.js";
+import { welcomePromotionDecision } from "../utils/welcomePromotion.js";
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -49,7 +53,7 @@ export const normalizeCustomer = (customer) => {
   return { ...cleanCustomer, phone: cleanCustomer.phone.replace(/\s/g, "") };
 };
 
-export const calculateCart = async (items, couponCode = "") => {
+export const calculateCart = async (items, couponCode = "", context = {}) => {
   if (!Array.isArray(items) || items.length === 0 || items.length > 30) {
     throw Object.assign(new Error("Your cart is empty or invalid"), { status: 400 });
   }
@@ -108,6 +112,23 @@ export const calculateCart = async (items, couponCode = "") => {
     if (!coupon) throw Object.assign(new Error("Coupon is invalid or expired"), { status: 400 });
     discount = money(subtotal * (Number(coupon.discount) / 100));
   }
+  const checkoutPhone = normalizeIndianPhone(context.customer?.phone);
+  const userPhone = normalizeIndianPhone(context.user?.phoneNormalized || context.user?.phone);
+  let welcomeEligible = false;
+  if (context.user && accountTypeFor(context.user) === "customer" && context.user.phoneVerifiedAt && checkoutPhone && checkoutPhone === userPhone) {
+    const used = await Order.exists({ $or: [
+      { userId: context.user._id },
+      { phone: { $in: phoneLookupValues(checkoutPhone) } },
+    ] });
+    welcomeEligible = !used;
+    const decision = welcomePromotionDecision({ subtotal, existingDiscount: discount, eligible: welcomeEligible });
+    if (decision.applied) {
+      discount = decision.discount;
+      coupon = null;
+    } else {
+      welcomeEligible = false;
+    }
+  }
   const discountRatio = subtotal > 0 ? discount / subtotal : 0;
   lines.forEach((line) => {
     line.gstRate = gstRateForApparelUnit(line.price * (1 - discountRatio));
@@ -120,6 +141,11 @@ export const calculateCart = async (items, couponCode = "") => {
     totalAmount: money(Math.max(subtotal - discount, 0)),
     couponCode: coupon?.code || "",
     couponPercent: coupon?.discount || 0,
+    promotionCode: welcomeEligible ? "WELCOME10" : "",
+    promotionPercent: welcomeEligible ? 10 : 0,
+    welcomeDiscountPhoneHash: welcomeEligible
+      ? crypto.createHmac("sha256", process.env.JWT_SECRET).update(checkoutPhone).digest("hex")
+      : "",
   };
 };
 
@@ -200,6 +226,8 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       subtotal: cart.subtotal,
       discount: cart.discount,
       couponCode: cart.couponCode,
+      promotionCode: cart.promotionCode,
+      welcomeDiscountPhoneHash: cart.welcomeDiscountPhoneHash || undefined,
       totalAmount: cart.totalAmount,
       paymentId: payment.paymentId || "",
       razorpayOrderId: payment.razorpayOrderId || "",

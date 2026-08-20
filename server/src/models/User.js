@@ -33,6 +33,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    phoneNormalized: { type: String, default: "", select: false },
+    phoneVerifiedAt: { type: Date, default: null },
+    phoneVerificationSentAt: { type: Date, default: null, select: false },
 
     address: {
       type: String,
@@ -102,6 +105,10 @@ const userSchema = new mongoose.Schema(
       },
     },
   }
+);
+userSchema.index(
+  { phoneNormalized: 1 },
+  { unique: true, partialFilterExpression: { phoneVerifiedAt: { $type: "date" } } }
 );
 
 export default mongoose.models.User ||

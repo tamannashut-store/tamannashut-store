@@ -29,6 +29,8 @@ const SellerOrders = lazy(() => import("./pages/SellerOrders"));
 const SellerAccount = lazy(() => import("./pages/SellerAccount"));
 const SellerSettlements = lazy(() => import("./pages/SellerSettlements"));
 const AdminSettlements = lazy(() => import("./pages/AdminSettlements"));
+const AdminAds = lazy(() => import("./pages/AdminAds"));
+const SellerAds = lazy(() => import("./pages/SellerAds"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => <div className="grid min-h-[55vh] place-items-center bg-brand-background text-sm font-medium text-slate-500">Loading…</div>;
@@ -76,6 +78,7 @@ function App() {
           <Route path="/admin/operations" element={<AdminOperations />} />
           <Route path="/admin/team" element={<AdminTeam />} />
           <Route path="/admin/settlements" element={<AdminSettlements />} />
+          <Route path="/admin/ads" element={<AdminAds />} />
           <Route path="/admin/listing-approvals" element={<AdminSellerListings />} />
           <Route path="/admin/edit/:id" element={<EditProduct />} />
           <Route path="/admin/coupons" element={<AdminCoupons />} />
@@ -87,6 +90,7 @@ function App() {
           <Route path="/seller/products/edit/:id" element={<EditProduct />} />
           <Route path="/seller/orders" element={<SellerOrders />} />
           <Route path="/seller/settlements" element={<SellerSettlements />} />
+          <Route path="/seller/ads" element={<SellerAds />} />
         </Route>
         <Route element={<SellerApplicantRoute><AdminLayout /></SellerApplicantRoute>}>
           <Route path="/seller/profile" element={<SellerAccount />} />
