@@ -80,7 +80,7 @@ test("store owner can open the seller invitation workspace", async ({ page }) =>
   await page.goto("/admin/team");
   await expect(page.getByRole("heading", { name: "Seller team" })).toBeVisible();
   await expect(page.getByPlaceholder("seller@example.com")).toBeVisible();
-  await expect(page.getByText("Primary store-owner account")).toBeVisible();
+  await expect(page.getByText("Platform administrator and catalogue owner")).toBeVisible();
 });
 
 test("mobile navigation exposes storefront and account destinations", async ({ page }) => {
@@ -151,11 +151,12 @@ test("password recovery screens provide clear safe paths", async ({ page }) => {
   await page.goto("/forgot-password");
   await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
   await expect(page.getByLabel("Email address")).toBeVisible();
-  await expect(page.getByRole("link", { name: /Back to sign in/ })).toHaveAttribute("href", "/login");
+  await expect(page.getByRole("link", { name: "Customer sign in" })).toHaveAttribute("href", "/login");
+  await expect(page.getByRole("link", { name: "Seller Centre sign in" })).toHaveAttribute("href", "/admin-login");
 
   await page.goto("/reset-password/sample-token");
-  await page.getByPlaceholder("At least 8 characters").fill("secure-password");
-  await page.getByPlaceholder("Enter it again").fill("different-password");
+  await page.getByPlaceholder("At least 8 characters").fill("SecurePass42");
+  await page.getByPlaceholder("Enter it again").fill("DifferentPass42");
   await page.getByRole("button", { name: "Set new password" }).click();
   await expect(page.getByRole("alert")).toContainText("do not match");
 });
@@ -163,9 +164,9 @@ test("password recovery screens provide clear safe paths", async ({ page }) => {
 test("changing a password clears the current browser session", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-customer-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } })));
   await page.goto("/change-password");
-  await page.getByPlaceholder("Current Password").fill("old-password");
-  await page.getByPlaceholder("New Password").fill("new-password");
-  await page.getByPlaceholder("Confirm Password").fill("new-password");
+  await page.getByLabel("Current password", { exact: true }).fill("OldPassword42");
+  await page.getByLabel("New password", { exact: true }).fill("NewPassword42");
+  await page.getByLabel("Confirm new password", { exact: true }).fill("NewPassword42");
   await page.getByRole("button", { name: "Update Password" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();

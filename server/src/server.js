@@ -57,6 +57,7 @@ import { backfillProductSlugs } from "./utils/productSlug.js";
 import { migrateMarketplaceOwnership } from "./utils/marketplaceMigration.js";
 import { backfillSellerSettlements } from "./utils/settlementMigration.js";
 import { reconcileSellerCompliance } from "./utils/sellerComplianceMigration.js";
+import { isRateLimitedAuthRequest } from "./utils/authRateLimit.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -102,7 +103,7 @@ app.use(
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
-app.use("/api/auth", authLimiter, authRoutes);
+app.use("/api/auth", (req, res, next) => isRateLimitedAuthRequest(req.method, req.path) ? authLimiter(req, res, next) : next(), authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/contacts", contactRoutes);

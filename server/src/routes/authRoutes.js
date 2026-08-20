@@ -16,6 +16,7 @@ import { loginPortalError } from "../utils/loginPortal.js";
 import { decryptSellerValue, effectiveSellerVerification, encryptedSellerProfile, normalizeSellerDetails, sellerProfileCompleteness } from "../utils/sellerOnboarding.js";
 import { recordAudit } from "../utils/recordAudit.js";
 import { accountTypeFor, isPlatformAdmin, publicAccount } from "../utils/accountRoles.js";
+import { passwordPolicyError } from "../utils/passwordPolicy.js";
 
 const router = express.Router();
 
@@ -28,9 +29,11 @@ router.post("/register", async (req, res) => {
         const name = String(req.body.name || "").trim();
         const email = String(req.body.email || "").trim().toLowerCase();
         const password = String(req.body.password || "");
-        if (name.length < 2 || name.length > 80 || !/^\S+@\S+\.\S+$/.test(email) || password.length < 8 || password.length > 128) {
-            return res.status(400).json({ message: "Enter a valid name, email and password of at least 8 characters" });
+        const passwordError = passwordPolicyError(password);
+        if (name.length < 2 || name.length > 80 || !/^\S+@\S+\.\S+$/.test(email) || passwordError) {
+            return res.status(400).json({ message: passwordError || "Enter a valid name and email address" });
         }
+        if (req.body.termsAccepted !== true) return res.status(400).json({ message: "Accept the Terms and Privacy Policy to create an account" });
         const existingUser = await User.findOne({ email });
 
         if (existingUser) {
@@ -45,6 +48,7 @@ router.post("/register", async (req, res) => {
             email,
             password: hashedPassword,
             marketingConsent: req.body.marketingConsent === true,
+            termsAcceptedAt: new Date(),
         });
 
         const token = jwt.sign(
@@ -58,9 +62,7 @@ router.post("/register", async (req, res) => {
             user: publicAccount(user),
           });
     } catch (error) {
-        res.status(500).json({
-            message: error.message,
-        });
+        res.status(error?.code === 11000 ? 409 : 500).json({ message: error?.code === 11000 ? "An account already exists for this email" : process.env.NODE_ENV === "production" ? "Account could not be created" : error.message });
     }
 });
 
@@ -79,6 +81,9 @@ const loginForPortal = (adminPortal = false) => async (req, res) => {
 
         const portalError = loginPortalError(user, adminPortal);
         if (portalError) return res.status(403).json({ message: portalError });
+
+        user.lastLoginAt = new Date();
+        await user.save();
 
         const token = jwt.sign(
             {
@@ -151,7 +156,8 @@ router.post("/seller-invitations/:token/accept", async (req, res) => {
         if (await User.exists({ email: invitation.email })) return res.status(409).json({ message: "An account already exists for this email" });
         const name = String(req.body.name || "").trim();
         const password = String(req.body.password || "");
-        if (name.length < 2 || name.length > 80 || password.length < 8 || password.length > 128) return res.status(400).json({ message: "Enter your full name and a password of at least 8 characters" });
+        const passwordError = passwordPolicyError(password);
+        if (name.length < 2 || name.length > 80 || passwordError) return res.status(400).json({ message: passwordError || "Enter your full name" });
         const details = normalizeSellerDetails(req.body);
         const securedProfile = encryptedSellerProfile(details);
         createdUser = await User.create({ name, email: invitation.email, password: await bcrypt.hash(password, 10), isAdmin: false, accountType: "seller", sellerRole: "member", sellerAccessStatus: "pending" });
@@ -161,7 +167,7 @@ router.post("/seller-invitations/:token/accept", async (req, res) => {
         return res.status(201).json({ message: "Seller details submitted for owner verification" });
     } catch (error) {
         if (createdUser?._id) await Promise.allSettled([User.deleteOne({ _id: createdUser._id }), SellerProfile.deleteOne({ userId: createdUser._id })]);
-        return res.status(error.status || 500).json({ message: error.status ? error.message : process.env.NODE_ENV === "production" ? "Seller account could not be created" : error.message });
+        return res.status(error.status || (error?.code === 11000 ? 409 : 500)).json({ message: error.status ? error.message : error?.code === 11000 ? "A seller account already exists for this email" : process.env.NODE_ENV === "production" ? "Seller account could not be created" : error.message });
     }
 });
 
@@ -389,7 +395,8 @@ router.post("/forgot-password", async (req, res) => {
 router.post("/reset-password/:token", async (req, res) => {
     try {
         const password = String(req.body.password || "");
-        if (password.length < 8 || password.length > 128) return res.status(400).json({ message: "Password must be between 8 and 128 characters" });
+        const passwordError = passwordPolicyError(password);
+        if (passwordError) return res.status(400).json({ message: passwordError });
         const tokenHash = crypto.createHash("sha256").update(String(req.params.token || "")).digest("hex");
         const user = await User.findOne({ passwordResetToken: tokenHash, passwordResetExpires: { $gt: new Date() } }).select("+passwordResetToken +passwordResetExpires");
         if (!user) return res.status(400).json({ message: "This reset link is invalid or has expired" });
@@ -399,7 +406,7 @@ router.post("/reset-password/:token", async (req, res) => {
         user.passwordResetToken = undefined;
         user.passwordResetExpires = undefined;
         await user.save();
-        return res.json({ message: "Password reset successfully. You can now sign in" });
+        return res.json({ message: "Password reset successfully. You can now sign in", loginPath: accountTypeFor(user) === "customer" ? "/login" : "/admin-login" });
     } catch (error) {
         return res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Password could not be reset" : error.message });
     }
@@ -498,54 +505,27 @@ router.delete("/profile/:id", protect, async (req, res) => {
     }
 });
 
-router.put("/change-password/:id", protect, async (req, res) => {
-
+const changePassword = async (req, res) => {
     try {
-
-        if (String(req.user._id) !== req.params.id) {
+        if (req.params.id && String(req.user._id) !== req.params.id) {
             return res.status(403).json({ message: "Access denied" });
         }
-
         const currentPassword = String(req.body.currentPassword || "");
         const newPassword = String(req.body.newPassword || "");
-        if (!currentPassword || newPassword.length < 8 || newPassword.length > 128) {
-            return res.status(400).json({ message: "Enter your current password and a new password between 8 and 128 characters" });
-        }
+        const passwordError = passwordPolicyError(newPassword);
+        if (!currentPassword || passwordError) return res.status(400).json({ message: !currentPassword ? "Enter your current password" : passwordError });
         if (currentPassword === newPassword) {
             return res.status(400).json({ message: "Choose a new password different from your current password" });
         }
-
-        const user = await User.findById(
-            req.params.id
-        ).select("+password");
-
+        const user = await User.findById(req.user._id).select("+password");
         if (!user) {
-
-            return res.status(404).json({
-                message: "User not found",
-            });
-
+            return res.status(404).json({ message: "User not found" });
         }
-
-        const isMatch =
-            await bcrypt.compare(
-                currentPassword,
-                user.password
-            );
-
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
         if (!isMatch) {
-
-            return res.status(400).json({
-                message: "Current password incorrect",
-            });
-
+            return res.status(400).json({ message: "Current password is incorrect" });
         }
-
-        user.password =
-            await bcrypt.hash(
-                newPassword,
-                10
-            );
+        user.password = await bcrypt.hash(newPassword, 10);
         user.passwordChangedAt = new Date();
         user.sessionVersion = (user.sessionVersion || 0) + 1;
         user.passwordResetToken = undefined;
@@ -553,19 +533,13 @@ router.put("/change-password/:id", protect, async (req, res) => {
 
         await user.save();
 
-        return res.json({
-            success: true,
-            message: "Password changed. Please sign in again",
-        });
-
+        return res.json({ success: true, message: "Password changed. Please sign in again", loginPath: accountTypeFor(user) === "customer" ? "/login" : "/admin-login" });
     } catch (error) {
-
-        res.status(500).json({
-            message: error.message,
-        });
-
+        res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Password could not be changed" : error.message });
     }
+};
 
-});
+router.put("/change-password", protect, changePassword);
+router.put("/change-password/:id", protect, changePassword);
 
 export default router;
