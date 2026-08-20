@@ -42,6 +42,7 @@ const productSchema = new mongoose.Schema(
       index: true,
     },
     approvalNote: { type: String, default: "", trim: true, maxlength: 500 },
+    sellerComplianceHold: { type: Boolean, default: false, index: true },
     reviewedAt: { type: Date, default: null },
     reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     lowStockThreshold: { type: Number, default: 3, min: 0 },
@@ -102,7 +103,7 @@ productSchema.index({ averageRating: -1 });
 productSchema.index({ "variants.sku": 1 });
 productSchema.index({ status: 1, color: 1, fabric: 1, ageGroup: 1 });
 productSchema.index({ sellerId: 1, updatedAt: -1 });
-productSchema.index({ sellerId: 1, approvalStatus: 1, status: 1 });
+productSchema.index({ sellerId: 1, approvalStatus: 1, status: 1, sellerComplianceHold: 1 });
 
 const Product = mongoose.model("Product", productSchema);
 

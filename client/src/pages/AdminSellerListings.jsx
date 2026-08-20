@@ -8,7 +8,14 @@ function AdminSellerListings() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const load = useCallback(async () => { try { const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/admin/list`, { params: { approval: "pending", limit: 100 } }); setProducts(data.products || []); } catch (error) { toast.error(error.response?.data?.message || "Seller listings could not be loaded"); } finally { setLoading(false); } }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    axios.get(`${import.meta.env.VITE_API_URL}/api/products/admin/list`, { params: { approval: "pending", limit: 100 } })
+      .then(({ data }) => { if (active) setProducts(data.products || []); })
+      .catch((error) => { if (active) toast.error(error.response?.data?.message || "Seller listings could not be loaded"); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
   const review = async (product, approvalStatus) => {
     const approvalNote = approvalStatus === "rejected" ? window.prompt("Explain what the seller must correct:", "") : "";
     if (approvalStatus === "rejected" && (approvalNote === null || approvalNote.trim().length < 5)) return;

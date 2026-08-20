@@ -4,6 +4,7 @@ import StoreLayout from "./components/StoreLayout";
 import AdminRoute from "./components/AdminRoute";
 import PrivateRoute from "./components/PrivateRoute";
 import SellerRoute from "./components/SellerRoute";
+import SellerApplicantRoute from "./components/SellerApplicantRoute";
 
 const Home = lazy(() => import("./pages/Home")); const Login = lazy(() => import("./pages/Login")); const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword")); const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -79,8 +80,10 @@ function App() {
           <Route path="/seller/products" element={<Admin />} />
           <Route path="/seller/products/edit/:id" element={<EditProduct />} />
           <Route path="/seller/orders" element={<SellerOrders />} />
-          <Route path="/seller/profile" element={<SellerAccount />} />
           <Route path="/seller/settlements" element={<SellerSettlements />} />
+        </Route>
+        <Route element={<SellerApplicantRoute><AdminLayout /></SellerApplicantRoute>}>
+          <Route path="/seller/profile" element={<SellerAccount />} />
         </Route>
         <Route path="/admin-coupons" element={<Navigate to="/admin/coupons" replace />} />
       </Routes></Suspense>

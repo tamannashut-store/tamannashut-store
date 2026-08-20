@@ -52,9 +52,11 @@ import crypto from "crypto";
 import * as Sentry from "@sentry/node";
 import Product from "./models/Product.js";
 import User from "./models/User.js";
+import SellerProfile from "./models/SellerProfile.js";
 import { backfillProductSlugs } from "./utils/productSlug.js";
 import { migrateMarketplaceOwnership } from "./utils/marketplaceMigration.js";
 import { backfillSellerSettlements } from "./utils/settlementMigration.js";
+import { reconcileSellerCompliance } from "./utils/sellerComplianceMigration.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -132,6 +134,8 @@ const start = async () => {
   console.log("MongoDB connected");
   const marketplaceMigration = await migrateMarketplaceOwnership({ User, Product });
   if (marketplaceMigration.sellersSeparated || marketplaceMigration.productsAssigned) console.log("Marketplace ownership prepared", marketplaceMigration);
+  const complianceMigration = await reconcileSellerCompliance({ User, SellerProfile, Product });
+  if (complianceMigration.listingsChanged) console.log("Seller compliance listing holds synchronized", complianceMigration);
   const settlementOrders = await backfillSellerSettlements();
   if (settlementOrders) console.log(`Seller settlements prepared for ${settlementOrders} orders`);
   const migratedSlugs = await backfillProductSlugs(Product);

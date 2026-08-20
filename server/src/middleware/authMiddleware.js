@@ -84,3 +84,8 @@ export const seller = (req, res, next) => {
     if (req.user && isMarketplaceSeller(req.user) && req.user.sellerAccessStatus === "active") return next();
     return res.status(403).json({ message: "Active seller account required" });
 };
+
+export const sellerApplicant = (req, res, next) => {
+    if (req.user && isMarketplaceSeller(req.user) && req.user.sellerAccessStatus !== "closed" && req.user.sellerAccessStatus !== "suspended") return next();
+    return res.status(403).json({ message: "Seller applicant account required" });
+};

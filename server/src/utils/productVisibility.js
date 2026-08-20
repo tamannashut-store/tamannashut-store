@@ -6,9 +6,11 @@ export const storefrontProductFilter = (filter = {}) => ({
   ...filter,
   status: "active",
   approvalStatus: { $in: [...STOREFRONT_APPROVAL_STATES] },
+  sellerComplianceHold: { $ne: true },
 });
 
 export const isStorefrontProduct = (product) => (
   product?.status === "active"
   && STOREFRONT_APPROVAL_STATES.includes(product?.approvalStatus)
+  && product?.sellerComplianceHold !== true
 );
