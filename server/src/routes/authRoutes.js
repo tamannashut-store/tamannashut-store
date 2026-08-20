@@ -10,15 +10,47 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import { admin, protect, seller, sellerApplicant } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
-import { passwordResetEmailTemplate, sellerInvitationEmailTemplate, sellerVerificationEmailTemplate } from "../utils/emailTemplates.js";
+import { emailVerificationTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate, sellerVerificationEmailTemplate, twoFactorCodeEmailTemplate } from "../utils/emailTemplates.js";
 import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
 import { loginPortalError } from "../utils/loginPortal.js";
 import { decryptSellerValue, effectiveSellerVerification, encryptedSellerProfile, normalizeSellerDetails, sellerProfileCompleteness } from "../utils/sellerOnboarding.js";
 import { recordAudit } from "../utils/recordAudit.js";
 import { accountTypeFor, isPlatformAdmin, publicAccount } from "../utils/accountRoles.js";
 import { passwordPolicyError } from "../utils/passwordPolicy.js";
+import { createEmailVerification, createTwoFactorCode, hashAuthSecret, maskEmail, safeSecretEqual } from "../utils/authSecurity.js";
 
 const router = express.Router();
+
+const sessionPayload = (user) => ({
+    token: jwt.sign({ id: user._id, sessionVersion: user.sessionVersion || 0 }, process.env.JWT_SECRET, { expiresIn: "7d" }),
+    user: publicAccount(user),
+});
+
+const sendVerificationEmail = async (user) => {
+    const verification = createEmailVerification();
+    user.emailVerificationRequiredAt ||= new Date();
+    user.emailVerificationToken = verification.tokenHash;
+    user.emailVerificationExpires = verification.expiresAt;
+    user.emailVerificationSentAt = new Date();
+    await user.save();
+    const url = `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/verify-email/${verification.token}`;
+    return sendEmail(user.email, "Verify your Tamanna's Hut email", emailVerificationTemplate(user, url));
+};
+
+const issueTwoFactorChallenge = async (user) => {
+    const factor = createTwoFactorCode();
+    user.twoFactorCodeHash = factor.codeHash;
+    user.twoFactorExpires = factor.expiresAt;
+    user.twoFactorAttempts = 0;
+    await user.save();
+    const delivery = await sendEmail(user.email, "Your Seller Centre security code", twoFactorCodeEmailTemplate(user, factor.code));
+    if (!delivery?.sent) return null;
+    return {
+        requiresTwoFactor: true,
+        challengeToken: jwt.sign({ id: user._id, type: "seller-centre-2fa", sessionVersion: user.sessionVersion || 0 }, process.env.JWT_SECRET, { expiresIn: "15m" }),
+        maskedEmail: maskEmail(user.email),
+    };
+};
 
 
 // REGISTER
@@ -43,24 +75,25 @@ router.post("/register", async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
+        const verification = createEmailVerification();
         const user = await User.create({
             name,
             email,
             password: hashedPassword,
             marketingConsent: req.body.marketingConsent === true,
             termsAcceptedAt: new Date(),
+            emailVerificationRequiredAt: new Date(),
+            emailVerificationToken: verification.tokenHash,
+            emailVerificationExpires: verification.expiresAt,
+            emailVerificationSentAt: new Date(),
         });
-
-        const token = jwt.sign(
-            { id: user._id, sessionVersion: user.sessionVersion || 0 },
-            process.env.JWT_SECRET,
-            { expiresIn: "7d" }
-          );
-          
-          return res.status(201).json({
-            token,
-            user: publicAccount(user),
-          });
+        const verifyUrl = `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/verify-email/${verification.token}`;
+        const delivery = await sendEmail(user.email, "Verify your Tamanna's Hut email", emailVerificationTemplate(user, verifyUrl));
+        if (!delivery?.sent) {
+            await User.deleteOne({ _id: user._id });
+            return res.status(503).json({ message: "Verification email could not be delivered. Please try creating the account again shortly" });
+        }
+        return res.status(201).json({ verificationRequired: true, email: user.email, message: "Check your email to activate your account" });
     } catch (error) {
         res.status(error?.code === 11000 ? 409 : 500).json({ message: error?.code === 11000 ? "An account already exists for this email" : process.env.NODE_ENV === "production" ? "Account could not be created" : error.message });
     }
@@ -74,7 +107,7 @@ const loginForPortal = (adminPortal = false) => async (req, res) => {
         const password = String(req.body.password || "");
         if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
 
-        const user = await User.findOne({ email }).select("+password");
+        const user = await User.findOne({ email }).select("+password +emailVerificationRequiredAt");
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ message: "Invalid email or password" });
         }
@@ -82,24 +115,20 @@ const loginForPortal = (adminPortal = false) => async (req, res) => {
         const portalError = loginPortalError(user, adminPortal);
         if (portalError) return res.status(403).json({ message: portalError });
 
+        if (!adminPortal && user.emailVerificationRequiredAt && !user.emailVerifiedAt) {
+            return res.status(403).json({ message: "Verify your email before signing in", code: "EMAIL_NOT_VERIFIED", email: user.email });
+        }
+
+        if (adminPortal) {
+            const challenge = await issueTwoFactorChallenge(user);
+            if (!challenge) return res.status(503).json({ message: "Security code could not be delivered. Please try again shortly" });
+            res.set("Cache-Control", "no-store");
+            return res.status(202).json(challenge);
+        }
+
         user.lastLoginAt = new Date();
         await user.save();
-
-        const token = jwt.sign(
-            {
-                id: user._id,
-                sessionVersion: user.sessionVersion || 0,
-            },
-            process.env.JWT_SECRET,
-            {
-                expiresIn: "7d",
-            }
-        );
-
-        return res.json({
-            token,
-            user: publicAccount(user),
-        });
+        return res.json(sessionPayload(user));
 
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -108,6 +137,86 @@ const loginForPortal = (adminPortal = false) => async (req, res) => {
 
 router.post("/login", loginForPortal(false));
 router.post("/admin-login", loginForPortal(true));
+
+const userFromTwoFactorChallenge = async (challengeToken) => {
+    const payload = jwt.verify(String(challengeToken || ""), process.env.JWT_SECRET);
+    if (payload.type !== "seller-centre-2fa") throw new Error("Invalid security challenge");
+    const user = await User.findById(payload.id).select("+twoFactorCodeHash +twoFactorExpires +twoFactorAttempts");
+    if (!user || Number(payload.sessionVersion || 0) !== Number(user.sessionVersion || 0)) throw new Error("Invalid security challenge");
+    return user;
+};
+
+router.post("/admin-login/verify", async (req, res) => {
+    try {
+        const user = await userFromTwoFactorChallenge(req.body.challengeToken);
+        const code = String(req.body.code || "").replace(/\D/g, "");
+        const portalError = loginPortalError(user, true);
+        if (portalError) return res.status(403).json({ message: portalError });
+        if (!user || !user.twoFactorCodeHash || !user.twoFactorExpires || user.twoFactorExpires <= new Date()) return res.status(400).json({ message: "This security code has expired. Request a new code" });
+        if (Number(user.twoFactorAttempts || 0) >= 5) return res.status(429).json({ message: "Too many incorrect codes. Request a new code" });
+        if (code.length !== 6 || !safeSecretEqual(hashAuthSecret(code), user.twoFactorCodeHash)) {
+            user.twoFactorAttempts = Number(user.twoFactorAttempts || 0) + 1;
+            await user.save();
+            return res.status(400).json({ message: "Incorrect security code" });
+        }
+        user.twoFactorCodeHash = undefined;
+        user.twoFactorExpires = undefined;
+        user.twoFactorAttempts = 0;
+        user.lastLoginAt = new Date();
+        await user.save();
+        res.set("Cache-Control", "no-store");
+        return res.json(sessionPayload(user));
+    } catch {
+        return res.status(400).json({ message: "This security challenge is invalid or has expired" });
+    }
+});
+
+router.post("/admin-login/resend", async (req, res) => {
+    try {
+        const user = await userFromTwoFactorChallenge(req.body.challengeToken);
+        if (!user) return res.status(400).json({ message: "This security challenge is invalid or has expired" });
+        const portalError = loginPortalError(user, true);
+        if (portalError) return res.status(403).json({ message: portalError });
+        const challenge = await issueTwoFactorChallenge(user);
+        if (!challenge) return res.status(503).json({ message: "Security code could not be delivered" });
+        res.set("Cache-Control", "no-store");
+        return res.json(challenge);
+    } catch {
+        return res.status(400).json({ message: "This security challenge is invalid or has expired" });
+    }
+});
+
+router.post("/verify-email", async (req, res) => {
+    try {
+        const tokenHash = hashAuthSecret(req.body.token);
+        const user = await User.findOne({ emailVerificationToken: tokenHash, emailVerificationExpires: { $gt: new Date() } }).select("+emailVerificationToken +emailVerificationExpires +emailVerificationRequiredAt +emailVerificationSentAt");
+        if (!user) return res.status(400).json({ message: "This verification link is invalid or has expired" });
+        user.emailVerifiedAt = new Date();
+        user.emailVerificationToken = undefined;
+        user.emailVerificationExpires = undefined;
+        user.emailVerificationSentAt = undefined;
+        user.lastLoginAt = new Date();
+        await user.save();
+        return res.json({ ...sessionPayload(user), message: "Email verified successfully" });
+    } catch (error) {
+        return res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Email could not be verified" : error.message });
+    }
+});
+
+router.post("/verify-email/resend", async (req, res) => {
+    try {
+        const email = String(req.body.email || "").trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: "Enter a valid email address" });
+        const user = await User.findOne({ email }).select("+emailVerificationRequiredAt +emailVerificationSentAt +emailVerificationToken +emailVerificationExpires");
+        if (!user || !user.emailVerificationRequiredAt || user.emailVerifiedAt) return res.json({ message: "If verification is required, a new link has been sent" });
+        if (user.emailVerificationSentAt && Date.now() - user.emailVerificationSentAt.getTime() < 60_000) return res.status(429).json({ message: "Please wait one minute before requesting another email" });
+        const delivery = await sendVerificationEmail(user);
+        if (!delivery?.sent) return res.status(503).json({ message: "Verification email could not be delivered" });
+        return res.json({ message: "A new verification link has been sent" });
+    } catch (error) {
+        return res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Verification email could not be sent" : error.message });
+    }
+});
 
 const ownerOnly = (req, res, next) => {
     if (!isPlatformAdmin(req.user)) return res.status(403).json({ message: "Only the platform administrator can manage seller accounts" });
@@ -160,7 +269,7 @@ router.post("/seller-invitations/:token/accept", async (req, res) => {
         if (name.length < 2 || name.length > 80 || passwordError) return res.status(400).json({ message: passwordError || "Enter your full name" });
         const details = normalizeSellerDetails(req.body);
         const securedProfile = encryptedSellerProfile(details);
-        createdUser = await User.create({ name, email: invitation.email, password: await bcrypt.hash(password, 10), isAdmin: false, accountType: "seller", sellerRole: "member", sellerAccessStatus: "pending" });
+        createdUser = await User.create({ name, email: invitation.email, password: await bcrypt.hash(password, 10), isAdmin: false, accountType: "seller", sellerRole: "member", sellerAccessStatus: "pending", emailVerifiedAt: new Date() });
         await SellerProfile.create({ userId: createdUser._id, ...securedProfile });
         invitation.acceptedAt = new Date();
         await invitation.save();

@@ -51,6 +51,10 @@ async function mockApi(page) {
     else if (pathname.endsWith("/api/orders/my-orders")) body = [codOrder];
     else if (pathname.endsWith("/api/orders")) body = [codOrder];
     else if (pathname.endsWith("/api/cart")) body = { items: [] };
+    else if (pathname.endsWith("/api/auth/verify-email/resend")) body = { message: "A new verification link has been sent" };
+    else if (pathname.endsWith("/api/auth/admin-login/verify")) body = { token: "safe-admin-token", user: { id: "admin-test", name: "Store Owner", email: "admin@example.com", isAdmin: true, sellerRole: "owner" } };
+    else if (pathname.endsWith("/api/auth/admin-login/resend")) body = { requiresTwoFactor: true, challengeToken: "replacement-challenge", maskedEmail: "ad***@example.com" };
+    else if (pathname.endsWith("/api/auth/admin-login")) body = { requiresTwoFactor: true, challengeToken: "safe-challenge", maskedEmail: "ad***@example.com" };
     else if (pathname.endsWith("/api/auth/login")) body = { token: "safe-local-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } };
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
@@ -144,6 +148,28 @@ test("registration makes shopping email consent optional", async ({ page }) => {
   const consent = page.getByRole("checkbox", { name: /Helpful shopping emails/ });
   await expect(consent).toBeVisible();
   await expect(consent).not.toBeChecked();
+  await expect(page.getByLabel("Confirm password")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: /I accept the Terms/ })).toBeVisible();
+});
+
+test("Seller Centre sign in requires the emailed security code", async ({ page }) => {
+  await page.goto("/admin-login");
+  await page.getByLabel("Seller Centre email").fill("admin@example.com");
+  await page.getByPlaceholder("Enter your password").fill("SafePassword42");
+  await page.getByRole("button", { name: "Continue securely" }).click();
+  await expect(page.getByLabel("Security code")).toBeVisible();
+  await expect(page.getByText(/ad\*\*\*@example\.com/)).toBeVisible();
+  await page.getByLabel("Security code").fill("123456");
+  await page.getByRole("button", { name: "Verify and open Seller Centre" }).click();
+  await expect(page).toHaveURL(/\/admin\/dashboard$/);
+});
+
+test("email verification page supports resending an activation link", async ({ page }) => {
+  await page.goto("/verify-email?email=new@example.com");
+  await expect(page.getByRole("heading", { name: "Verify your email" })).toBeVisible();
+  await expect(page.getByLabel("Account email")).toHaveValue("new@example.com");
+  await page.getByRole("button", { name: "Send a new verification link" }).click();
+  await expect(page.getByRole("status")).toContainText(/verification/i);
 });
 
 test("password recovery screens provide clear safe paths", async ({ page }) => {

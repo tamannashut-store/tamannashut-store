@@ -93,7 +93,7 @@ const authLimiter = rateLimit({
   limit: 20,
   standardHeaders: "draft-8",
   legacyHeaders: false,
-  message: { message: "Too many login attempts. Please try again later." },
+  message: { message: "Too many authentication attempts. Please try again later." },
 });
 app.use("/api", limiter);
 app.use(

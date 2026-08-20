@@ -5,8 +5,6 @@ import { FiEye, FiEyeOff, FiUserPlus } from "react-icons/fi";
 import toast from "react-hot-toast";
 import AuthShell from "../components/AuthShell";
 
-const readGuestCart = () => { try { const value = JSON.parse(localStorage.getItem("guest_cart")); return Array.isArray(value) ? value : []; } catch { return []; } };
-
 export default function Register() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", marketingConsent: false, termsAccepted: false });
@@ -23,15 +21,8 @@ export default function Register() {
     setLoading(true);
     try {
       const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, { name: form.name.trim(), email: form.email.trim(), password: form.password, marketingConsent: form.marketingConsent, termsAccepted: form.termsAccepted });
-      const guestCart = readGuestCart();
-      localStorage.setItem("user", JSON.stringify(data)); axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
-      if (guestCart.length) {
-        try { await axios.post(`${import.meta.env.VITE_API_URL}/api/cart/merge`, { items: guestCart.map((item) => ({ productId: item._id, selectedSize: item.selectedSize, selectedSku: item.selectedSku || "", qty: item.qty })) }); }
-        catch { toast.error("Account created, but your bag could not sync. Please review it before checkout."); }
-      }
-      localStorage.removeItem("guest_cart"); window.dispatchEvent(new Event("cartUpdated")); toast.success("Account created");
-      const destination = sessionStorage.getItem("redirectAfterLogin"); sessionStorage.removeItem("redirectAfterLogin");
-      navigate(destination || (guestCart.length ? "/checkout" : "/profile"), { replace: true });
+      toast.success(data.message || "Account created. Verify your email to continue");
+      navigate(`/verify-email?email=${encodeURIComponent(data.email || form.email.trim())}`, { replace: true });
     } catch (requestError) { setError(requestError.response?.data?.message || "Your account could not be created. Please try again."); }
     finally { setLoading(false); }
   };

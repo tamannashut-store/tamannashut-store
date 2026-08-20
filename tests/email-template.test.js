@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { adminNewOrderEmailTemplate, orderEmailTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate } from "../server/src/utils/emailTemplates.js";
+import { adminNewOrderEmailTemplate, emailVerificationTemplate, orderEmailTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate, twoFactorCodeEmailTemplate } from "../server/src/utils/emailTemplates.js";
 
 const baseOrder = {
   _id: "order-123",
@@ -49,4 +49,14 @@ test("seller invitation explains verification and expiry", () => {
   assert.match(html, /Complete seller onboarding/);
   assert.match(html, /expires in 48 hours/i);
   assert.match(html, /access remains locked/i);
+});
+
+test("account verification and Seller Centre codes use branded secure emails", () => {
+  const verification = emailVerificationTemplate({ name: "New Customer" }, "https://www.tamannashut.com/verify-email/token");
+  assert.match(verification, /Verify email address/);
+  assert.match(verification, /expires in 24 hours/i);
+  const factor = twoFactorCodeEmailTemplate({ name: "Seller" }, "123456");
+  assert.match(factor, /TWO-STEP VERIFICATION/);
+  assert.match(factor, /123456/);
+  assert.match(factor, /10 minutes/i);
 });
