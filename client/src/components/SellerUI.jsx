@@ -17,6 +17,6 @@ export function SellerEmpty({ title, description }) {
 
 export function StatusBadge({ value }) {
   const normalized = String(value || "pending").toLowerCase();
-  const colors = ["delivered", "refunded", "active", "verified"].includes(normalized) ? "bg-emerald-50 text-emerald-700" : ["cancelled", "archived", "rto delivered", "rejected", "closed"].includes(normalized) ? "bg-red-50 text-red-700" : ["confirmed", "packed", "shipped"].includes(normalized) ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700";
+  const colors = ["delivered", "refunded", "active", "verified", "paid", "matched"].includes(normalized) ? "bg-emerald-50 text-emerald-700" : ["cancelled", "archived", "rto delivered", "rejected", "closed", "failed", "exception"].includes(normalized) ? "bg-red-50 text-red-700" : ["confirmed", "packed", "shipped", "processing"].includes(normalized) ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700";
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${colors}`}>{String(value || "Pending").replaceAll("_", " ")}</span>;
 }

@@ -64,7 +64,7 @@ router.get("/notifications", protect, admin, async (_req, res) => {
       Contact.countDocuments({ readAt: null }),
       Product.find({ status: "active" }).select("variants sizeStock lowStockThreshold").lean(),
       Product.countDocuments({ approvalStatus: "pending" }),
-      SellerSettlement.countDocuments({ status: { $in: ["eligible", "held"] } }),
+      SellerSettlement.countDocuments({ status: { $in: ["eligible", "held", "processing", "failed"] } }),
       AdCampaign.countDocuments({ status: "pending_review" }),
     ]);
     return res.json({ orders, reviews: reviewResult[0]?.count || 0, messages, products: products.filter(isLowStockProduct).length, listingApprovals, settlements, ads });
