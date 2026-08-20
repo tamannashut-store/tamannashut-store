@@ -14,6 +14,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { productPath } from "../utils/productUrl";
+import { productStructuredData } from "../utils/productStructuredData";
 
 function DiscoveryCard({ item }) {
   return (
@@ -203,31 +204,7 @@ function ProductDetails() {
         <meta property="og:image" content={images[0].url} />
         <meta property="og:type" content="product" />
         <link rel="canonical" href={`https://www.tamannashut.com${productPath(product)}`} />
-        <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Product",
-            name: product.name,
-            image: images.map((image) => image.url),
-            description: product.description,
-            brand: { "@type": "Brand", name: "Tamanna's Hut" },
-            offers: {
-              "@type": "Offer",
-              url: `https://www.tamannashut.com${productPath(product)}`,
-              priceCurrency: "INR",
-              price: product.price,
-              availability: totalStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-              itemCondition: "https://schema.org/NewCondition",
-            },
-            ...(product.reviews?.length ? {
-              aggregateRating: {
-                "@type": "AggregateRating",
-                ratingValue: Number(product.averageRating || 0).toFixed(1),
-                reviewCount: product.reviews.length,
-              },
-            } : {}),
-          })}
-        </script>
+        <script type="application/ld+json">{JSON.stringify(productStructuredData(product, productPath(product), images))}</script>
       </Helmet>
 
       <main className="bg-brand-background pb-20">
