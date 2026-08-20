@@ -5,6 +5,8 @@ import AdminRoute from "./components/AdminRoute";
 import PrivateRoute from "./components/PrivateRoute";
 import SellerRoute from "./components/SellerRoute";
 import SellerApplicantRoute from "./components/SellerApplicantRoute";
+import AuthenticatedRoute from "./components/AuthenticatedRoute";
+import CustomerGuestRoute from "./components/CustomerGuestRoute";
 
 const Home = lazy(() => import("./pages/Home")); const Login = lazy(() => import("./pages/Login")); const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword")); const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -36,8 +38,8 @@ function App() {
       <Suspense fallback={<PageLoader/>}><Routes>
         <Route element={<StoreLayout />}>
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<CustomerGuestRoute><Login /></CustomerGuestRoute>} />
+          <Route path="/register" element={<CustomerGuestRoute><Register /></CustomerGuestRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -49,7 +51,7 @@ function App() {
           <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-          <Route path="/change-password" element={<PrivateRoute><ChangePassword /></PrivateRoute>} />
+          <Route path="/change-password" element={<Navigate to="/account/change-password" replace />} />
           <Route path="/return-policy" element={<ReturnPolicy />} />
           <Route path="/shipping-policy" element={<ShippingPolicy />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -59,6 +61,7 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
 
+        <Route path="/account/change-password" element={<AuthenticatedRoute><ChangePassword /></AuthenticatedRoute>} />
         <Route path="/admin-login" element={<AdminLogin />} />
         <Route path="/seller/register" element={<SellerRegister />} />
         <Route path="/seller/register/:token" element={<SellerRegister />} />

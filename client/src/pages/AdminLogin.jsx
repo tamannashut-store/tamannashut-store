@@ -3,11 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FiArrowLeft, FiEye, FiEyeOff, FiLock, FiShield } from "react-icons/fi";
 import logo from "../assets/logo.png";
-
-function readSession() {
-  try { return JSON.parse(localStorage.getItem("user")); }
-  catch { return null; }
-}
+import { readSession } from "../utils/storage";
+import { accountTypeFromUser, homeForAccount } from "../utils/accountSession";
 
 function AdminLogin() {
   const navigate = useNavigate();
@@ -19,8 +16,7 @@ function AdminLogin() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (customerSession?.user?.accountType === "seller" || customerSession?.user?.sellerRole === "member") navigate(customerSession.user.sellerAccessStatus === "active" ? "/seller/dashboard" : "/seller/profile", { replace: true });
-    else if (customerSession?.user?.isAdmin) navigate("/admin/dashboard", { replace: true });
+    if (customerSession && accountTypeFromUser(customerSession.user) !== "customer") navigate(homeForAccount(customerSession.user), { replace: true });
   }, [customerSession, navigate]);
 
   const handleSubmit = async (event) => {
@@ -31,8 +27,9 @@ function AdminLogin() {
       const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/admin-login`, { email: email.trim(), password });
       localStorage.setItem("user", JSON.stringify(data));
       axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
-      const sellerAccount = data.user?.accountType === "seller" || data.user?.sellerRole === "member";
-      navigate(sellerAccount ? (data.user?.sellerAccessStatus === "active" ? "/seller/dashboard" : "/seller/profile") : "/admin/dashboard", { replace: true });
+      const requested = sessionStorage.getItem("redirectAfterSellerLogin");
+      sessionStorage.removeItem("redirectAfterSellerLogin");
+      navigate(requested || homeForAccount(data.user), { replace: true });
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Seller sign-in failed. Check the email and password.");
     } finally {
@@ -53,7 +50,7 @@ function AdminLogin() {
         <div className="mb-7 flex items-center justify-between lg:hidden"><img src={logo} alt="Tamanna's Hut" className="h-14 rounded-xl bg-white px-2 py-1 shadow-sm"/><Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary"><FiArrowLeft/> Store</Link></div>
         <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(20,45,32,.12)] sm:p-10">
           <div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#eef5f0] text-xl text-brand-primary"><FiLock/></span><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#397153]">Secure access</p><h2 className="mt-1 text-3xl font-bold tracking-tight">Seller sign in</h2></div></div>
-          <p className="mt-5 text-sm leading-6 text-slate-500">Use your platform-administrator or approved marketplace-seller credentials. Customer accounts cannot access Seller Centre.</p>
+          <p className="mt-5 text-sm leading-6 text-slate-500">Use your platform-administrator or marketplace-seller credentials. Applicants can sign in to review their verification status; customer accounts cannot access Seller Centre.</p>
 
           {customerSession?.user && !customerSession.user.isAdmin && customerSession.user.accountType !== "seller" && <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"><p className="font-semibold">Currently shopping as {customerSession.user.name || customerSession.user.email}</p><p className="mt-1 text-blue-700">Signing in here with a Seller Centre account will switch this browser. Your customer account is not being deleted.</p></div>}
           {error && <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">{error}</div>}

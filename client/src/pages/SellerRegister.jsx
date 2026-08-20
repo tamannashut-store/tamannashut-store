@@ -39,6 +39,7 @@ function SellerRegister() {
   const submit = async (event) => {
     event.preventDefault();
     setError("");
+    if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) return setError("Use at least 8 characters with at least one letter and one number");
     if (form.password !== form.confirmPassword) return setError("Passwords do not match");
     if (form.bankAccountNumber !== form.confirmBankAccountNumber) return setError("Bank account numbers do not match");
     setSubmitting(true);
@@ -64,7 +65,7 @@ function SellerRegister() {
         <section><h2 className="text-xl font-bold">1. Account owner</h2><div className="mt-5 grid gap-5 md:grid-cols-2">
           <Field label="Full name"><input required minLength="2" maxLength="80" autoComplete="name" value={form.name} onChange={(e) => change("name", e.target.value)} className="field-control mt-2"/></Field>
           <Field label="Business phone"><input required inputMode="tel" autoComplete="tel" value={form.businessPhone} onChange={(e) => change("businessPhone", e.target.value)} className="field-control mt-2" placeholder="10-digit mobile number"/></Field>
-          <Field label="Password"><div className="relative mt-2"><input required minLength="8" maxLength="128" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={(e) => change("password", e.target.value)} className="field-control pr-12"/><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500">{showPassword ? <FiEyeOff/> : <FiEye/>}</button></div></Field>
+          <Field label="Password"><div className="relative mt-2"><input required minLength="8" maxLength="128" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={(e) => change("password", e.target.value)} className="field-control pr-12"/><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500">{showPassword ? <FiEyeOff/> : <FiEye/>}</button></div><span className="mt-2 block text-xs font-normal text-slate-500">At least 8 characters with a letter and a number.</span></Field>
           <Field label="Confirm password"><input required minLength="8" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.confirmPassword} onChange={(e) => change("confirmPassword", e.target.value)} className="field-control mt-2"/></Field>
         </div></section>
 

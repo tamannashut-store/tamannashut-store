@@ -18,7 +18,7 @@ if (storedUser?.token) {
 }
 
 let handlingExpiredSession = false;
-const customerProtectedPaths = ["/checkout", "/profile", "/my-orders", "/change-password", "/dashboard"];
+const customerProtectedPaths = ["/checkout", "/profile", "/my-orders", "/account", "/change-password", "/dashboard"];
 
 axios.interceptors.response.use(
   (response) => response,
@@ -30,7 +30,8 @@ axios.interceptors.response.use(
         handlingExpiredSession = true;
         window.dispatchEvent(new CustomEvent("sessionExpired"));
         const path = window.location.pathname;
-        if (path.startsWith("/admin")) {
+        if (path.startsWith("/admin") || path.startsWith("/seller")) {
+          sessionStorage.setItem("redirectAfterSellerLogin", `${path}${window.location.search}`);
           window.location.replace("/admin-login?reason=session-expired");
         } else if (customerProtectedPaths.some((protectedPath) => path === protectedPath || path.startsWith(`${protectedPath}/`))) {
           sessionStorage.setItem("redirectAfterLogin", `${path}${window.location.search}`);

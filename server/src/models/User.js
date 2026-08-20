@@ -18,6 +18,8 @@ const userSchema = new mongoose.Schema(
     sessionVersion: { type: Number, default: 0, min: 0 },
     passwordResetToken: { type: String, select: false, index: true },
     passwordResetExpires: { type: Date, select: false },
+    lastLoginAt: { type: Date, default: null },
+    termsAcceptedAt: { type: Date, default: null },
 
     phone: {
       type: String,

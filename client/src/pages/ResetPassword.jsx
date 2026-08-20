@@ -13,15 +13,17 @@ export default function ResetPassword() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [completed, setCompleted] = useState(false);
+  const [loginPath, setLoginPath] = useState("/login");
 
   const submit = async (event) => {
     event.preventDefault();
     setError("");
-    if (password.length < 8) return setError("Use at least 8 characters for your new password.");
+    if (password.length < 8 || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) return setError("Use at least 8 characters with at least one letter and one number.");
     if (password !== confirmPassword) return setError("The two passwords do not match.");
     setSubmitting(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/reset-password/${encodeURIComponent(token)}`, { password });
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/reset-password/${encodeURIComponent(token)}`, { password });
+      setLoginPath(data.loginPath || "/login");
       setCompleted(true);
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Password could not be reset. Request a new secure link.");
@@ -33,7 +35,7 @@ export default function ResetPassword() {
   return <AuthShell
     eyebrow="Create new password"
     title={completed ? "Password updated" : "Choose a new password"}
-    description={completed ? "Your old sessions have been closed to protect your account." : "Choose a password with at least 8 characters that you do not use elsewhere."}
+    description={completed ? "Your old sessions have been closed to protect your account." : "Choose a unique password with at least 8 characters, including a letter and a number."}
     asideTitle="Protect every order and saved detail."
     asideCopy="Changing your password signs out older sessions automatically."
     asideItems={["Single-use secure reset link", "Old sessions are invalidated", "Password is stored securely"]}
@@ -44,7 +46,7 @@ export default function ResetPassword() {
         <p className="font-semibold">Your new password is ready</p>
         <p className="mt-1">Sign in again on this and any other device using the new password.</p>
       </div>
-      <Link to="/login" className="btn-primary mt-6 w-full py-4">Continue to sign in</Link>
+      <Link to={loginPath} className="btn-primary mt-6 w-full py-4">Continue to sign in</Link>
     </div> : <form onSubmit={submit} className="mt-7">
       <div className="space-y-5">
         <label className="block text-sm font-semibold text-slate-700">New password

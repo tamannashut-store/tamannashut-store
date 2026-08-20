@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FiBarChart2, FiBox, FiCheckSquare, FiDollarSign, FiExternalLink, FiLogOut, FiMenu, FiMessageSquare, FiPercent, FiSettings, FiShoppingBag, FiStar, FiUsers, FiX } from "react-icons/fi";
+import { FiBarChart2, FiBox, FiCheckSquare, FiDollarSign, FiExternalLink, FiKey, FiLogOut, FiMenu, FiMessageSquare, FiPercent, FiSettings, FiShoppingBag, FiStar, FiUsers, FiX } from "react-icons/fi";
 import logo from "../assets/logo.png";
 
 const adminLinks = [
@@ -78,6 +78,7 @@ function AdminLayout() {
         </nav>
         <div className="hidden shrink-0 border-t border-white/10 pt-4 lg:block">
           <a href="/" className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white">View storefront <FiExternalLink /></a>
+          <NavLink to="/account/change-password" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white"><FiKey/> Change password</NavLink>
           <button type="button" onClick={logout} className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/50 hover:bg-white/10 hover:text-white"><FiLogOut /> Sign out</button>
         </div>
       </aside>
