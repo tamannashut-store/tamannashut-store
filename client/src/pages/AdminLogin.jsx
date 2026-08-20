@@ -14,6 +14,8 @@ function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [challenge, setChallenge] = useState(null);
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     if (customerSession && accountTypeFromUser(customerSession.user) !== "customer") navigate(homeForAccount(customerSession.user), { replace: true });
@@ -24,7 +26,13 @@ function AdminLogin() {
     setError("");
     setLoading(true);
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/admin-login`, { email: email.trim(), password });
+      const endpoint = challenge ? "/api/auth/admin-login/verify" : "/api/auth/admin-login";
+      const payload = challenge ? { challengeToken: challenge.challengeToken, code } : { email: email.trim(), password };
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}${endpoint}`, payload);
+      if (data.requiresTwoFactor) {
+        setChallenge(data); setPassword(""); setCode("");
+        return;
+      }
       localStorage.setItem("user", JSON.stringify(data));
       axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
       const requested = sessionStorage.getItem("redirectAfterSellerLogin");
@@ -35,6 +43,14 @@ function AdminLogin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const resendCode = async () => {
+    if (!challenge) return;
+    setLoading(true); setError("");
+    try { const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/admin-login/resend`, { challengeToken: challenge.challengeToken }); setChallenge(data); setCode(""); }
+    catch (requestError) { setError(requestError.response?.data?.message || "A new security code could not be sent."); }
+    finally { setLoading(false); }
   };
 
   return <main className="grid min-h-screen bg-[#f7f5ef] lg:grid-cols-[minmax(360px,.8fr)_minmax(520px,1.2fr)]">
@@ -50,16 +66,16 @@ function AdminLogin() {
         <div className="mb-7 flex items-center justify-between lg:hidden"><img src={logo} alt="Tamanna's Hut" className="h-14 rounded-xl bg-white px-2 py-1 shadow-sm"/><Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary"><FiArrowLeft/> Store</Link></div>
         <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(20,45,32,.12)] sm:p-10">
           <div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#eef5f0] text-xl text-brand-primary"><FiLock/></span><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#397153]">Secure access</p><h2 className="mt-1 text-3xl font-bold tracking-tight">Seller sign in</h2></div></div>
-          <p className="mt-5 text-sm leading-6 text-slate-500">Use your platform-administrator or marketplace-seller credentials. Applicants can sign in to review their verification status; customer accounts cannot access Seller Centre.</p>
+          <p className="mt-5 text-sm leading-6 text-slate-500">{challenge ? `Enter the six-digit code sent to ${challenge.maskedEmail}. It expires in 10 minutes.` : "Use your platform-administrator or marketplace-seller credentials. A one-time email code protects every Seller Centre sign in."}</p>
 
           {customerSession?.user && !customerSession.user.isAdmin && customerSession.user.accountType !== "seller" && <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"><p className="font-semibold">Currently shopping as {customerSession.user.name || customerSession.user.email}</p><p className="mt-1 text-blue-700">Signing in here with a Seller Centre account will switch this browser. Your customer account is not being deleted.</p></div>}
           {error && <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">{error}</div>}
 
-          <div className="mt-7 space-y-5">
+          {!challenge ? <div className="mt-7 space-y-5">
             <label className="block text-sm font-semibold text-slate-700">Seller Centre email<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required className="field-control mt-2" placeholder="seller@example.com"/></label>
             <label className="block text-sm font-semibold text-slate-700">Password<div className="relative mt-2"><input type={showPassword ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required className="field-control pr-12" placeholder="Enter your password"/><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500">{showPassword ? <FiEyeOff/> : <FiEye/>}</button></div></label>
-          </div>
-          <button type="submit" disabled={loading} className="btn-primary mt-7 w-full py-4 text-base disabled:cursor-wait disabled:opacity-60">{loading ? "Signing in…" : "Open Seller Centre"}</button>
+          </div> : <div className="mt-7"><label className="block text-sm font-semibold text-slate-700">Security code<input type="text" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} minLength="6" maxLength="6" className="field-control mt-2 text-center text-2xl tracking-[.35em]" required /></label><div className="mt-4 flex flex-wrap justify-between gap-3 text-sm"><button type="button" onClick={() => { setChallenge(null); setCode(""); setError(""); }} className="font-semibold text-slate-500 hover:text-brand-primary">Use a different account</button><button type="button" onClick={resendCode} disabled={loading} className="font-semibold text-brand-primary hover:underline">Send a new code</button></div></div>}
+          <button type="submit" disabled={loading || (challenge && code.length !== 6)} className="btn-primary mt-7 w-full py-4 text-base disabled:cursor-wait disabled:opacity-60">{loading ? "Checking…" : challenge ? "Verify and open Seller Centre" : "Continue securely"}</button>
           <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t pt-5 text-sm sm:flex-row"><Link to="/" className="inline-flex items-center gap-2 font-semibold text-brand-primary"><FiArrowLeft/> Back to storefront</Link><Link to="/forgot-password" className="font-semibold text-slate-500 hover:text-brand-primary">Forgot password?</Link></div><p className="mt-5 text-center text-sm text-slate-500">Received a seller invitation? <Link to="/seller/register" className="font-semibold text-brand-primary hover:underline">Create your seller account</Link></p>
         </form>
       </div>

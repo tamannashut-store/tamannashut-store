@@ -10,6 +10,7 @@ import CustomerGuestRoute from "./components/CustomerGuestRoute";
 
 const Home = lazy(() => import("./pages/Home")); const Login = lazy(() => import("./pages/Login")); const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword")); const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 const Dashboard = lazy(() => import("./pages/Dashboard")); const ProductDetails = lazy(() => import("./pages/ProductDetails")); const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout")); const Shop = lazy(() => import("./pages/Shop")); const Success = lazy(() => import("./pages/Success"));
 const MyOrders = lazy(() => import("./pages/MyOrders")); const Wishlist = lazy(() => import("./pages/Wishlist")); const Profile = lazy(() => import("./pages/Profile"));
@@ -42,6 +43,8 @@ function App() {
           <Route path="/register" element={<CustomerGuestRoute><Register /></CustomerGuestRoute>} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/verify-email/:token" element={<VerifyEmail />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Cart />} />

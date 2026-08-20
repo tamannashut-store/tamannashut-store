@@ -33,4 +33,5 @@ export const publicAccount = (user) => ({
   accountType: accountTypeFor(user),
   sellerRole: user.sellerRole || "",
   sellerAccessStatus: user.sellerAccessStatus || "active",
+  emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequiredAt),
 });

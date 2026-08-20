@@ -66,7 +66,7 @@ function Login() {
   return <AuthShell eyebrow="Customer account" title="Welcome back" description="Sign in to view orders, manage your profile and continue checkout." asideTitle="Continue your shopping journey." asideCopy="Access saved bags, order tracking, returns and a faster checkout experience." asideItems={["Your bag follows you across devices", "Track every order in one place", "Secure account access"]} icon={FiShoppingBag}>
         <form onSubmit={handleSubmit}>
 
-          {error && <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">{error}{error.includes("Seller Centre") && <Link to="/admin-login" className="mt-2 flex items-center gap-2 font-semibold underline">Open Seller Centre <FiArrowRight /></Link>}</div>}
+          {error && <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">{error}{error.includes("Seller Centre") && <Link to="/admin-login" className="mt-2 flex items-center gap-2 font-semibold underline">Open Seller Centre <FiArrowRight /></Link>}{error.toLowerCase().includes("verify your email") && <Link to={`/verify-email?email=${encodeURIComponent(formData.email.trim())}`} className="mt-2 flex items-center gap-2 font-semibold underline">Resend verification email <FiArrowRight /></Link>}</div>}
 
           <div className="mt-7 space-y-5">
             <label className="block text-sm font-semibold text-slate-700">Email address<input type="email" name="email" value={formData.email} onChange={handleChange} autoComplete="email" placeholder="you@example.com" required className="field-control mt-2" /></label>

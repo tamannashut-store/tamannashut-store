@@ -20,6 +20,14 @@ const userSchema = new mongoose.Schema(
     passwordResetExpires: { type: Date, select: false },
     lastLoginAt: { type: Date, default: null },
     termsAcceptedAt: { type: Date, default: null },
+    emailVerificationRequiredAt: { type: Date, default: null, select: false },
+    emailVerifiedAt: { type: Date, default: null },
+    emailVerificationToken: { type: String, default: null, select: false, index: true },
+    emailVerificationExpires: { type: Date, default: null, select: false },
+    emailVerificationSentAt: { type: Date, default: null, select: false },
+    twoFactorCodeHash: { type: String, default: null, select: false },
+    twoFactorExpires: { type: Date, default: null, select: false },
+    twoFactorAttempts: { type: Number, default: 0, min: 0, select: false },
 
     phone: {
       type: String,
@@ -83,6 +91,13 @@ const userSchema = new mongoose.Schema(
         delete value.password;
         delete value.passwordResetToken;
         delete value.passwordResetExpires;
+        delete value.emailVerificationRequiredAt;
+        delete value.emailVerificationToken;
+        delete value.emailVerificationExpires;
+        delete value.emailVerificationSentAt;
+        delete value.twoFactorCodeHash;
+        delete value.twoFactorExpires;
+        delete value.twoFactorAttempts;
         return value;
       },
     },
