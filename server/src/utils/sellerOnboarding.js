@@ -94,3 +94,45 @@ export const encryptedSellerProfile = (details) => ({
   bankVerification: { status: "format_checked", source: "manual_document_review", checkedAt: new Date() },
   declarationsAcceptedAt: new Date(),
 });
+
+const hasAddress = (address) => Boolean(
+  String(address?.line1 || "").trim().length >= 5
+  && String(address?.city || "").trim().length >= 2
+  && String(address?.state || "").trim().length >= 2
+  && /^\d{6}$/.test(String(address?.pincode || ""))
+);
+
+// This deliberately works with masked/lean profiles too. It prevents a legacy
+// top-level `verified` flag from hiding missing KYC, bank or fulfilment data.
+export const sellerProfileCompleteness = (profile) => {
+  const missingFields = [];
+  const requireValue = (value, label, minimum = 2) => {
+    if (String(value || "").trim().length < minimum) missingFields.push(label);
+  };
+  requireValue(profile?.legalBusinessName, "Legal business name");
+  requireValue(profile?.tradeName, "Trade name");
+  requireValue(profile?.businessType, "Business constitution");
+  if (!/^\+?[0-9]{10,13}$/.test(String(profile?.businessPhone || "").replace(/\s/g, ""))) missingFields.push("Business phone");
+  requireValue(profile?.authorizedSignatoryName, "Authorised signatory");
+  if (!hasAddress(profile?.registeredAddress)) missingFields.push("Registered address");
+  if (!hasAddress(profile?.pickupAddress)) missingFields.push("Pickup address");
+  if (!profile?.gstinEncrypted && String(profile?.gstinLast4 || "").length !== 4) missingFields.push("GSTIN");
+  if (!profile?.panEncrypted && String(profile?.panLast4 || "").length !== 4) missingFields.push("PAN");
+  requireValue(profile?.bankAccountHolder, "Bank account holder");
+  if (!profile?.bankAccountEncrypted && String(profile?.bankAccountLast4 || "").length !== 4) missingFields.push("Bank account number");
+  if (!profile?.ifscEncrypted && String(profile?.ifscLast4 || "").length !== 4) missingFields.push("IFSC");
+  if (!profile?.declarationsAcceptedAt) missingFields.push("Seller declarations");
+  return { complete: missingFields.length === 0, missingFields };
+};
+
+export const effectiveSellerVerification = (profile) => {
+  const completeness = sellerProfileCompleteness(profile);
+  const checksVerified = profile?.gstVerification?.status === "verified" && profile?.bankVerification?.status === "verified";
+  return {
+    ...completeness,
+    checksVerified,
+    status: completeness.complete && checksVerified && profile?.verificationStatus === "verified"
+      ? "verified"
+      : profile?.verificationStatus === "rejected" ? "rejected" : "needs_update",
+  };
+};

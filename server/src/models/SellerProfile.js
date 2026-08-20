@@ -50,6 +50,12 @@ const sellerProfileSchema = new mongoose.Schema({
   reviewedAt: { type: Date, default: null },
   reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   reviewNote: { type: String, default: "", maxlength: 500 },
+  closure: {
+    status: { type: String, enum: ["open", "closed"], default: "open" },
+    requestedAt: { type: Date, default: null },
+    completedAt: { type: Date, default: null },
+    reason: { type: String, default: "", maxlength: 500 },
+  },
 }, { timestamps: true });
 
 export default mongoose.models.SellerProfile || mongoose.model("SellerProfile", sellerProfileSchema);

@@ -5,14 +5,15 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import SellerInvitation from "../models/SellerInvitation.js";
 import SellerProfile from "../models/SellerProfile.js";
+import SellerSettlement from "../models/SellerSettlement.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
-import { admin, protect, seller } from "../middleware/authMiddleware.js";
+import { admin, protect, seller, sellerApplicant } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { passwordResetEmailTemplate, sellerInvitationEmailTemplate, sellerVerificationEmailTemplate } from "../utils/emailTemplates.js";
 import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
 import { loginPortalError } from "../utils/loginPortal.js";
-import { decryptSellerValue, encryptedSellerProfile, normalizeSellerDetails } from "../utils/sellerOnboarding.js";
+import { decryptSellerValue, effectiveSellerVerification, encryptedSellerProfile, normalizeSellerDetails, sellerProfileCompleteness } from "../utils/sellerOnboarding.js";
 import { recordAudit } from "../utils/recordAudit.js";
 import { accountTypeFor, isPlatformAdmin, publicAccount } from "../utils/accountRoles.js";
 
@@ -168,13 +169,14 @@ router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
     try {
         res.set("Cache-Control", "no-store");
         const [users, profiles, invitations] = await Promise.all([
-            User.find({ $or: [{ isAdmin: true }, { accountType: "seller" }, { sellerRole: "member" }] }).select("name email isAdmin accountType sellerRole sellerAccessStatus createdAt").sort({ createdAt: 1 }).lean(),
+            User.find({ $or: [{ accountType: "seller" }, { sellerRole: "member" }] }).select("name email isAdmin accountType sellerRole sellerAccessStatus createdAt").sort({ createdAt: 1 }).lean(),
             SellerProfile.find().select("+gstinEncrypted +panEncrypted +bankAccountEncrypted +ifscEncrypted").lean(),
             SellerInvitation.find({ acceptedAt: null, expiresAt: { $gt: new Date() } }).select("email expiresAt createdAt").sort({ createdAt: -1 }).lean(),
         ]);
         const profilesByUser = new Map(profiles.map((profile) => [String(profile.userId), profile]));
         const sellers = users.map((user) => {
             const profile = profilesByUser.get(String(user._id));
+            const compliance = profile ? effectiveSellerVerification(profile) : null;
             return { ...user, profile: profile ? {
                 legalBusinessName: profile.legalBusinessName,
                 tradeName: profile.tradeName,
@@ -191,7 +193,9 @@ router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
                 ifsc: decryptSellerValue(profile.ifscEncrypted),
                 gstVerification: profile.gstVerification,
                 bankVerification: profile.bankVerification,
-                verificationStatus: profile.verificationStatus,
+                verificationStatus: compliance.status,
+                recordedVerificationStatus: profile.verificationStatus,
+                completeness: compliance,
                 submittedAt: profile.submittedAt,
                 reviewedAt: profile.reviewedAt,
                 reviewNote: profile.reviewNote,
@@ -213,6 +217,10 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
         const user = await User.findOne({ _id: req.params.userId, $or: [{ accountType: "seller" }, { sellerRole: "member" }] });
         const profile = await SellerProfile.findOne({ userId: req.params.userId });
         if (!user || !profile) return res.status(404).json({ message: "Seller verification record not found" });
+        const completeness = sellerProfileCompleteness(profile);
+        if (status === "verified" && !completeness.complete) {
+            return res.status(409).json({ message: `Seller application is incomplete: ${completeness.missingFields.join(", ")}`, missingFields: completeness.missingFields });
+        }
         profile.verificationStatus = status;
         profile.reviewedAt = new Date();
         profile.reviewedBy = req.user._id;
@@ -222,7 +230,10 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
             profile.bankVerification = { ...(profile.bankVerification?.toObject?.() || profile.bankVerification || {}), status: "verified", source: "bank_proof_manual_review", checkedAt: new Date(), beneficiaryName: profile.bankAccountHolder };
         }
         user.sellerAccessStatus = status === "verified" ? "active" : "rejected";
-        await Promise.all([profile.save(), user.save()]);
+        await Promise.all([
+            profile.save(), user.save(),
+            Product.updateMany({ sellerId: user._id }, { $set: { sellerComplianceHold: status !== "verified" } }),
+        ]);
         await recordAudit({ user: req.user, action: `seller.${status}`, entityType: "seller", entityId: user._id, summary: `${status === "verified" ? "Approved" : "Rejected"} seller ${user.email}` });
         await sendEmail(user.email, status === "verified" ? "Seller Centre access approved" : "Seller verification needs attention", sellerVerificationEmailTemplate(user, status === "verified", note));
         return res.json({ message: status === "verified" ? "Seller approved" : "Seller verification rejected" });
@@ -231,11 +242,12 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
     }
 });
 
-router.get("/seller-profile/me", protect, seller, async (req, res) => {
+router.get("/seller-profile/me", protect, sellerApplicant, async (req, res) => {
     try {
         res.set("Cache-Control", "no-store");
         const profile = await SellerProfile.findOne({ userId: req.user._id }).lean();
         if (!profile) return res.status(404).json({ message: "Seller profile not found" });
+        const compliance = effectiveSellerVerification(profile);
         return res.json({
             account: publicAccount(req.user),
             profile: {
@@ -254,13 +266,99 @@ router.get("/seller-profile/me", protect, seller, async (req, res) => {
                 ifscLast4: profile.ifscLast4,
                 gstVerification: profile.gstVerification,
                 bankVerification: profile.bankVerification,
-                verificationStatus: profile.verificationStatus,
+                verificationStatus: compliance.status,
+                recordedVerificationStatus: profile.verificationStatus,
+                completeness: compliance,
                 submittedAt: profile.submittedAt,
                 reviewedAt: profile.reviewedAt,
                 reviewNote: profile.reviewNote,
             },
         });
     } catch (error) { return res.status(500).json({ message: "Seller profile could not be loaded" }); }
+});
+
+router.put("/seller-profile/me/business-details", protect, sellerApplicant, async (req, res) => {
+    try {
+        const text = (key, max = 200) => String(req.body[key] || "").trim().slice(0, max);
+        const address = (prefix) => ({
+            line1: text(`${prefix}Line1`), line2: text(`${prefix}Line2`), city: text(`${prefix}City`, 100),
+            state: text(`${prefix}State`, 100), pincode: String(req.body[`${prefix}Pincode`] || "").replace(/\D/g, ""),
+        });
+        const businessType = text("businessType", 40);
+        const businessPhone = String(req.body.businessPhone || "").replace(/\s/g, "");
+        const registeredAddress = address("registeredAddress");
+        const pickupAddress = req.body.pickupSameAsRegistered === true ? { ...registeredAddress } : address("pickupAddress");
+        if (text("legalBusinessName", 120).length < 2 || text("tradeName", 120).length < 2 || !["proprietorship", "partnership", "llp", "private_limited", "public_limited", "trust", "society", "other"].includes(businessType)) return res.status(400).json({ message: "Enter the legal name, trade name and business constitution" });
+        if (!/^\+?[0-9]{10,13}$/.test(businessPhone) || text("authorizedSignatoryName", 120).length < 2) return res.status(400).json({ message: "Enter a valid business phone and authorised signatory" });
+        if (req.body.declarationsAccepted !== true) return res.status(400).json({ message: "Confirm that the updated business and fulfilment details are accurate" });
+        for (const [label, value] of [["registered", registeredAddress], ["pickup", pickupAddress]]) {
+            if (value.line1.length < 5 || value.city.length < 2 || value.state.length < 2 || !/^\d{6}$/.test(value.pincode)) return res.status(400).json({ message: `Enter a complete ${label} business address` });
+        }
+        const profile = await SellerProfile.findOne({ userId: req.user._id });
+        if (!profile) return res.status(404).json({ message: "Seller profile not found" });
+        profile.legalBusinessName = text("legalBusinessName", 120);
+        profile.tradeName = text("tradeName", 120);
+        profile.businessType = businessType;
+        profile.businessPhone = businessPhone;
+        profile.authorizedSignatoryName = text("authorizedSignatoryName", 120);
+        profile.registeredAddress = registeredAddress;
+        profile.pickupAddress = pickupAddress;
+        profile.declarationsAcceptedAt = new Date();
+        profile.verificationStatus = "pending";
+        profile.reviewedAt = null;
+        profile.reviewedBy = null;
+        profile.reviewNote = "Business details updated by seller. GST and bank checks require administrator review.";
+        profile.submittedAt = new Date();
+        await Promise.all([
+            profile.save(),
+            Product.updateMany({ sellerId: req.user._id }, { $set: { sellerComplianceHold: true } }),
+        ]);
+        await recordAudit({ user: req.user, action: "seller.profile_resubmitted", entityType: "seller", entityId: req.user._id, summary: "Seller updated business and fulfilment details" });
+        return res.json({ message: "Business details submitted for verification" });
+    } catch (error) {
+        return res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Seller details could not be updated" : error.message });
+    }
+});
+
+router.delete("/seller-profile/me", protect, sellerApplicant, async (req, res) => {
+    try {
+        const confirmation = String(req.body.confirmation || "").trim().toUpperCase();
+        const password = String(req.body.password || "");
+        const reason = String(req.body.reason || "").trim().slice(0, 500);
+        if (confirmation !== "CLOSE") return res.status(400).json({ message: "Type CLOSE to confirm seller account closure" });
+        const user = await User.findById(req.user._id).select("+password");
+        if (!user || !(await bcrypt.compare(password, user.password))) return res.status(400).json({ message: "Enter your current password to close the seller account" });
+        const openOrderStatuses = ["Pending", "Processing", "Confirmed", "Packed", "Shipped", "Cancellation Requested", "Return Requested", "Return Approved", "Return Picked Up", "Returned", "Refund Pending", "RTO Initiated"];
+        const [openOrder, openSettlement] = await Promise.all([
+            Order.exists({ "products.sellerId": user._id, status: { $in: openOrderStatuses } }),
+            SellerSettlement.exists({ sellerId: user._id, status: { $in: ["pending", "eligible", "held"] } }),
+        ]);
+        if (openOrder) return res.status(409).json({ message: "This seller account has an active order, return or refund. Complete it before closing the account" });
+        if (openSettlement) return res.status(409).json({ message: "This seller account has an unsettled payout. Record or resolve the payout before closing the account" });
+        const profile = await SellerProfile.findOne({ userId: user._id });
+        await recordAudit({ user, action: "seller.account_closed", entityType: "seller", entityId: user._id, summary: `Seller requested account closure${reason ? `: ${reason}` : ""}` });
+        await Product.updateMany({ sellerId: user._id }, { $set: { status: "archived" } });
+        if (profile) {
+            profile.closure = { status: "closed", requestedAt: new Date(), completedAt: new Date(), reason };
+            await profile.save();
+        }
+        user.name = "Closed seller";
+        user.email = `closed-${user._id}@deleted.invalid`;
+        user.phone = "";
+        user.address = "";
+        user.city = "";
+        user.state = "";
+        user.pincode = "";
+        user.cart = [];
+        user.password = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
+        user.passwordChangedAt = new Date();
+        user.sessionVersion = (user.sessionVersion || 0) + 1;
+        user.sellerAccessStatus = "closed";
+        await user.save();
+        return res.json({ message: "Seller account closed. Listings are archived and sign-in access has been removed" });
+    } catch (error) {
+        return res.status(500).json({ message: process.env.NODE_ENV === "production" ? "Seller account could not be closed" : error.message });
+    }
 });
 
 router.post("/forgot-password", async (req, res) => {

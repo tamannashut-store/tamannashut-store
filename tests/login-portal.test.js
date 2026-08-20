@@ -16,8 +16,13 @@ test("each account type can use its intended portal", () => {
   assert.equal(loginPortalError({ accountType: "seller", sellerAccessStatus: "active" }, true), "");
 });
 
-test("pending sellers cannot enter Seller Centre before verification", () => {
-  assert.equal(loginPortalError({ accountType: "seller", sellerAccessStatus: "pending" }, true), "Your Seller Centre access is awaiting business verification");
+test("pending sellers can sign in to the restricted profile correction area", () => {
+  assert.equal(loginPortalError({ accountType: "seller", sellerAccessStatus: "pending" }, true), "");
+});
+
+test("closed and suspended sellers cannot sign in", () => {
+  assert.match(loginPortalError({ accountType: "seller", sellerAccessStatus: "closed" }, true), /unavailable/);
+  assert.match(loginPortalError({ accountType: "seller", sellerAccessStatus: "suspended" }, true), /unavailable/);
 });
 
 test("marketplace sellers cannot use the customer portal", () => {

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { admin, seller, sellerCentre } from "../server/src/middleware/authMiddleware.js";
+import { admin, seller, sellerApplicant, sellerCentre } from "../server/src/middleware/authMiddleware.js";
 
 const response = () => {
   const state = { status: 200, body: null };
@@ -40,5 +40,16 @@ test("pending seller cannot use seller-scoped endpoints", () => {
   let called = false;
   sellerCentre({ user: { accountType: "seller", sellerAccessStatus: "pending" } }, res, () => { called = true; });
   assert.equal(called, false);
+  assert.equal(res.state.status, 403);
+});
+
+test("pending or rejected sellers can access only applicant profile endpoints", () => {
+  for (const sellerAccessStatus of ["pending", "rejected"]) {
+    let called = false;
+    sellerApplicant({ user: { accountType: "seller", sellerAccessStatus } }, response(), () => { called = true; });
+    assert.equal(called, true);
+  }
+  const res = response();
+  sellerApplicant({ user: { accountType: "seller", sellerAccessStatus: "closed" } }, res, () => {});
   assert.equal(res.state.status, 403);
 });

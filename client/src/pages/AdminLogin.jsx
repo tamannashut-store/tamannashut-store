@@ -19,7 +19,7 @@ function AdminLogin() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (customerSession?.user?.accountType === "seller" || customerSession?.user?.sellerRole === "member") navigate("/seller/dashboard", { replace: true });
+    if (customerSession?.user?.accountType === "seller" || customerSession?.user?.sellerRole === "member") navigate(customerSession.user.sellerAccessStatus === "active" ? "/seller/dashboard" : "/seller/profile", { replace: true });
     else if (customerSession?.user?.isAdmin) navigate("/admin/dashboard", { replace: true });
   }, [customerSession, navigate]);
 
@@ -32,7 +32,7 @@ function AdminLogin() {
       localStorage.setItem("user", JSON.stringify(data));
       axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
       const sellerAccount = data.user?.accountType === "seller" || data.user?.sellerRole === "member";
-      navigate(sellerAccount ? "/seller/dashboard" : "/admin/dashboard", { replace: true });
+      navigate(sellerAccount ? (data.user?.sellerAccessStatus === "active" ? "/seller/dashboard" : "/seller/profile") : "/admin/dashboard", { replace: true });
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Seller sign-in failed. Check the email and password.");
     } finally {

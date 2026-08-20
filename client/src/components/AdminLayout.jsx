@@ -35,7 +35,7 @@ function AdminLayout() {
   let sessionUser = null;
   try { sessionUser = JSON.parse(localStorage.getItem("user"))?.user || null; } catch { /* Invalid cached session is handled by the route guard. */ }
   const sellerAccount = sessionUser?.accountType === "seller" || sessionUser?.sellerRole === "member";
-  const visibleLinks = sellerAccount ? sellerLinks : adminLinks;
+  const visibleLinks = sellerAccount ? (sessionUser?.sellerAccessStatus === "active" ? sellerLinks : sellerLinks.filter(([to]) => to === "/seller/profile")) : adminLinks;
   const logout = () => {
     localStorage.removeItem("user");
     delete axios.defaults.headers.common.Authorization;

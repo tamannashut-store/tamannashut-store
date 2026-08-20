@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSellerDetails } from "../server/src/utils/sellerOnboarding.js";
+import { effectiveSellerVerification, normalizeSellerDetails, sellerProfileCompleteness } from "../server/src/utils/sellerOnboarding.js";
 
 const validApplication = () => ({
   legalBusinessName: "Example Proprietor",
@@ -42,4 +42,28 @@ test("seller onboarding rejects PAN that does not match GSTIN", () => {
   const application = validApplication();
   application.pan = "AAAAA1111A";
   assert.throws(() => normalizeSellerDetails(application), /PAN must match/);
+});
+
+const completedProfile = () => ({
+  legalBusinessName: "Example Proprietor", tradeName: "Example Kids", businessType: "proprietorship",
+  businessPhone: "9876543210", authorizedSignatoryName: "Example Owner",
+  registeredAddress: { line1: "10 Market Road", city: "Howrah", state: "West Bengal", pincode: "711310" },
+  pickupAddress: { line1: "10 Market Road", city: "Howrah", state: "West Bengal", pincode: "711310" },
+  gstinLast4: "F1Z5", panLast4: "234F", bankAccountHolder: "Example Proprietor", bankAccountLast4: "7890", ifscLast4: "3456",
+  declarationsAcceptedAt: new Date(), verificationStatus: "verified",
+  gstVerification: { status: "verified" }, bankVerification: { status: "verified" },
+});
+
+test("legacy verified sellers are not treated as compliant when required fields are missing", () => {
+  const profile = completedProfile();
+  profile.registeredAddress = {};
+  profile.bankVerification.status = "pending";
+  const result = effectiveSellerVerification(profile);
+  assert.equal(result.status, "needs_update");
+  assert.ok(result.missingFields.includes("Registered address"));
+});
+
+test("complete KYC with both manual checks is effectively verified", () => {
+  assert.deepEqual(sellerProfileCompleteness(completedProfile()), { complete: true, missingFields: [] });
+  assert.equal(effectiveSellerVerification(completedProfile()).status, "verified");
 });
