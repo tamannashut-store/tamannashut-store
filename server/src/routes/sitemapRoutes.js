@@ -1,11 +1,12 @@
 import express from "express";
 import Product from "../models/Product.js";
+import { storefrontProductFilter } from "../utils/productVisibility.js";
 
 const router = express.Router();
 
 router.get("/sitemap.xml", async (req, res) => {
     try {
-        const products = await Product.find({ status: "active" });
+        const products = await Product.find(storefrontProductFilter()).select("slug updatedAt").lean();
 
         let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -48,6 +49,7 @@ router.get("/sitemap.xml", async (req, res) => {
 
         xml += `</urlset>`;
 
+        res.set("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
         res.header("Content-Type", "application/xml");
         res.send(xml);
 

@@ -1,12 +1,13 @@
 import express from "express";
 import Product from "../models/Product.js";
 import { inventoryItems } from "../utils/inventory.js";
+import { storefrontProductFilter } from "../utils/productVisibility.js";
 
 const router = express.Router();
 
 router.get("/google-feed.xml", async (req, res) => {
   try {
-    const products = await Product.find({ status: "active" }).lean();
+    const products = await Product.find(storefrontProductFilter()).lean();
 
     const xmlText = (value) => String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -59,6 +60,7 @@ xmlns:g="http://base.google.com/ns/1.0">
 </channel>
 </rss>`;
 
+    res.set("Cache-Control", "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400");
     res.set("Content-Type", "application/xml");
     res.send(xml);
 
