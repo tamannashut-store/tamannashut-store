@@ -27,6 +27,15 @@ const codOrder = {
   products: [{ _id: product._id, name: product.name, price: 299, qty: 1, selectedColor: "Maroon", selectedSize: "0-3M", sku: "TEST-MAR-03", image }],
   statusHistory: [{ status: "Pending", note: "Order placed", createdAt: "2026-08-12T10:00:00.000Z" }, { status: "Confirmed", note: "Status updated by admin", createdAt: "2026-08-12T10:05:00.000Z" }],
 };
+const sellerSettlement = {
+  _id: "88cc33dd44ee55ff66007711",
+  sellerId: { _id: "seller-test", name: "Test Seller", email: "seller@example.com" },
+  orderId: { _id: codOrder._id, status: "Delivered", createdAt: codOrder.createdAt, invoiceNumber: "TH-26-123" },
+  status: "eligible", reconciliationStatus: "pending", grossAmount: 299, allocatedDiscount: 0,
+  netSalesAmount: 299, commissionPercent: 10, commissionAmount: 29.9, refundAmount: 0,
+  adjustmentAmount: -20, payableAmount: 249.1, payoutAttempts: [],
+  adjustments: [{ _id: "adjustment-test", category: "shipping", amount: -20, note: "Seller shipping contribution" }],
+};
 
 async function mockApi(page) {
   // Intercept every API host so a developer's local .env can never make this
@@ -47,6 +56,7 @@ async function mockApi(page) {
       paymentMix: [{ method: "COD", count: 1 }],
       topProducts: [], couponPerformance: [], recentOrders: [],
     };
+    else if (pathname.endsWith("/api/settlements")) body = { settlements: [sellerSettlement], summary: { eligible: 249.1, processing: 0, failed: 0, held: 0, paid: 0 } };
     else if (pathname.endsWith("/api/auth/seller-team")) body = { sellers: [{ _id: "admin-test", name: "Store Owner", email: "admin@example.com", sellerRole: "owner", sellerAccessStatus: "active", profile: null }], invitations: [] };
     else if (pathname.endsWith("/api/orders/my-orders")) body = [codOrder];
     else if (pathname.endsWith("/api/orders")) body = [codOrder];
@@ -312,4 +322,14 @@ test("seller operations distinguishes saved carts from consent-eligible recoveri
   await expect(page.getByText("Consent-eligible recoveries")).toBeVisible();
   await expect(page.getByText("No recovery message is sent automatically.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Send one reminder" })).toBeVisible();
+});
+
+test("admin settlement reconciliation shows an auditable payout action", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
+  await page.goto("/admin/settlements");
+  await expect(page.getByRole("heading", { name: "Seller settlements" })).toBeVisible();
+  await expect(page.getByText("Test Seller")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start payout" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Statement" })).toBeVisible();
+  await expect(page.getByText("Adjustment ledger (1)")).toBeVisible();
 });

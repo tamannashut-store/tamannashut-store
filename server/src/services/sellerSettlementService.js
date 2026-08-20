@@ -45,6 +45,7 @@ export const desiredSettlementStatus = (order, currentStatus = "pending") => {
   if (terminalReversalStatuses.has(order.status)) return "reversed";
   if (currentStatus === "paid") return "paid";
   if (["Return Requested", "Return Approved", "Return Picked Up", "Returned", "Refund Pending", "RTO Initiated"].includes(order.status)) return "held";
+  if (order.status === "Delivered" && ["processing", "failed"].includes(currentStatus)) return currentStatus;
   if (order.status === "Delivered") return settlementEligibilityDate(order) <= new Date() ? "eligible" : "pending";
   return "pending";
 };
@@ -115,4 +116,4 @@ export const settlementSummary = (records) => records.reduce((summary, item) => 
   summary[item.status] = money((summary[item.status] || 0) + Number(item.payableAmount || 0));
   summary.total = money(summary.total + Number(item.payableAmount || 0));
   return summary;
-}, { total: 0, pending: 0, eligible: 0, held: 0, paid: 0, reversed: 0 });
+}, { total: 0, pending: 0, eligible: 0, held: 0, processing: 0, failed: 0, paid: 0, reversed: 0 });

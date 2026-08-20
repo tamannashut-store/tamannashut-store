@@ -30,10 +30,12 @@ test("settlement lifecycle holds returns and reverses terminal orders", () => {
   assert.equal(desiredSettlementStatus({ status: "Return Requested" }), "held");
   assert.equal(desiredSettlementStatus({ status: "Refunded" }, "paid"), "reversed");
   assert.equal(desiredSettlementStatus({ status: "Packed" }), "pending");
+  assert.equal(desiredSettlementStatus({ status: "Delivered", statusHistory: [{ status: "Delivered", createdAt: new Date(Date.now() - 8 * 86400000) }] }, "processing"), "processing");
+  assert.equal(desiredSettlementStatus({ status: "Delivered", statusHistory: [{ status: "Delivered", createdAt: new Date(Date.now() - 8 * 86400000) }] }, "failed"), "failed");
 });
 
-test("summary keeps settlement states separate", () => {
-  assert.deepEqual(settlementSummary([{ status: "eligible", payableAmount: 486 }, { status: "paid", payableAmount: 200 }]), { total: 686, pending: 0, eligible: 486, held: 0, paid: 200, reversed: 0 });
+test("summary keeps settlement and payout states separate", () => {
+  assert.deepEqual(settlementSummary([{ status: "eligible", payableAmount: 486 }, { status: "processing", payableAmount: 100 }, { status: "failed", payableAmount: 50 }, { status: "paid", payableAmount: 200 }]), { total: 836, pending: 0, eligible: 486, held: 0, processing: 100, failed: 50, paid: 200, reversed: 0 });
 });
 
 test("seller fulfilment state follows the customer order safely", () => {
