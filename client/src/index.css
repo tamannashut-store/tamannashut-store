@@ -30,9 +30,18 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 0 0 3px rgb(53 94 59 / 12%);
     outline: none;
 }
-button:focus-visible, a:focus-visible {
+button:focus-visible, a:focus-visible, summary:focus-visible {
     outline: 3px solid rgb(53 94 59 / 25%);
     outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
 }
 ::selection {
     background: #355E3B;

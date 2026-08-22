@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { adminNewOrderEmailTemplate, emailVerificationTemplate, orderEmailTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate, twoFactorCodeEmailTemplate } from "../server/src/utils/emailTemplates.js";
+import { adminNewOrderEmailTemplate, contactAdminEmailTemplate, contactCustomerEmailTemplate, emailVerificationTemplate, orderEmailTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate, twoFactorCodeEmailTemplate } from "../server/src/utils/emailTemplates.js";
 
 const baseOrder = {
   _id: "order-123",
@@ -59,4 +59,15 @@ test("account verification and Seller Centre codes use branded secure emails", (
   assert.match(factor, /TWO-STEP VERIFICATION/);
   assert.match(factor, /123456/);
   assert.match(factor, /10 minutes/i);
+});
+
+test("support emails include a safe customer reference and structured context", () => {
+  const customer = contactCustomerEmailTemplate("Test Parent", "B06F8E07");
+  assert.match(customer, /B06F8E07/);
+  assert.match(customer, /1–2 business days/);
+
+  const admin = contactAdminEmailTemplate({ name: "<Parent>", email: "test@example.com", topic: "Order support", orderReference: "ORDER-123", message: "Please <check> this order", reference: "B06F8E07" });
+  assert.match(admin, /Order support/);
+  assert.match(admin, /ORDER-123/);
+  assert.doesNotMatch(admin, /<Parent>|<check>/);
 });
