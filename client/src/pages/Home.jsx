@@ -14,6 +14,8 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { imageSrcSet, optimizedImage } from "../utils/image";
 import { productPath } from "../utils/productUrl";
+import { isCanceledRequest } from "../utils/retryRequest";
+import { useReloadOnPageResume } from "../utils/useReloadOnPageResume";
 
 const categories = [
   { key: "girls", label: "Girls", copy: "Dresses and sets for celebrations and everyday moments." },
@@ -61,12 +63,15 @@ function Home() {
 
   useEffect(() => {
     let active = true;
-    getProducts({ limit: 12 })
-      .then(({ data }) => { if (active) setProducts(Array.isArray(data) ? data : data.products || []); })
-      .catch(() => { if (active) { setProducts([]); setLoadError(true); } })
+    const controller = new AbortController();
+    getProducts({ limit: 12 }, { signal: controller.signal })
+      .then(({ data }) => { if (active) { setProducts(Array.isArray(data) ? data : data.products || []); setLoadError(false); } })
+      .catch((error) => { if (active && !isCanceledRequest(error)) setLoadError(true); })
       .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
+    return () => { active = false; controller.abort(); };
   }, [reloadKey]);
+
+  useReloadOnPageResume(setReloadKey);
 
   useEffect(() => {
     let active = true;
