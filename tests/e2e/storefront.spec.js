@@ -115,6 +115,22 @@ test("unknown storefront URLs show a useful 404 page", async ({ page }) => {
   await expect(page).toHaveURL(/this-page-does-not-exist$/);
 });
 
+test("help centre provides searchable answers and a support path", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/help");
+  await expect(page.getByRole("heading", { name: "How can we help?" })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search help articles" }).fill("COD order paid");
+  await expect(page.getByText("When is a COD order paid?", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/contact");
+});
+
+test("order support links prefill the contact topic and reference", async ({ page }) => {
+  await page.goto("/contact?topic=order&order=B06F8E07");
+  await expect(page.getByLabel("Support topic")).toHaveValue("order");
+  await expect(page.getByLabel(/Order number/)).toHaveValue("B06F8E07");
+  await expect(page.getByRole("main").getByRole("link", { name: "Help Centre" })).toHaveAttribute("href", "/help");
+});
+
 test("corrupted browser storage is cleared without crashing the storefront", async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem("user", "{broken-session");
