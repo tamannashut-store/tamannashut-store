@@ -7,6 +7,9 @@ import SkeletonProduct from "../components/SkeletonProduct";
 import { FiFilter, FiX } from "react-icons/fi";
 import { trackEvent } from "../utils/analytics";
 import { productPath } from "../utils/productUrl";
+import { isCanceledRequest } from "../utils/retryRequest";
+import { getProducts } from "../api/productApi";
+import { useReloadOnPageResume } from "../utils/useReloadOnPageResume";
 
 const categories = [
   { label: "All", value: "" },
@@ -21,6 +24,7 @@ function Shop() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadPhase, setLoadPhase] = useState("loading");
   const [error, setError] = useState("");
   const [availableSizes, setAvailableSizes] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
@@ -38,18 +42,20 @@ function Shop() {
   const ageGroup = searchParams.get("ageGroup") || "";
   const page = Math.max(Number(searchParams.get("page")) || 1, 1);
   const queryString = searchParams.toString();
+  const apiBase = import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const controller = new AbortController();
 
     const fetchProducts = async () => {
       setLoading(true);
+      setLoadPhase("loading");
       setError("");
       try {
         const params = Object.fromEntries(new URLSearchParams(queryString).entries());
-        const { data } = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/products`,
-          { params: { ...params, limit: 12 }, signal: controller.signal }
+        const { data } = await getProducts(
+          { ...params, limit: 12 },
+          { signal: controller.signal, onRetry: () => setLoadPhase("waking") }
         );
         setProducts(data.products || []);
         setTotalProducts(data.totalProducts ?? data.products?.length ?? 0);
@@ -61,12 +67,17 @@ function Shop() {
         if (data.filterOptions) setFilterOptions(data.filterOptions);
         if (params.search) trackEvent("view_search_results", { search_term: params.search, result_count: data.totalProducts ?? data.products?.length ?? 0 });
       } catch (requestError) {
-        if (requestError.code !== "ERR_CANCELED") {
+        if (!isCanceledRequest(requestError)) {
           console.error(requestError);
-          setError("Products could not be loaded. Please try again.");
+          setError(navigator.onLine
+            ? "The store is taking longer than expected to respond. Please try again."
+            : "You appear to be offline. Check your connection and try again.");
         }
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          setLoadPhase("idle");
+        }
       }
     };
 
@@ -74,7 +85,9 @@ function Shop() {
     return () => controller.abort();
   }, [queryString, reloadKey]);
 
-  useEffect(() => { let active = true; axios.get(`${import.meta.env.VITE_API_URL}/api/ads/placements/shop`).then(({ data }) => { if (active) setSponsored(data.campaigns || []); }).catch(() => {}); return () => { active = false; }; }, []);
+  useReloadOnPageResume(setReloadKey);
+
+  useEffect(() => { let active = true; axios.get(`${apiBase}/api/ads/placements/shop`, { timeout: 12000 }).then(({ data }) => { if (active) setSponsored(data.campaigns || []); }).catch(() => {}); return () => { active = false; }; }, [apiBase]);
 
   useEffect(() => { if (!filtersOpen) return undefined; const previous = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = previous; }; }, [filtersOpen]);
 
@@ -124,7 +137,7 @@ function Shop() {
           <div>
             <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">Tamanna&apos;s Hut collection</p>
             <h1 className="mt-2 text-3xl font-bold sm:text-4xl md:text-5xl">Find their perfect outfit</h1>
-            <p className="mt-3 text-gray-500">{loading ? "Finding products…" : `${totalProducts} products found`}</p>
+            <p className="mt-3 text-gray-500">{loading ? (loadPhase === "waking" ? "Waking up the store…" : "Finding products…") : `${totalProducts} products found`}</p>
             {!loading && searchMode === "fuzzy" && searchParams.get("search") && <p className="mt-2 text-sm font-medium text-amber-700">Showing close matches for “{searchParams.get("search")}”.</p>}
           </div>
 
@@ -210,6 +223,8 @@ function Shop() {
             </div>
 
             {error && <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-red-50 p-4 text-red-700"><span>{error}</span><button type="button" onClick={() => setReloadKey((value) => value + 1)} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold">Try again</button></div>}
+
+            {loading && loadPhase === "waking" && <div role="status" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">The store is waking up</p><p className="mt-1">This can take about a minute after a quiet period. We will reconnect automatically—there is no need to reload the page.</p></div>}
 
             <div className="grid gap-7 sm:grid-cols-2 xl:grid-cols-3">
               {loading

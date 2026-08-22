@@ -324,6 +324,28 @@ test("seller operations distinguishes saved carts from consent-eligible recoveri
   await expect(page.getByRole("button", { name: "Send one reminder" })).toBeVisible();
 });
 
+test("shop recovers automatically when the catalogue service is waking up", async ({ page }) => {
+  let requests = 0;
+  await page.route("**/api/products?**", async (route) => {
+    requests += 1;
+    if (requests === 1) {
+      await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Service is starting" }) });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ products: [product], totalProducts: 1, totalPages: 1, searchMode: "exact" }),
+    });
+  });
+
+  await page.goto("/shop");
+  await expect(page.getByText("The store is waking up", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: product.name })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText("1 products found")).toBeVisible();
+  expect(requests).toBe(2);
+});
+
 test("admin settlement reconciliation shows an auditable payout action", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
   await page.goto("/admin/settlements");
