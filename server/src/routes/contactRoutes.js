@@ -6,6 +6,8 @@ import { admin, protect } from "../middleware/authMiddleware.js";
 import { contactAdminEmailTemplate, contactCustomerEmailTemplate } from "../utils/emailTemplates.js";
 
 const router = express.Router();
+const contactTopics = new Set(["general", "order", "delivery", "return", "payment"]);
+const topicLabels = { general: "General question", order: "Order support", delivery: "Delivery and tracking", return: "Return or refund", payment: "Payment support" };
 const contactLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     limit: 5,
@@ -38,10 +40,34 @@ router.patch("/read", protect, admin, async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 });
+router.patch("/:id/read", protect, admin, async (req, res) => {
+    try {
+        if (!/^[a-f\d]{24}$/i.test(req.params.id)) return res.status(400).json({ success: false, message: "Invalid support reference" });
+        const contact = await Contact.findByIdAndUpdate(req.params.id, { $set: { readAt: new Date() } }, { new: true });
+        if (!contact) return res.status(404).json({ success: false, message: "Support request not found" });
+        return res.json(contact);
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Support request could not be updated" });
+    }
+});
+router.patch("/:id/status", protect, admin, async (req, res) => {
+    try {
+        if (!/^[a-f\d]{24}$/i.test(req.params.id)) return res.status(400).json({ success: false, message: "Invalid support reference" });
+        const status = String(req.body.status || "");
+        if (!["open", "in_progress", "resolved"].includes(status)) return res.status(400).json({ success: false, message: "Choose a valid support status" });
+        const contact = await Contact.findByIdAndUpdate(req.params.id, { $set: { status, readAt: new Date() } }, { new: true });
+        if (!contact) return res.status(404).json({ success: false, message: "Support request not found" });
+        return res.json(contact);
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Support status could not be updated" });
+    }
+});
 router.post("/", contactLimiter, async (req, res) => {
     try {
         const name = String(req.body.name || "").trim();
         const email = String(req.body.email || "").trim().toLowerCase();
+        const topic = contactTopics.has(String(req.body.topic || "")) ? String(req.body.topic) : "general";
+        const orderReference = String(req.body.orderReference || "").trim().slice(0, 40);
         const message = String(req.body.message || "").trim();
         if (name.length < 2 || name.length > 80 || email.length > 254 || message.length < 10 || message.length > 2000) {
             return res.status(400).json({
@@ -61,26 +87,30 @@ router.post("/", contactLimiter, async (req, res) => {
         const contact = await Contact.create({
             name,
             email,
+            topic,
+            orderReference,
             message,
         });
+        const reference = String(contact._id).slice(-8).toUpperCase();
 
         // Admin Email
         await sendEmail(
             process.env.ADMIN_EMAIL || "support@tamannashut.com",
-            "New Contact Form Message",
-            contactAdminEmailTemplate({ name, email, message })
+            `Support request ${reference} · ${topicLabels[topic]}`,
+            contactAdminEmailTemplate({ name, email, topic: topicLabels[topic], orderReference, message, reference })
         );
 
         // Customer Email
         await sendEmail(
             email,
             "Thank you for contacting Tamanna's Hut",
-            contactCustomerEmailTemplate(name)
+            contactCustomerEmailTemplate(name, reference)
         );
 
         res.json({
             success: true,
             message: "Message sent successfully",
+            reference,
         });
 
     } catch (error) {
