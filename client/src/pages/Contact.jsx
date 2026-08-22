@@ -2,12 +2,23 @@
 import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { Link, useSearchParams } from "react-router-dom";
+
+const topics = {
+  general: "General question",
+  order: "Order support",
+  delivery: "Delivery and tracking",
+  return: "Return or refund",
+  payment: "Payment support",
+};
 
 function Contact() {
-
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [topic, setTopic] = useState(topics[searchParams.get("topic")] ? searchParams.get("topic") : "general");
+  const [orderReference, setOrderReference] = useState(searchParams.get("order") || "");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -46,7 +57,7 @@ function Contact() {
         {
           name,
           email,
-          message,
+          message: `[Topic: ${topics[topic]}]${orderReference.trim() ? `\n[Order: ${orderReference.trim()}]` : ""}\n\n${message.trim()}`,
         }
       );
 
@@ -55,6 +66,7 @@ function Contact() {
       setName("");
       setEmail("");
       setMessage("");
+      setOrderReference("");
 
     } catch (error) {
 
@@ -77,11 +89,13 @@ function Contact() {
         />
       </Helmet>
 
-      <div className="mx-auto max-w-5xl px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
+      <main className="mx-auto max-w-5xl px-5 py-12 sm:px-6 sm:py-16 lg:py-20">
 
         <h1 className="mb-8 text-3xl font-bold sm:mb-10 sm:text-5xl">
           Contact Us
         </h1>
+
+        <p className="-mt-5 mb-8 text-sm text-slate-500 sm:-mt-7 sm:mb-10">Looking for a quick answer? Visit the <Link to="/help" className="font-semibold text-brand-primary underline">Help Centre</Link>.</p>
 
         <div className="grid gap-8 md:grid-cols-2 md:gap-10">
 
@@ -108,7 +122,11 @@ function Contact() {
 
             <label className="field-label">Email address<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="field-control mt-2" maxLength="254" autoComplete="email" required /></label>
 
-            <label className="field-label">How can we help?<textarea rows="5" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Tell us about your order or question" className="field-control mt-2" minLength="10" maxLength="2000" required /></label>
+            <label className="field-label">Support topic<select value={topic} onChange={(event) => setTopic(event.target.value)} className="field-control mt-2">{Object.entries(topics).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+
+            {(topic !== "general" || orderReference) && <label className="field-label">Order number <span className="font-normal text-slate-400">(if available)</span><input value={orderReference} onChange={(event) => setOrderReference(event.target.value)} placeholder="Order number shown in My Orders" className="field-control mt-2" maxLength="40" /></label>}
+
+            <label className="field-label">How can we help?<textarea rows="5" value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Tell us about your order or question" className="field-control mt-2" minLength="10" maxLength="1800" required /></label>
 
             <button
               type="submit"
@@ -121,7 +139,7 @@ function Contact() {
           </form>
 
         </div>
-      </div>
+      </main>
     </>
   );
 }
