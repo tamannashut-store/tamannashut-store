@@ -40,7 +40,7 @@ function Contact() {
     try {
       setLoading(true);
       const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/contacts`, { name: cleanName, email: cleanEmail, topic, orderReference: orderReference.trim(), message: cleanMessage });
-      setSubmission({ type: "success", message: "Your support request has been sent.", reference: data.reference });
+      setSubmission({ type: "success", message: "Your support request has been sent.", reference: data.reference, accountLinked: data.accountLinked === true });
       setMessage("");
       setOrderReference("");
       toast.success("Support request sent");
@@ -68,7 +68,7 @@ function Contact() {
 
       <section aria-labelledby="support-form-heading" className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8 lg:p-10">
         <div className="border-b border-slate-100 pb-6"><h2 id="support-form-heading" className="text-2xl font-bold">Send a secure request</h2><p className="mt-2 text-sm text-slate-500">Support hours: Monday–Saturday, 10:00 AM–6:00 PM IST.</p></div>
-        {submission && <div role={submission.type === "error" ? "alert" : "status"} aria-live="polite" className={`mt-6 rounded-2xl border p-4 ${submission.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-red-200 bg-red-50 text-red-800"}`}><div className="flex items-start gap-3">{submission.type === "success" && <FiCheckCircle aria-hidden="true" className="mt-0.5 shrink-0 text-xl"/>}<div><p className="font-semibold">{submission.message}</p>{submission.reference && <p className="mt-1 text-sm">Support reference: <strong className="font-mono">{submission.reference}</strong>. Keep this number for follow-up.</p>}</div></div></div>}
+        {submission && <div role={submission.type === "error" ? "alert" : "status"} aria-live="polite" className={`mt-6 rounded-2xl border p-4 ${submission.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-red-200 bg-red-50 text-red-800"}`}><div className="flex items-start gap-3">{submission.type === "success" && <FiCheckCircle aria-hidden="true" className="mt-0.5 shrink-0 text-xl"/>}<div><p className="font-semibold">{submission.message}</p>{submission.reference && <p className="mt-1 text-sm">Support reference: <strong className="font-mono">{submission.reference}</strong>. Keep this number for follow-up.</p>}{submission.accountLinked && <Link to="/support" className="mt-3 inline-flex font-semibold underline underline-offset-4">View support requests</Link>}</div></div></div>}
         <form onSubmit={handleSubmit} className="mt-6 grid gap-5 sm:grid-cols-2">
           <label className="field-label">Your name<input type="text" value={name} onChange={(event) => setName(event.target.value)} className="field-control mt-2" minLength="2" maxLength="80" autoComplete="name" required/></label>
           <label className="field-label">Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="field-control mt-2" maxLength="254" autoComplete="email" required/></label>

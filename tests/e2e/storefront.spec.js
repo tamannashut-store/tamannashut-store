@@ -29,6 +29,7 @@ const codOrder = {
 };
 const supportContact = {
   _id: "66cc44dd55ee66ff77008899",
+  customerId: "test-user",
   name: "Test Parent",
   email: "parent@example.com",
   topic: "order",
@@ -36,7 +37,10 @@ const supportContact = {
   message: "Please check the delivery status for this order.",
   status: "open",
   readAt: null,
+  customerLastReadAt: null,
+  replies: [{ _id: "reply-admin-1", sender: "admin", body: "Your parcel is scheduled for dispatch tomorrow.", createdAt: "2026-08-22T10:03:00.000Z" }],
   createdAt: "2026-08-22T10:00:00.000Z",
+  lastActivityAt: "2026-08-22T10:03:00.000Z",
 };
 const sellerSettlement = {
   _id: "88cc33dd44ee55ff66007711",
@@ -78,7 +82,11 @@ async function mockApi(page) {
     else if (pathname.endsWith("/api/auth/admin-login/resend")) body = { requiresTwoFactor: true, challengeToken: "replacement-challenge", maskedEmail: "ad***@example.com" };
     else if (pathname.endsWith("/api/auth/admin-login")) body = { requiresTwoFactor: true, challengeToken: "safe-challenge", maskedEmail: "ad***@example.com" };
     else if (pathname.endsWith("/api/auth/login")) body = { token: "safe-local-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } };
-    else if (pathname.endsWith("/api/contacts") && method === "POST") body = { success: true, message: "Message sent successfully", reference: "B06F8E07" };
+    else if (pathname.endsWith(`/api/contacts/mine/${supportContact._id}/replies`) && method === "POST") body = { ...supportContact, status: "open", customerLastReadAt: "2026-08-22T10:06:00.000Z", replies: [...supportContact.replies, { _id: "reply-customer-1", sender: "customer", body: "Thank you for the update.", createdAt: "2026-08-22T10:06:00.000Z" }] };
+    else if (pathname.endsWith(`/api/contacts/mine/${supportContact._id}`)) body = { ...supportContact, customerLastReadAt: "2026-08-22T10:05:00.000Z" };
+    else if (pathname.endsWith("/api/contacts/mine")) body = [supportContact];
+    else if (pathname.endsWith(`/api/contacts/${supportContact._id}/replies`) && method === "POST") body = { ...supportContact, readAt: "2026-08-22T10:05:00.000Z", status: "in_progress", replies: [...supportContact.replies, { _id: "reply-admin-2", sender: "admin", body: "We have confirmed the dispatch schedule.", createdAt: "2026-08-22T10:07:00.000Z" }] };
+    else if (pathname.endsWith("/api/contacts") && method === "POST") body = { success: true, message: "Message sent successfully", reference: "B06F8E07", accountLinked: true };
     else if (pathname.endsWith("/api/contacts")) body = [supportContact];
     else if (pathname.endsWith(`/api/contacts/${supportContact._id}/read`)) body = { ...supportContact, readAt: "2026-08-22T10:05:00.000Z" };
     else if (pathname.endsWith(`/api/contacts/${supportContact._id}/status`)) body = { ...supportContact, readAt: "2026-08-22T10:05:00.000Z", status: "in_progress" };
@@ -140,7 +148,7 @@ test("help centre provides searchable answers and a support path", async ({ page
   await page.getByRole("button", { name: "When is a COD order paid?" }).click();
   await expect(page.getByText(/Cash-on-delivery payment remains pending/)).toBeVisible();
   await expect(page.getByRole("status")).toContainText("1 answer available");
-  await expect(page.getByRole("link", { name: "Contact support" })).toHaveAttribute("href", "/contact");
+  await expect(page.getByRole("link", { name: "Support requests" })).toHaveAttribute("href", "/support");
 });
 
 test("admin support inbox keeps unread requests actionable until opened", async ({ page }) => {
@@ -153,6 +161,21 @@ test("admin support inbox keeps unread requests actionable until opened", async 
   await expect(page.locator(`#support-${supportContact._id}`).getByText("Please check the delivery status for this order.", { exact: true })).toBeVisible();
   await page.getByLabel("Request status").selectOption("in_progress");
   await expect(page.getByLabel("Request status")).toHaveValue("in_progress");
+  await page.getByLabel("Reply to customer").fill("We have confirmed the dispatch schedule.");
+  await page.getByRole("button", { name: "Send reply" }).click();
+  await expect(page.getByText("We have confirmed the dispatch schedule.")).toBeVisible();
+});
+
+test("customer support portal keeps replies private and usable on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-customer-token", user: { id: "test-user", name: "Test Parent", email: "parent@example.com", accountType: "customer" } })));
+  await page.goto("/support");
+  await expect(page.getByRole("heading", { name: "Support requests" })).toBeVisible();
+  await expect(page.getByText("Your parcel is scheduled for dispatch tomorrow.").last()).toBeVisible();
+  await page.getByLabel("Reply securely").fill("Thank you for the update.");
+  await page.getByRole("button", { name: "Send reply" }).click();
+  await expect(page.getByText("Thank you for the update.").last()).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test("storefront offers a keyboard-accessible skip link", async ({ page }) => {
@@ -180,6 +203,7 @@ test("contact support returns an accessible case reference", async ({ page }) =>
   await page.getByLabel("How can we help?").fill("Please check the current delivery status.");
   await page.getByRole("button", { name: "Send support request" }).click();
   await expect(page.getByRole("region", { name: "Send a secure request" }).getByRole("status")).toContainText("Support reference: B06F8E07");
+  await expect(page.getByRole("link", { name: "View support requests" })).toHaveAttribute("href", "/support");
 });
 
 test("corrupted browser storage is cleared without crashing the storefront", async ({ page }) => {

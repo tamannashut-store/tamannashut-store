@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { adminNewOrderEmailTemplate, contactAdminEmailTemplate, contactCustomerEmailTemplate, emailVerificationTemplate, orderEmailTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate, twoFactorCodeEmailTemplate } from "../server/src/utils/emailTemplates.js";
+import { adminNewOrderEmailTemplate, contactAdminEmailTemplate, contactCustomerEmailTemplate, emailVerificationTemplate, orderEmailTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate, supportFollowUpEmailTemplate, supportReplyEmailTemplate, twoFactorCodeEmailTemplate } from "../server/src/utils/emailTemplates.js";
 
 const baseOrder = {
   _id: "order-123",
@@ -70,4 +70,16 @@ test("support emails include a safe customer reference and structured context", 
   assert.match(admin, /Order support/);
   assert.match(admin, /ORDER-123/);
   assert.doesNotMatch(admin, /<Parent>|<check>/);
+});
+
+test("support conversation emails escape replies and link to the correct workspace", () => {
+  const customer = supportReplyEmailTemplate({ name: "<Parent>", reference: "B06F8E07", reply: "Please <confirm> delivery." });
+  assert.match(customer, /View support request/);
+  assert.match(customer, /\/support/);
+  assert.doesNotMatch(customer, /<Parent>|<confirm>/);
+
+  const admin = supportFollowUpEmailTemplate({ name: "<Parent>", email: "test@example.com", reference: "B06F8E07", message: "My <reply>" });
+  assert.match(admin, /Open support inbox/);
+  assert.match(admin, /\/admin\/contacts/);
+  assert.doesNotMatch(admin, /<Parent>|<reply>/);
 });

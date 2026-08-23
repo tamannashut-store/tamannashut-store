@@ -12,6 +12,7 @@ const pages = {
   "/checkout": ["Secure Checkout | Tamanna's Hut", "Complete your Tamanna's Hut order securely.", false],
   "/profile": ["My Profile | Tamanna's Hut", "Manage your Tamanna's Hut delivery profile.", false],
   "/my-orders": ["My Orders | Tamanna's Hut", "Track your Tamanna's Hut orders, returns and refunds.", false],
+  "/support": ["My Support Requests | Tamanna's Hut", "Review and reply to your Tamanna's Hut customer support requests.", false],
 };
 
 export default function PageMeta() {
