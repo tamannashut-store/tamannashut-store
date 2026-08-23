@@ -91,6 +91,6 @@ export default function HelpCentre() {
       </div>
     </div></section>
 
-    <section className="mt-12 grid gap-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-8 md:grid-cols-[1fr_auto] md:items-center"><div><p className="eyebrow">Personal support</p><h2 className="mt-2 text-2xl font-bold">Still need help?</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Send a secure support request and keep the reference number. Include your order number when asking about an existing purchase.</p></div><div className="flex flex-wrap gap-3"><Link to="/my-orders" className="btn-secondary">My orders</Link><Link to="/contact" className="btn-primary"><FiMail aria-hidden="true"/> Contact support</Link></div></section>
+    <section className="mt-12 grid gap-5 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-8 md:grid-cols-[1fr_auto] md:items-center"><div><p className="eyebrow">Personal support</p><h2 className="mt-2 text-2xl font-bold">Still need help?</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Send a secure support request and keep the conversation in your account. Include your order number when asking about an existing purchase.</p></div><div className="flex flex-wrap gap-3"><Link to="/support" className="btn-secondary">Support requests</Link><Link to="/contact" className="btn-primary"><FiMail aria-hidden="true"/> New request</Link></div></section>
   </main>;
 }

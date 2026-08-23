@@ -33,6 +33,7 @@ const AdminSettlements = lazy(() => import("./pages/AdminSettlements"));
 const AdminAds = lazy(() => import("./pages/AdminAds"));
 const SellerAds = lazy(() => import("./pages/SellerAds"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 
 const PageLoader = () => <div className="grid min-h-[55vh] place-items-center bg-brand-background text-sm font-medium text-slate-500">Loading…</div>;
 
@@ -57,6 +58,7 @@ function App() {
           <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/support" element={<PrivateRoute><SupportTickets /></PrivateRoute>} />
           <Route path="/change-password" element={<Navigate to="/account/change-password" replace />} />
           <Route path="/return-policy" element={<ReturnPolicy />} />
           <Route path="/shipping-policy" element={<ShippingPolicy />} />

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import Contact from "../server/src/models/Contact.js";
+import mongoose from "mongoose";
 
 test("contact messages enforce production length limits", async () => {
   const invalid = new Contact({ name: "A", email: "test@example.com", message: "short" });
@@ -26,4 +27,24 @@ test("contact requests store a structured topic, order reference and workflow st
 
   request.topic = "unknown";
   await assert.rejects(request.validate(), /`unknown` is not a valid enum value/);
+});
+
+test("account support requests validate a secure customer conversation", async () => {
+  const request = new Contact({
+    customerId: new mongoose.Types.ObjectId(),
+    name: "Test Parent",
+    email: "test@example.com",
+    message: "Please check the delivery status for my order.",
+    replies: [
+      { sender: "admin", body: "We are checking this with the courier." },
+      { sender: "customer", body: "Thank you. Please keep me updated." },
+    ],
+  });
+  await request.validate();
+  assert.equal(request.replies.length, 2);
+  assert.equal(request.replies[0].sender, "admin");
+  assert.ok(request.lastActivityAt instanceof Date);
+
+  request.replies.push({ sender: "seller", body: "This sender is not permitted." });
+  await assert.rejects(request.validate(), /`seller` is not a valid enum value/);
 });

@@ -64,6 +64,25 @@ export const protect = async (req, res, next) => {
 
 };
 
+// Public forms can enrich a request when a valid customer session is present,
+// while still remaining usable for guests and browsers with an expired token.
+export const optionalProtect = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) return next();
+
+    try {
+        const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).select("-password +passwordChangedAt");
+        if (!user || (decoded.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)) return next();
+        const passwordChangedAt = user.passwordChangedAt ? Math.floor(user.passwordChangedAt.getTime() / 1000) : 0;
+        if (passwordChangedAt && decoded.iat < passwordChangedAt) return next();
+        req.user = user;
+    } catch {
+        // Invalid optional credentials must not break the public support form.
+    }
+    return next();
+};
+
 export const admin = (req, res, next) => {
     if (req.user && isPlatformAdmin(req.user)) {
         return next();
