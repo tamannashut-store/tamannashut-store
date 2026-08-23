@@ -1,7 +1,7 @@
 {
-  "name": "client",
+  "name": "tamannashut-storefront",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource/roboto": "^5.2.10",
     "@sentry/react": "^10.70.0",
     "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.16.1",

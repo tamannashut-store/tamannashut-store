@@ -7,6 +7,7 @@ import SellerRoute from "./components/SellerRoute";
 import SellerApplicantRoute from "./components/SellerApplicantRoute";
 import AuthenticatedRoute from "./components/AuthenticatedRoute";
 import CustomerGuestRoute from "./components/CustomerGuestRoute";
+import PageLoader from "./components/PageLoader";
 
 const Home = lazy(() => import("./pages/Home")); const Login = lazy(() => import("./pages/Login")); const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword")); const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -35,12 +36,10 @@ const SellerAds = lazy(() => import("./pages/SellerAds"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 
-const PageLoader = () => <div className="grid min-h-[55vh] place-items-center bg-brand-background text-sm font-medium text-slate-500">Loading…</div>;
-
 function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<PageLoader/>}><Routes>
+      <Suspense fallback={<PageLoader />}><Routes>
         <Route element={<StoreLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<CustomerGuestRoute><Login /></CustomerGuestRoute>} />
