@@ -1,12 +1,15 @@
 import logo from "../assets/logo.png";
 
-function PageLoader() {
+function PageLoader({
+  title = "Preparing your page",
+  message = "This should only take a moment.",
+}) {
   return (
     <div
       className="grid min-h-[65vh] place-items-center bg-brand-background px-6 py-16"
       role="status"
       aria-live="polite"
-      aria-label="Loading page"
+      aria-label={title}
     >
       <div className="flex w-full max-w-xs flex-col items-center text-center">
         <img
@@ -24,10 +27,10 @@ function PageLoader() {
         </div>
 
         <p className="mt-5 text-sm font-semibold tracking-wide text-brand-dark">
-          Preparing your page
+          {title}
         </p>
         <p className="mt-1 text-xs leading-5 text-slate-500">
-          This should only take a moment.
+          {message}
         </p>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import { FiCheckCircle, FiExternalLink, FiEye, FiEyeOff, FiLock, FiShield } from "react-icons/fi";
 import logo from "../assets/logo.png";
+import PageLoader from "../components/PageLoader";
 
 const initialForm = {
   name: "", password: "", confirmPassword: "", legalBusinessName: "", tradeName: "", businessType: "",
@@ -52,7 +53,7 @@ function SellerRegister() {
   };
 
   if (!token) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border bg-white p-8 text-center shadow-xl"><img src={logo} alt="Tamanna's Hut" className="mx-auto h-16"/><FiLock className="mx-auto mt-7 text-3xl text-brand-primary"/><h1 className="mt-4 text-3xl font-bold">Invitation required</h1><p className="mt-3 leading-7 text-slate-600">Seller registration starts from a private invitation sent by the platform administrator.</p><Link to="/admin-login" className="btn-primary mt-7 w-full">Back to seller sign in</Link></section></main>;
-  if (loading) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] text-slate-500">Checking secure invitation…</main>;
+  if (loading) return <PageLoader title="Checking your invitation" message="We’re verifying this secure seller invitation." />;
   if (complete) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border bg-white p-8 text-center shadow-xl"><FiCheckCircle className="mx-auto text-5xl text-emerald-600"/><h1 className="mt-5 text-3xl font-bold">Application submitted</h1><p className="mt-3 leading-7 text-slate-600">Your seller account is separate from the platform administrator. Access stays locked until GST and settlement details are reviewed.</p><Link to="/admin-login" className="btn-primary mt-7 w-full">Go to seller sign in</Link></section></main>;
   if (!invitation) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border border-red-200 bg-white p-8 text-center shadow-xl"><h1 className="text-3xl font-bold">Invitation unavailable</h1><p role="alert" className="mt-4 text-red-700">{error}</p><Link to="/admin-login" className="btn-secondary mt-7 w-full">Back to seller sign in</Link></section></main>;
 

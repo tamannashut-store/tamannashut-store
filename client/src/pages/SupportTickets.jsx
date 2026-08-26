@@ -3,6 +3,7 @@ import axios from "axios";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { FiArrowLeft, FiCheckCircle, FiClock, FiMail, FiMessageSquare, FiPlus, FiSend } from "react-icons/fi";
+import PageLoader from "../components/PageLoader";
 
 const topicLabels = { general: "General question", order: "Order support", delivery: "Delivery and tracking", return: "Return or refund", payment: "Payment support" };
 const statusLabels = { open: "Open", in_progress: "In progress", resolved: "Resolved" };
@@ -73,7 +74,7 @@ export default function SupportTickets() {
     finally { setSending(false); }
   };
 
-  if (loading) return <main className="grid min-h-[55vh] place-items-center text-sm font-medium text-slate-500">Loading support requests…</main>;
+  if (loading) return <PageLoader title="Loading support requests" message="We’re retrieving your conversations with customer care." />;
 
   return <main className="bg-[#f7f6f2]"><div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:py-12 lg:px-8">
     <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-sm text-slate-500"><Link to="/" className="hover:text-brand-primary">Home</Link><span aria-hidden="true">/</span><span aria-current="page">Support requests</span></nav>
