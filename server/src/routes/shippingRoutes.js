@@ -18,15 +18,27 @@ const safeEqual = (left, right) => {
   const a = Buffer.from(String(left || "")); const b = Buffer.from(String(right || ""));
   return a.length > 0 && a.length === b.length && crypto.timingSafeEqual(a, b);
 };
+const positiveParcelNumber = (input, fallback, label, maximum) => {
+  const candidate = input === undefined || input === null || input === "" ? fallback : input;
+  if ((typeof candidate !== "string" && typeof candidate !== "number") || (typeof candidate === "string" && !/^\d+(?:\.\d{1,3})?$/.test(candidate.trim()))) {
+    throw Object.assign(new Error(`${label} must be a positive number`), { status: 400 });
+  }
+  const value = Number(candidate);
+  if (!Number.isFinite(value) || value <= 0 || value > maximum) throw Object.assign(new Error(`${label} is outside the supported range`), { status: 400 });
+  return value;
+};
 const parcelFrom = (body, existing = {}) => {
+  if (!body || typeof body !== "object" || Array.isArray(body) || Object.getPrototypeOf(body) !== Object.prototype) {
+    throw Object.assign(new Error("Package details must be a JSON object"), { status: 400 });
+  }
+  const { destinationState, weight, length: packageLength, breadth, height } = body;
   const value = {
-    destinationState: String(body.destinationState || existing.destinationState || "").trim().slice(0, 80),
-    weight: Number(body.weight ?? existing.package?.weight ?? 0.5),
-    length: Number(body.length ?? existing.package?.length ?? 15),
-    breadth: Number(body.breadth ?? existing.package?.breadth ?? 12),
-    height: Number(body.height ?? existing.package?.height ?? 5),
+    destinationState: String(destinationState || existing.destinationState || "").trim().slice(0, 80),
+    weight: positiveParcelNumber(weight, existing.package?.weight ?? 0.5, "Weight", 100),
+    length: positiveParcelNumber(packageLength, existing.package?.length ?? 15, "Length", 300),
+    breadth: positiveParcelNumber(breadth, existing.package?.breadth ?? 12, "Breadth", 300),
+    height: positiveParcelNumber(height, existing.package?.height ?? 5, "Height", 300),
   };
-  if ([value.weight, value.length, value.breadth, value.height].some((item) => !Number.isFinite(item) || item <= 0)) throw Object.assign(new Error("Package dimensions and weight must be greater than zero"), { status: 400 });
   return value;
 };
 const loadOrder = async (id) => {

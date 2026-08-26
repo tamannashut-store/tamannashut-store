@@ -25,7 +25,8 @@ test("verified online confirmation email confirms payment", () => {
 
 test("transactional email escapes customer and catalogue HTML", () => {
   const html = orderEmailTemplate({ ...baseOrder, customerName: "<script>alert(1)</script>", paymentMethod: "COD", products: [{ ...baseOrder.products[0], name: "<img src=x onerror=alert(1)>" }] });
-  assert.doesNotMatch(html, /<script>|<img src=x/);
+  assert.equal(html.includes("<script>"), false);
+  assert.equal(html.includes("<img src=x"), false);
   assert.match(html, /&lt;script&gt;/);
   assert.match(html, /&lt;img/);
 });

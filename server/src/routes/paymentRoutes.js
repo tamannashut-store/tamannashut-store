@@ -11,6 +11,7 @@ import {
 } from "../services/orderService.js";
 import PaymentAttempt from "../models/PaymentAttempt.js";
 import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
+import { razorpayIdFromInput } from "../utils/inputSecurity.js";
 
 const router = express.Router();
 const razorpay = new Razorpay({
@@ -46,32 +47,34 @@ router.post("/create-order", protect, async (req, res) => {
 
 router.post("/verify-payment", protect, async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    const razorpayOrderId = razorpayIdFromInput(req.body.razorpay_order_id, "order", "Razorpay order identifier");
+    const razorpayPaymentId = razorpayIdFromInput(req.body.razorpay_payment_id, "pay", "Razorpay payment identifier");
+    const razorpaySignature = typeof req.body.razorpay_signature === "string" ? req.body.razorpay_signature : "";
+    if (!razorpaySignature) {
       return res.status(400).json({ message: "Incomplete payment response" });
     }
 
     const expected = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest("hex");
-    const receivedBuffer = Buffer.from(String(razorpay_signature));
+    const receivedBuffer = Buffer.from(razorpaySignature);
     const expectedBuffer = Buffer.from(expected);
     if (receivedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(receivedBuffer, expectedBuffer)) {
       return res.status(400).json({ message: "Invalid payment signature" });
     }
 
-    const attempt = await PaymentAttempt.findOne({ razorpayOrderId: razorpay_order_id, userId: req.user._id });
+    const attempt = await PaymentAttempt.findOne({ razorpayOrderId: razorpayOrderId, userId: req.user._id });
     const [razorpayOrder, razorpayPayment] = await Promise.all([
-      razorpay.orders.fetch(razorpay_order_id),
-      razorpay.payments.fetch(razorpay_payment_id),
+      razorpay.orders.fetch(razorpayOrderId),
+      razorpay.payments.fetch(razorpayPaymentId),
     ]);
     const cart = attempt?.cart || await calculateCart(req.body.products, req.body.couponCode, { user: req.user, customer: req.body.customer });
     const expectedAmount = Math.round(cart.totalAmount * 100);
     if (
       razorpayOrder.notes?.userId !== String(req.user._id) ||
       Number(razorpayOrder.amount) !== expectedAmount ||
-      razorpayPayment.order_id !== razorpay_order_id ||
+      razorpayPayment.order_id !== razorpayOrderId ||
       Number(razorpayPayment.amount) !== expectedAmount ||
       razorpayPayment.status !== "captured"
     ) {
@@ -87,14 +90,14 @@ router.post("/verify-payment", protect, async (req, res) => {
         payment: {
           method: "Online",
           status: "Paid",
-          paymentId: razorpay_payment_id,
-          razorpayOrderId: razorpay_order_id,
+          paymentId: razorpayPaymentId,
+          razorpayOrderId: razorpayOrderId,
         },
         idempotencyKey: req.body.idempotencyKey,
       });
     } catch (orderError) {
       try {
-        await razorpay.payments.refund(razorpay_payment_id, {
+        await razorpay.payments.refund(razorpayPaymentId, {
           amount: expectedAmount,
           notes: { reason: "Order could not be confirmed" },
         });
@@ -105,12 +108,12 @@ router.post("/verify-payment", protect, async (req, res) => {
           scope.setTag("payment.refund", "automatic_failed");
           Sentry.captureException(refundError);
         });
-        orderError.message = `${orderError.message}. Please contact support with payment ID ${razorpay_payment_id}.`;
+        orderError.message = `${orderError.message}. Please contact support with payment ID ${razorpayPaymentId}.`;
       }
       throw orderError;
     }
     if (result.created) await sendOrderNotifications(result.order);
-    if (attempt) { attempt.status = "completed"; attempt.paymentId = razorpay_payment_id; await attempt.save(); }
+    if (attempt) { attempt.status = "completed"; attempt.paymentId = razorpayPaymentId; await attempt.save(); }
     return res.status(result.created ? 201 : 200).json({ success: true, order: result.order });
   } catch (error) {
     return res.status(error.status || 500).json({ success: false, message: error.message });

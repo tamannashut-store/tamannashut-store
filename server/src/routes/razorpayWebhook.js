@@ -7,6 +7,7 @@ import { createOrderWithReservedStock, sendOrderNotifications } from "../service
 import { razorpayWebhookContext } from "../utils/webhookMonitoring.js";
 import { syncOrderSettlementsSafely } from "../services/sellerSettlementService.js";
 import AdCampaign from "../models/AdCampaign.js";
+import { razorpayIdFromInput } from "../utils/inputSecurity.js";
 
 export const razorpayWebhook = async (req, res) => {
   let event;
@@ -24,36 +25,41 @@ export const razorpayWebhook = async (req, res) => {
     const refund = event.payload?.refund?.entity;
 
     if (event.event === "payment.captured" && payment?.order_id) {
-      const adCampaign = await AdCampaign.findOne({ razorpayOrderId: payment.order_id });
+      const razorpayOrderId = razorpayIdFromInput(payment.order_id, "order", "Razorpay order identifier");
+      const razorpayPaymentId = razorpayIdFromInput(payment.id, "pay", "Razorpay payment identifier");
+      const adCampaign = await AdCampaign.findOne({ razorpayOrderId: razorpayOrderId });
       if (adCampaign) {
         if (Number(payment.amount) !== Math.round(adCampaign.amount * 100)) throw new Error("Seller ad payment amount did not match its campaign");
-        if (["payment_pending", "cancelled"].includes(adCampaign.status)) await AdCampaign.updateOne({ _id: adCampaign._id, status: { $in: ["payment_pending", "cancelled"] } }, { $set: { status: "pending_review", razorpayPaymentId: payment.id, paidAt: new Date() } });
+        if (["payment_pending", "cancelled"].includes(adCampaign.status)) await AdCampaign.updateOne({ _id: adCampaign._id, status: { $in: ["payment_pending", "cancelled"] } }, { $set: { status: "pending_review", razorpayPaymentId, paidAt: new Date() } });
         return res.status(200).json({ received: true });
       }
-      const existing = await Order.findOne({ $or: [{ razorpayOrderId: payment.order_id }, { paymentId: payment.id }] });
+      const existing = await Order.findOne({ $or: [{ razorpayOrderId: razorpayOrderId }, { paymentId: razorpayPaymentId }] });
       if (!existing) {
-        const attempt = await PaymentAttempt.findOne({ razorpayOrderId: payment.order_id });
+        const attempt = await PaymentAttempt.findOne({ razorpayOrderId: razorpayOrderId });
         if (attempt) {
           const user = await User.findById(attempt.userId);
           if (user) {
-            const result = await createOrderWithReservedStock({ user, customer: attempt.customer, cart: attempt.cart, payment: { method: "Online", status: "Paid", paymentId: payment.id, razorpayOrderId: payment.order_id }, idempotencyKey: attempt.idempotencyKey });
-            attempt.status = "completed"; attempt.paymentId = payment.id; await attempt.save();
+            const result = await createOrderWithReservedStock({ user, customer: attempt.customer, cart: attempt.cart, payment: { method: "Online", status: "Paid", paymentId: razorpayPaymentId, razorpayOrderId: razorpayOrderId }, idempotencyKey: attempt.idempotencyKey });
+            attempt.status = "completed"; attempt.paymentId = razorpayPaymentId; await attempt.save();
             if (result.created) await sendOrderNotifications(result.order);
           }
         }
       }
     } else if (event.event === "payment.failed" && payment?.order_id) {
-      await AdCampaign.updateOne({ razorpayOrderId: payment.order_id, status: "payment_pending" }, { $set: { status: "cancelled" } });
-      await PaymentAttempt.updateOne({ razorpayOrderId: payment.order_id }, { $set: { status: "failed", paymentId: payment.id || "", failureReason: payment.error_description || payment.error_reason || "Payment failed" } });
+      const razorpayOrderId = razorpayIdFromInput(payment.order_id, "order", "Razorpay order identifier");
+      const razorpayPaymentId = payment.id ? razorpayIdFromInput(payment.id, "pay", "Razorpay payment identifier") : "";
+      await AdCampaign.updateOne({ razorpayOrderId: razorpayOrderId, status: "payment_pending" }, { $set: { status: "cancelled" } });
+      await PaymentAttempt.updateOne({ razorpayOrderId: razorpayOrderId }, { $set: { status: "failed", paymentId: razorpayPaymentId, failureReason: String(payment.error_description || payment.error_reason || "Payment failed").slice(0, 300) } });
     } else if (["refund.created", "refund.processed", "refund.failed"].includes(event.event) && refund?.payment_id) {
-      const adCampaign = await AdCampaign.findOne({ razorpayPaymentId: refund.payment_id });
+      const razorpayPaymentId = razorpayIdFromInput(refund.payment_id, "pay", "Razorpay payment identifier");
+      const adCampaign = await AdCampaign.findOne({ razorpayPaymentId });
       if (adCampaign) {
         adCampaign.refundId = refund.id || adCampaign.refundId || "";
         adCampaign.refundStatus = event.event === "refund.processed" ? "processed" : event.event === "refund.failed" ? "failed" : "submitted";
         await adCampaign.save();
         return res.status(200).json({ received: true });
       }
-      const order = await Order.findOne({ paymentId: refund.payment_id });
+      const order = await Order.findOne({ paymentId: razorpayPaymentId });
       if (order) {
         order.refund.amount = Number(refund.amount || 0) / 100;
         order.refund.reference = refund.id || order.refund.reference || "";
@@ -78,6 +84,6 @@ export const razorpayWebhook = async (req, res) => {
       scope.setContext("payment_event", razorpayWebhookContext(event));
       Sentry.captureException(error);
     });
-    return res.status(500).json({ message: "Webhook processing failed" });
+    return res.status(error.status || 500).json({ message: error.status ? error.message : "Webhook processing failed" });
   }
 };

@@ -20,6 +20,7 @@ import { passwordPolicyError } from "../utils/passwordPolicy.js";
 import { createEmailVerification, createTwoFactorCode, hashAuthSecret, maskEmail, safeSecretEqual } from "../utils/authSecurity.js";
 import { normalizeIndianPhone } from "../utils/phone.js";
 import { checkPhoneVerification, phoneVerificationConfigured, sendPhoneVerification } from "../services/phoneVerificationService.js";
+import { isValidEmailAddress } from "../utils/inputSecurity.js";
 
 const router = express.Router();
 
@@ -64,7 +65,7 @@ router.post("/register", async (req, res) => {
         const email = String(req.body.email || "").trim().toLowerCase();
         const password = String(req.body.password || "");
         const passwordError = passwordPolicyError(password);
-        if (name.length < 2 || name.length > 80 || !/^\S+@\S+\.\S+$/.test(email) || passwordError) {
+        if (name.length < 2 || name.length > 80 || !isValidEmailAddress(email) || passwordError) {
             return res.status(400).json({ message: passwordError || "Enter a valid name and email address" });
         }
         if (req.body.termsAccepted !== true) return res.status(400).json({ message: "Accept the Terms and Privacy Policy to create an account" });
@@ -208,7 +209,7 @@ router.post("/verify-email", async (req, res) => {
 router.post("/verify-email/resend", async (req, res) => {
     try {
         const email = String(req.body.email || "").trim().toLowerCase();
-        if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: "Enter a valid email address" });
+        if (!isValidEmailAddress(email)) return res.status(400).json({ message: "Enter a valid email address" });
         const user = await User.findOne({ email }).select("+emailVerificationRequiredAt +emailVerificationSentAt +emailVerificationToken +emailVerificationExpires");
         if (!user || !user.emailVerificationRequiredAt || user.emailVerifiedAt) return res.json({ message: "If verification is required, a new link has been sent" });
         if (user.emailVerificationSentAt && Date.now() - user.emailVerificationSentAt.getTime() < 60_000) return res.status(429).json({ message: "Please wait one minute before requesting another email" });
@@ -273,7 +274,7 @@ const ownerOnly = (req, res, next) => {
 router.post("/seller-invitations", protect, admin, ownerOnly, async (req, res) => {
     try {
         const email = String(req.body.email || "").trim().toLowerCase();
-        if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: "Enter a valid seller email address" });
+        if (!isValidEmailAddress(email)) return res.status(400).json({ message: "Enter a valid seller email address" });
         if (await User.exists({ email })) return res.status(409).json({ message: "An account already exists for this email" });
         await SellerInvitation.deleteMany({ email, acceptedAt: null });
         const token = crypto.randomBytes(32).toString("hex");
@@ -527,7 +528,7 @@ router.post("/forgot-password", async (req, res) => {
     const response = { message: "If an account exists for that email, a password reset link has been sent" };
     try {
         const email = String(req.body.email || "").trim().toLowerCase();
-        if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: "Enter a valid email address" });
+        if (!isValidEmailAddress(email)) return res.status(400).json({ message: "Enter a valid email address" });
         const user = await User.findOne({ email }).select("+passwordResetToken +passwordResetExpires");
         if (!user) return res.status(404).json({ message: "No account was found with this email address", code: "ACCOUNT_NOT_FOUND" });
         const token = crypto.randomBytes(32).toString("hex");

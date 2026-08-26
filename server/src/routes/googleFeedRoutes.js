@@ -2,10 +2,12 @@ import express from "express";
 import Product from "../models/Product.js";
 import { storefrontProductFilter } from "../utils/productVisibility.js";
 import { buildGoogleMerchantFeed } from "../utils/googleMerchantFeed.js";
+import rateLimit from "express-rate-limit";
 
 const router = express.Router();
+const feedLimiter = rateLimit({ windowMs: 60 * 1000, limit: 60, standardHeaders: "draft-8", legacyHeaders: false });
 
-router.get("/google-feed.xml", async (req, res) => {
+router.get("/google-feed.xml", feedLimiter, async (req, res) => {
   try {
     const products = await Product.find(storefrontProductFilter()).lean();
     const xml = buildGoogleMerchantFeed(products);
