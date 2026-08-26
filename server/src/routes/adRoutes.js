@@ -8,6 +8,7 @@ import { storefrontProductFilter } from "../utils/productVisibility.js";
 import { recordAudit } from "../utils/recordAudit.js";
 import { createRazorpayRefund } from "../services/refundService.js";
 import { AD_PACKAGES, AD_PLACEMENTS } from "../utils/adCampaign.js";
+import { objectIdFromInput, razorpayIdFromInput } from "../utils/inputSecurity.js";
 
 const router = express.Router();
 const packages = AD_PACKAGES;
@@ -39,7 +40,8 @@ router.post("/seller/create-order", protect, seller, async (req, res) => {
     const selectedPackage = packages[String(req.body.packageKey || "")];
     const placement = String(req.body.placement || "");
     if (!selectedPackage || !placements.has(placement)) return res.status(400).json({ message: "Select a valid ad package and placement" });
-    const product = await Product.findOne({ _id: req.body.productId, sellerId: req.user._id, ...storefrontProductFilter() }).select("_id name");
+    const productId = objectIdFromInput(req.body.productId, "product identifier");
+    const product = await Product.findOne({ _id: productId, sellerId: req.user._id, ...storefrontProductFilter() }).select("_id name");
     if (!product) return res.status(404).json({ message: "Only your approved, active listings can be promoted" });
     await AdCampaign.updateMany({ sellerId: req.user._id, status: "payment_pending", createdAt: { $lt: new Date(Date.now() - 30 * 60 * 1000) } }, { $set: { status: "cancelled" } });
     const overlapping = await AdCampaign.exists({ sellerId: req.user._id, productId: product._id, placement, status: { $in: ["payment_pending", "pending_review", "active", "paused"] } });
@@ -64,17 +66,20 @@ router.post("/seller/create-order", protect, seller, async (req, res) => {
 
 router.post("/seller/verify", protect, seller, async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) return res.status(400).json({ message: "Incomplete payment response" });
-    const campaign = await AdCampaign.findOne({ _id: req.body.campaignId, sellerId: req.user._id, razorpayOrderId: razorpay_order_id, status: { $in: ["payment_pending", "cancelled"] } });
+    const campaignId = objectIdFromInput(req.body.campaignId, "campaign identifier");
+    const razorpayOrderId = razorpayIdFromInput(req.body.razorpay_order_id, "order", "Razorpay order identifier");
+    const razorpayPaymentId = razorpayIdFromInput(req.body.razorpay_payment_id, "pay", "Razorpay payment identifier");
+    const razorpaySignature = typeof req.body.razorpay_signature === "string" ? req.body.razorpay_signature : "";
+    if (!razorpaySignature) return res.status(400).json({ message: "Incomplete payment response" });
+    const campaign = await AdCampaign.findOne({ _id: campaignId, sellerId: req.user._id, razorpayOrderId: razorpayOrderId, status: { $in: ["payment_pending", "cancelled"] } });
     if (!campaign) return res.status(409).json({ message: "This ad payment is not available for verification" });
-    const expected = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET).update(`${razorpay_order_id}|${razorpay_payment_id}`).digest("hex");
-    const expectedBuffer = Buffer.from(expected); const receivedBuffer = Buffer.from(String(razorpay_signature));
+    const expected = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET).update(`${razorpayOrderId}|${razorpayPaymentId}`).digest("hex");
+    const expectedBuffer = Buffer.from(expected); const receivedBuffer = Buffer.from(razorpaySignature);
     if (expectedBuffer.length !== receivedBuffer.length || !crypto.timingSafeEqual(expectedBuffer, receivedBuffer)) return res.status(400).json({ message: "Invalid payment signature" });
-    const [order, payment] = await Promise.all([razorpay.orders.fetch(razorpay_order_id), razorpay.payments.fetch(razorpay_payment_id)]);
+    const [order, payment] = await Promise.all([razorpay.orders.fetch(razorpayOrderId), razorpay.payments.fetch(razorpayPaymentId)]);
     const amount = Math.round(campaign.amount * 100);
     if (order.notes?.campaignId !== String(campaign._id) || order.notes?.sellerId !== String(req.user._id) || Number(order.amount) !== amount || payment.order_id !== order.id || Number(payment.amount) !== amount || payment.status !== "captured") return res.status(409).json({ message: "Ad payment amount or status could not be verified" });
-    campaign.razorpayPaymentId = razorpay_payment_id; campaign.status = "pending_review"; campaign.paidAt = new Date(); await campaign.save();
+    campaign.razorpayPaymentId = razorpayPaymentId; campaign.status = "pending_review"; campaign.paidAt = new Date(); await campaign.save();
     await recordAudit({ user: req.user, action: "seller_ad_paid", entityType: "AdCampaign", entityId: campaign._id, summary: "Seller paid for a listing promotion", metadata: { placement: campaign.placement, amount: campaign.amount } }).catch(() => {});
     return res.json({ message: "Payment verified. Your campaign is awaiting platform review.", campaign });
   } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
@@ -83,7 +88,8 @@ router.post("/seller/verify", protect, seller, async (req, res) => {
 router.patch("/seller/:id/status", protect, seller, async (req, res) => {
   try {
     const requested = String(req.body.status || "");
-    const campaign = await AdCampaign.findOne({ _id: req.params.id, sellerId: req.user._id });
+    const campaignId = objectIdFromInput(req.params.id, "campaign identifier");
+    const campaign = await AdCampaign.findOne({ _id: campaignId, sellerId: req.user._id });
     if (!campaign) return res.status(404).json({ message: "Campaign not found" });
     if (requested === "paused" && campaign.status === "active") campaign.status = "paused";
     else if (requested === "active" && campaign.status === "paused" && campaign.endsAt > new Date()) campaign.status = "active";
@@ -100,7 +106,8 @@ router.get("/admin", protect, admin, async (_req, res) => {
 
 router.patch("/admin/:id/review", protect, admin, async (req, res) => {
   try {
-    const decision = String(req.body.decision || ""); const campaign = await AdCampaign.findById(req.params.id).populate("productId");
+    const campaignId = objectIdFromInput(req.params.id, "campaign identifier");
+    const decision = String(req.body.decision || ""); const campaign = await AdCampaign.findById(campaignId).populate("productId");
     if (!campaign) return res.status(404).json({ message: "Campaign not found" });
     if (decision === "approved") {
       if (campaign.status !== "pending_review") return res.status(409).json({ message: "Only paid campaigns awaiting review can be approved" });
@@ -134,7 +141,7 @@ router.get("/placements/:placement", async (req, res) => {
 });
 
 router.post("/:id/click", async (req, res) => {
-  try { await AdCampaign.updateOne({ _id: req.params.id, status: "active", startsAt: { $lte: new Date() }, endsAt: { $gt: new Date() } }, { $inc: { clicks: 1 } }); return res.status(204).end(); }
+  try { const campaignId = objectIdFromInput(req.params.id, "campaign identifier"); await AdCampaign.updateOne({ _id: campaignId, status: "active", startsAt: { $lte: new Date() }, endsAt: { $gt: new Date() } }, { $inc: { clicks: 1 } }); return res.status(204).end(); }
   catch { return res.status(204).end(); }
 });
 

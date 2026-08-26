@@ -1,10 +1,12 @@
 import express from "express";
 import Product from "../models/Product.js";
 import { storefrontProductFilter } from "../utils/productVisibility.js";
+import rateLimit from "express-rate-limit";
 
 const router = express.Router();
+const sitemapLimiter = rateLimit({ windowMs: 60 * 1000, limit: 60, standardHeaders: "draft-8", legacyHeaders: false });
 
-router.get("/sitemap.xml", async (req, res) => {
+router.get("/sitemap.xml", sitemapLimiter, async (req, res) => {
     try {
         const products = await Product.find(storefrontProductFilter()).select("slug updatedAt").lean();
 

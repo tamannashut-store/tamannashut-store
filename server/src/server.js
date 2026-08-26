@@ -57,7 +57,13 @@ app.use((req, res, next) => {
   res.set("x-request-id", req.requestId);
   next();
 });
-app.post("/api/payment/webhook", express.raw({ type: "application/json", limit: "256kb" }), razorpayWebhook);
+const paymentWebhookLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+app.post("/api/payment/webhook", paymentWebhookLimiter, express.raw({ type: "application/json", limit: "256kb" }), razorpayWebhook);
 app.use(express.json({ limit: "1mb" }));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
