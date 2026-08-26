@@ -15,7 +15,7 @@ import {
 } from "../services/orderService.js";
 import { cancelShiprocketShipment, verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
 import { createRazorpayRefund } from "../services/refundService.js";
-import upload from "../middleware/upload.js";
+import upload, { validateUploadedImages } from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 import { recordAudit } from "../utils/recordAudit.js";
@@ -153,7 +153,7 @@ const uploadReturnEvidence = (file) => new Promise((resolve, reject) => {
   streamifier.createReadStream(file.buffer).pipe(stream);
 });
 
-router.post("/return/:id", protect, upload.array("images", 3), async (req, res) => {
+router.post("/return/:id", protect, upload.array("images", 3), validateUploadedImages, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });

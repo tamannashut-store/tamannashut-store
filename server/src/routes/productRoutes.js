@@ -1,7 +1,7 @@
 import express from "express";
 import { buildSearchRegex, escapeRegex } from "../utils/search.js";
 import Product from "../models/Product.js";
-import upload from "../middleware/upload.js";
+import upload, { validateUploadedImages } from "../middleware/upload.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
 import { admin, protect, sellerCentre } from "../middleware/authMiddleware.js";
@@ -154,7 +154,7 @@ const uploadToCloudinary = (fileBuffer) => {
 //   }
 // });
 
-router.post("/", protect, sellerCentre, upload.array("images", 30), async (req, res) => {
+router.post("/", protect, sellerCentre, upload.array("images", 30), validateUploadedImages, async (req, res) => {
   try {
     const fields = parseProductFields(req.body);
     let images = [];
@@ -494,6 +494,7 @@ router.put(
   protect,
   sellerCentre,
   upload.array("images", 30),
+  validateUploadedImages,
   async (req, res) => {
     let uploadedImages = [];
     try {
