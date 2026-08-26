@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import ColorVariantEditor from "../components/ColorVariantEditor";
 import ListingWizardNav, { WizardActions } from "../components/ListingWizardNav";
 import ColorImageManager from "../components/ColorImageManager";
+import PageLoader from "../components/PageLoader";
 
 function EditProduct() {
   const { id } = useParams();
@@ -81,7 +82,7 @@ function EditProduct() {
     setEditStep((step) => Math.min(step + 1, 3));
   };
 
-  if (loading) return <div className="p-10 text-slate-500">Loading product…</div>;
+  if (loading) return <PageLoader title="Loading product details" message="We’re preparing the listing and its variants." />;
 
   const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
   return (
