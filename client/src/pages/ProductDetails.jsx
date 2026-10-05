@@ -243,8 +243,8 @@ function ProductDetails() {
               </div>
               <h1 className="mt-4 text-3xl font-bold leading-tight md:text-4xl">{product.name}</h1>
               <div className="mt-4 flex items-center gap-3">
-                <span className="rounded-lg bg-green-700 px-2.5 py-1 text-sm font-semibold text-white">★ {Number(product.averageRating || 0).toFixed(1)}</span>
-                <a href="#reviews" className="text-sm text-gray-500 underline">{product.reviews?.length || 0} reviews</a>
+                {product.reviews?.length > 0 && <span className="rounded-lg bg-green-700 px-2.5 py-1 text-sm font-semibold text-white">★ {Number(product.averageRating || 0).toFixed(1)}</span>}
+                <a href="#reviews" className="text-sm text-gray-500 underline">{product.reviews?.length ? `${product.reviews.length} reviews` : "No reviews yet"}</a>
               </div>
               <div className="mt-6 flex flex-wrap items-end gap-3"><p className="text-4xl font-bold text-brand-primary">₹{selectedPrice.toLocaleString("en-IN")}</p>{Number(product.mrp) > selectedPrice && <><p className="pb-1 text-lg text-gray-400 line-through">₹{Number(product.mrp).toLocaleString("en-IN")}</p><span className="mb-1 rounded-full bg-green-50 px-2.5 py-1 text-sm font-semibold text-green-700">{Math.round((1 - selectedPrice / Number(product.mrp)) * 100)}% off</span></>}</div>
               <p className="mt-2 text-sm text-gray-500">Inclusive of all taxes</p>
@@ -272,7 +272,7 @@ function ProductDetails() {
               </div>
 
               <div className="mt-7 grid grid-cols-3 gap-3 border-t pt-6 text-center text-xs text-gray-600">
-                <div><span className="block text-xl">🚚</span><span className="mt-1 block">Free India delivery</span></div>
+                <div><span className="block text-xl">🚚</span><span className="mt-1 block">Delivery details at checkout</span></div>
                 <div><span className="block text-xl">↩</span><span className="mt-1 block">7-day returns</span></div>
                 <div><span className="block text-xl">🔒</span><span className="mt-1 block">Secure payment</span></div>
               </div>

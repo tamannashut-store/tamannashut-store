@@ -21,6 +21,7 @@ import { createEmailVerification, createTwoFactorCode, hashAuthSecret, maskEmail
 import { normalizeIndianPhone } from "../utils/phone.js";
 import { checkPhoneVerification, phoneVerificationConfigured, sendPhoneVerification } from "../services/phoneVerificationService.js";
 import { isValidEmailAddress } from "../utils/inputSecurity.js";
+import { phoneLoginHandlers } from "../services/phoneLoginService.js";
 
 const router = express.Router();
 
@@ -140,6 +141,9 @@ const loginForPortal = (adminPortal = false) => async (req, res) => {
 
 router.post("/login", loginForPortal(false));
 router.post("/admin-login", loginForPortal(true));
+const mobileLogin = phoneLoginHandlers({ sessionPayload });
+router.post("/phone-login/send", mobileLogin.send);
+router.post("/phone-login/check", mobileLogin.check);
 
 const userFromTwoFactorChallenge = async (challengeToken) => {
     const payload = jwt.verify(String(challengeToken || ""), process.env.JWT_SECRET);

@@ -11,7 +11,8 @@ export const sendEmail = async (to, subject, html) => {
       html,
     });
 
-    return { sent: true, id: result?.data?.id || "" };
+    if (result?.error || !result?.data?.id) return { sent: false };
+    return { sent: true, id: result.data.id };
   } catch (error) {
     console.error("EMAIL ERROR:", String(error?.message || "Email delivery failed").slice(0, 200));
     return { sent: false };

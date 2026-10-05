@@ -8,8 +8,10 @@ import { shiprocketWebhookContext } from "../utils/webhookMonitoring.js";
 import { restoreOrderStock } from "../services/orderService.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { orderStatusEmailTemplate } from "../utils/emailTemplates.js";
+import { createReturnShipment } from "../services/returnShipmentService.js";
+import { requirePickupSuccess } from "../utils/shiprocketResponse.js";
 import {
-  assignShiprocketAwb, cancelShiprocketShipment, createShiprocketOrder, createShiprocketReturn,
+  assignShiprocketAwb, cancelShiprocketShipment, createShiprocketOrder, getShiprocketReturnCouriers,
   generateShiprocketLabel, getShiprocketCouriers, resolveShiprocketPostcode, scheduleShiprocketPickup, verifyShiprocketDeliveryPostcode,
 } from "../services/shiprocketService.js";
 
@@ -110,7 +112,51 @@ router.post("/orders/:id/awb", async (req, res) => { try {
 router.post("/orders/:id/pickup", async (req, res) => { try { const order = await loadOrder(req.params.id); requireOpenFulfilment(order); if (!order.shipping?.awbCode) return res.status(400).json({ message: "Assign an AWB first" }); await scheduleShiprocketPickup(order.shipping.shipmentId); order.shipping.pickupScheduled = true; if (order.status === "Confirmed") { order.status = "Packed"; order.statusHistory.push({ status: "Packed", note: "Courier pickup scheduled" }); } await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/label", async (req, res) => { try { const order = await loadOrder(req.params.id); requireOpenFulfilment(order); if (!order.shipping?.awbCode) return res.status(400).json({ message: "Assign an AWB first" }); const data = await generateShiprocketLabel(order.shipping.shipmentId); if (!data.label_url) throw Object.assign(new Error(data.message || "Shiprocket did not return a shipping label"), { status: 502 }); order.shipping.labelUrl = String(data.label_url); await order.save(); return res.json({ order, labelUrl: order.shipping.labelUrl }); } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/cancel", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.shipping?.awbCode) return res.status(400).json({ message: "No AWB has been assigned" }); if (order.shipping.pickupScheduled) return res.status(400).json({ message: "Cancel the pickup from Shiprocket support or dashboard" }); await cancelShiprocketShipment(order.shipping.awbCode); order.shipping.externalStatus = "Shipment cancelled"; order.statusHistory.push({ status: order.status, note: "Shiprocket shipment cancelled; order status unchanged" }); await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
-router.post("/orders/:id/return/create", async (req, res) => { try { const order = await loadOrder(req.params.id); if (order.status !== "Return Approved") return res.status(400).json({ message: "Approve the return before creating reverse logistics" }); if (order.returnRequest?.reverseShipmentId) return res.json({ order, existing: true }); const parcel = parcelFrom(req.body, order.shipping); const data = await createShiprocketReturn(order, parcel); const response = data.response?.data || data; const shipmentId = response.shipment_id || data.shipment_id; if (!shipmentId) throw Object.assign(new Error(data.message || "Shiprocket did not create the reverse shipment"), { status: 502 }); order.returnRequest.reverseOrderId = String(response.order_id || data.order_id || ""); order.returnRequest.reverseShipmentId = String(shipmentId); order.returnRequest.reverseAwb = String(response.awb_code || data.awb_code || ""); order.statusHistory.push({ status: order.status, note: "Reverse shipment created in Shiprocket" }); await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
-router.post("/orders/:id/return/pickup", async (req, res) => { try { const order = await loadOrder(req.params.id); if (!order.returnRequest?.reverseShipmentId) return res.status(400).json({ message: "Create the reverse shipment first" }); if (order.returnRequest.reversePickupScheduled) return res.json({ order, existing: true }); await scheduleShiprocketPickup(order.returnRequest.reverseShipmentId); order.returnRequest.reversePickupScheduled = true; order.statusHistory.push({ status: order.status, note: "Reverse pickup scheduled" }); await order.save(); return res.json({ order }); } catch (error) { return fail(res, error); } });
+router.post("/orders/:id/return/create", async (req, res) => {
+  try {
+    const order = await loadOrder(req.params.id);
+    if (order.returnRequest?.reverseShipmentId) return res.json({ order, existing: true });
+    if (order.status !== "Return Approved") return res.status(400).json({ message: "Approve the return before creating reverse logistics" });
+    return res.json(await createReturnShipment(order, parcelFrom(req.body, order.shipping)));
+  } catch (error) { return fail(res, error); }
+});
+router.post("/orders/:id/return/couriers", async (req, res) => {
+  try {
+    const order = await loadOrder(req.params.id);
+    if (order.status !== "Return Approved") return res.status(409).json({ message: "Couriers can be selected for approved returns" });
+    const parcel = parcelFrom(req.body, { package: order.returnRequest?.reversePackage || order.shipping?.package });
+    const data = await getShiprocketReturnCouriers(order, parcel);
+    return res.json({ couriers: data.data?.available_courier_companies || [] });
+  } catch (error) { return fail(res, error); }
+});
+router.post("/orders/:id/return/awb", async (req, res) => {
+  try {
+    const order = await loadOrder(req.params.id);
+    if (order.status !== "Return Approved" || !order.returnRequest?.reverseShipmentId) return res.status(409).json({ message: "Create an approved return shipment first" });
+    if (order.returnRequest.reverseAwb) return res.json({ order, existing: true });
+    const courierId = Number(req.body.courierId);
+    if (!Number.isInteger(courierId) || courierId <= 0) return res.status(400).json({ message: "Select a return courier" });
+    const data = await assignShiprocketAwb(order.returnRequest.reverseShipmentId, courierId, true);
+    const response = data.response?.data || data.data || data;
+    if (!response.awb_code) throw Object.assign(new Error(data.message || data.response?.message || "Shiprocket could not assign a return AWB"), { status: 502 });
+    order.returnRequest.reverseAwb = String(response.awb_code);
+    order.returnRequest.reverseCourierId = courierId;
+    order.returnRequest.reverseCourierName = String(response.courier_name || req.body.courierName || "").slice(0, 120);
+    await order.save();
+    return res.json({ order });
+  } catch (error) { return fail(res, error); }
+});
+router.post("/orders/:id/return/pickup", async (req, res) => {
+  try {
+    const order = await loadOrder(req.params.id);
+    if (order.returnRequest?.reversePickupScheduled) return res.json({ order, existing: true });
+    if (order.status !== "Return Approved" || !order.returnRequest?.reverseAwb || !order.returnRequest?.reverseShipmentId) return res.status(409).json({ message: "Assign a courier and return AWB before scheduling pickup" });
+    requirePickupSuccess(await scheduleShiprocketPickup(order.returnRequest.reverseShipmentId));
+    order.returnRequest.reversePickupScheduled = true;
+    order.statusHistory.push({ status: order.status, note: "Reverse pickup scheduled" });
+    await order.save();
+    return res.json({ order });
+  } catch (error) { return fail(res, error); }
+});
 
 export default router;

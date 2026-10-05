@@ -1,3 +1,5 @@
+import { shiprocketShipment } from "../utils/shiprocketResponse.js";
+
 const API_BASE = "https://apiv2.shiprocket.in/v1/external";
 let cachedToken = "";
 let tokenExpiresAt = 0;
@@ -46,6 +48,7 @@ const request = async (path, { method = "GET", body, retry = true } = {}) => {
 
 const cleanPhone = (phone) => String(phone || "").replace(/\D/g, "").slice(-10);
 const orderReference = (order) => String(order._id).slice(-20);
+export const returnOrderReference = (order) => `R${orderReference(order)}`;
 const orderDate = (date) => new Date(date).toISOString().slice(0, 19).replace("T", " ");
 
 export const createShiprocketOrder = async (order, parcel) => request("/orders/create/adhoc", {
@@ -131,7 +134,7 @@ const getConfiguredPickupAddress = async () => {
 export const createShiprocketReturn = async (order, parcel) => {
   const seller = await getConfiguredPickupAddress();
   return request("/shipments/create/return-shipment", { method: "POST", body: {
-    order_id: `R${orderReference(order)}`,
+    order_id: returnOrderReference(order),
     order_date: orderDate(new Date()),
     pickup_customer_name: String(order.customerName || "Customer").slice(0, 50), pickup_last_name: "", pickup_address: String(order.address || "").slice(0, 80), pickup_address_2: String(order.address || "").slice(80, 160), pickup_city: order.city, pickup_state: order.state || order.shipping?.destinationState, pickup_country: "India", pickup_pincode: Number(order.pincode), pickup_email: order.email, pickup_phone: cleanPhone(order.phone), pickup_isd_code: "91",
     shipping_customer_name: seller.name || "Tamanna's Hut", shipping_last_name: "", shipping_address: seller.address, shipping_address_2: seller.address_2 || "", shipping_city: seller.city, shipping_state: seller.state, shipping_country: seller.country || "India", shipping_pincode: Number(seller.pin_code || seller.pincode), shipping_email: seller.email || process.env.SHIPROCKET_EMAIL, shipping_phone: cleanPhone(seller.phone), shipping_isd_code: "91",
@@ -140,7 +143,29 @@ export const createShiprocketReturn = async (order, parcel) => {
   } });
 };
 
-export const assignShiprocketAwb = (shipmentId, courierId) => request("/courier/assign/awb", { method: "POST", body: { shipment_id: Number(shipmentId), courier_id: Number(courierId) } });
+// Match our reference exactly; Shiprocket's numeric order ID is a different ID.
+export const findShiprocketReturn = async (order) => {
+  for (let page = 1; page <= 20; page++) {
+    const data = await request(`/orders/processing/return?page=${page}&per_page=100`);
+    const items = Array.isArray(data.data) ? data.data : data.data?.data;
+    if (!Array.isArray(items)) throw Object.assign(new Error("Shiprocket return list could not be verified. No new return was created."), { status: 502 });
+    const match = items.find((item) => String(item.channel_order_id || "") === returnOrderReference(order));
+    if (match) {
+      const shipment = shiprocketShipment(match);
+      if (!shipment) throw Object.assign(new Error("The return already exists in Shiprocket but its shipment is not ready. Check the Returns dashboard."), { status: 409 });
+      return shipment;
+    }
+    const lastPage = Number(data.meta?.pagination?.total_pages || data.meta?.last_page || data.last_page);
+    if ((lastPage && page >= lastPage) || items.length < 100) return null;
+  }
+  throw Object.assign(new Error("Return history could not be fully checked. No new return was created."), { status: 502 });
+};
+
+export const getShiprocketReturnCouriers = (order, parcel) => {
+  const params = new URLSearchParams({ pickup_postcode: String(order.pincode), delivery_postcode: String(process.env.SHIPROCKET_PICKUP_POSTCODE), cod: "0", weight: String(parcel.weight), length: String(parcel.length), breadth: String(parcel.breadth), height: String(parcel.height), declared_value: String(order.totalAmount), is_return: "1" });
+  return request(`/courier/serviceability/?${params}`);
+};
+export const assignShiprocketAwb = (shipmentId, courierId, isReturn = false) => request("/courier/assign/awb", { method: "POST", body: { shipment_id: Number(shipmentId), courier_id: Number(courierId), ...(isReturn ? { is_return: 1 } : {}) } });
 export const scheduleShiprocketPickup = (shipmentId) => request("/courier/generate/pickup", { method: "POST", body: { shipment_id: [Number(shipmentId)] } });
 export const generateShiprocketLabel = (shipmentId) => request("/courier/generate/label", { method: "POST", body: { shipment_id: [Number(shipmentId)] } });
 export const cancelShiprocketShipment = (awb) => request("/orders/cancel/shipment/awbs", { method: "POST", body: { awbs: [String(awb)] } });
