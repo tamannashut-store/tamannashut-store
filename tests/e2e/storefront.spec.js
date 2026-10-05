@@ -81,6 +81,8 @@ async function mockApi(page) {
     else if (pathname.endsWith("/api/auth/admin-login/verify")) body = { token: "safe-admin-token", user: { id: "admin-test", name: "Store Owner", email: "admin@example.com", isAdmin: true, sellerRole: "owner" } };
     else if (pathname.endsWith("/api/auth/admin-login/resend")) body = { requiresTwoFactor: true, challengeToken: "replacement-challenge", maskedEmail: "ad***@example.com" };
     else if (pathname.endsWith("/api/auth/admin-login")) body = { requiresTwoFactor: true, challengeToken: "safe-challenge", maskedEmail: "ad***@example.com" };
+    else if (pathname.endsWith("/api/auth/phone-login/send")) body = { challengeToken: "safe-phone-challenge", message: "Login code sent to your mobile number" };
+    else if (pathname.endsWith("/api/auth/phone-login/check")) body = { token: "safe-local-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } };
     else if (pathname.endsWith("/api/auth/login")) body = { token: "safe-local-token", user: { id: "test-user", name: "Test Customer", email: "test@example.com", isAdmin: false } };
     else if (pathname.endsWith(`/api/contacts/mine/${supportContact._id}/replies`) && method === "POST") body = { ...supportContact, status: "open", customerLastReadAt: "2026-08-22T10:06:00.000Z", replies: [...supportContact.replies, { _id: "reply-customer-1", sender: "customer", body: "Thank you for the update.", createdAt: "2026-08-22T10:06:00.000Z" }] };
     else if (pathname.endsWith(`/api/contacts/mine/${supportContact._id}`)) body = { ...supportContact, customerLastReadAt: "2026-08-22T10:05:00.000Z" };
@@ -239,6 +241,124 @@ test("login offers recovery and registration and accepts a safe mocked session",
   await page.getByRole("button", { name: "Sign in securely" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("user") || "null")?.user?.email)).toBe("test@example.com");
+});
+
+test("mobile OTP login completes checkout redirect with a mocked provider", async ({ page }) => {
+  await page.addInitScript(() => sessionStorage.setItem("redirectAfterLogin", "/my-orders"));
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Mobile & OTP" }).click();
+  await page.getByLabel("Mobile number").fill("9876543210");
+  await page.getByRole("button", { name: "Send login code" }).click();
+  await expect(page.getByLabel("One-time code")).toBeVisible();
+  await page.getByLabel("One-time code").fill("123456");
+  await page.getByRole("button", { name: "Sign in securely" }).click();
+  await expect(page).toHaveURL(/\/my-orders$/);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("user") || "null")?.token)).toBe("safe-local-token");
+});
+
+test("failed guest bag merge preserves both saved copies", async ({ page }) => {
+  const guestItem = { ...product, selectedSize: "0-3M", selectedSku: "TEST-MAR-03", qty: 1 };
+  await page.addInitScript((item) => {
+    localStorage.setItem("guest_cart", JSON.stringify([item]));
+    sessionStorage.setItem("pending_guest_cart", JSON.stringify([item]));
+  }, guestItem);
+  await page.route("**/api/cart/merge", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Temporarily unavailable" }) }));
+  await page.goto("/login");
+  await page.getByPlaceholder("you@example.com").fill("test@example.com");
+  await page.getByPlaceholder("Enter your password").fill("safe-password");
+  await page.getByRole("button", { name: "Sign in securely" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]").length)).toBe(1);
+  await expect.poll(() => page.evaluate(() => JSON.parse(sessionStorage.getItem("pending_guest_cart") || "[]").length)).toBe(1);
+});
+
+test("return pickup requires a courier assignment and displays the reverse AWB", async ({ page }) => {
+  const order = { ...codOrder, status: "Return Approved", returnRequest: { reverseShipmentId: "12345", reverseAwb: "", reversePickupScheduled: false } };
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
+  await page.route("**/api/orders", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([order]) }));
+  await page.route("**/api/logistics/orders/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/return/couriers")) return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ couriers: [{ courier_company_id: 42, courier_name: "Test Reverse Courier", rate: 60 }] }) });
+    if (path.endsWith("/return/awb")) order.returnRequest.reverseAwb = "RET123456";
+    if (path.endsWith("/return/pickup")) order.returnRequest.reversePickupScheduled = true;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ order }) });
+  });
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.goto("/admin/orders");
+  await page.getByRole("button", { name: /Test Customer/ }).click();
+  await expect(page.getByRole("button", { name: "Schedule reverse pickup" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Find return couriers" }).click();
+  await page.getByRole("button", { name: /Test Reverse Courier/ }).click();
+  await expect(page.getByText("AWB RET123456", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Schedule reverse pickup" }).click();
+  await expect(page.getByText("Reverse pickup scheduled", { exact: true }).first()).toBeVisible();
+});
+
+test("COD refund notification links to a private UPI form and clears on submission", async ({ page }) => {
+  const order = { ...codOrder, status: "Refund Pending", paymentStatus: "Paid" };
+  let submitted = false;
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user", name: "Test Customer", accountType: "customer" } })));
+  await page.route("**/api/orders/my-orders", (route) => route.fulfill({ json: [order] }));
+  await page.route("**/api/orders/refund-details/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/notifications")) return route.fulfill({ json: { notifications: submitted ? [] : [{ orderId: order._id, href: `/my-orders#${order._id}`, message: "Provide UPI or bank details for your COD refund" }] } });
+    if (route.request().method() === "PUT") {
+      const body = route.request().postDataJSON();
+      expect(body.upiId).toBe("test.customer@bank"); submitted = true;
+    }
+    return route.fulfill({ json: { required: true, submitted, method: "UPI", maskedDestination: "te***@bank" } });
+  });
+  await page.goto("/");
+  const notification = page.getByRole("complementary", { name: "Account notifications" });
+  await notification.getByRole("link", { name: /Provide UPI or bank details/ }).click();
+  await expect(page).toHaveURL(new RegExp(`/my-orders#${order._id}$`));
+  await page.getByLabel("Account holder name").fill("Test Customer");
+  await page.getByLabel("UPI ID", { exact: true }).fill("test.customer@bank");
+  await page.getByRole("button", { name: "Save refund details" }).click();
+  await expect(page.getByRole("heading", { name: "Refund details received" })).toBeVisible();
+  await expect(page.getByText("UPI · te***@bank")).toBeVisible();
+  await expect(notification).toHaveCount(0);
+  await expect(page.getByLabel("UPI ID", { exact: true })).toHaveCount(0);
+});
+
+test("bank refund form requires matching confirmation and preserves the email link through login", async ({ page }) => {
+  const order = { ...codOrder, status: "Refund Pending", paymentStatus: "Paid" };
+  let writes = 0;
+  await page.route("**/api/orders/my-orders", (route) => route.fulfill({ json: [order] }));
+  await page.route(`**/api/orders/refund-details/${order._id}`, async (route) => {
+    if (route.request().method() === "PUT") {
+      writes++;
+      const body = route.request().postDataJSON(); expect(body.accountNumber).toBe(body.confirmAccountNumber);
+      return route.fulfill({ json: { submitted: true, method: "Bank transfer", maskedDestination: "Account ending 7890" } });
+    }
+    return route.fulfill({ json: { required: true, submitted: false } });
+  });
+  await page.goto(`/my-orders#${order._id}`);
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByPlaceholder("you@example.com").fill("test@example.com");
+  await page.getByPlaceholder("Enter your password").fill("safe-password");
+  await page.getByRole("button", { name: "Sign in securely" }).click();
+  await expect(page).toHaveURL(new RegExp(`/my-orders#${order._id}$`));
+  await page.getByLabel("Refund method").selectOption("Bank transfer");
+  await page.getByLabel("Account holder name").fill("Test Customer");
+  await page.getByLabel("Bank account number", { exact: true }).fill("01234567890");
+  await page.getByLabel("Confirm bank account number").fill("01234567891");
+  await page.getByLabel("IFSC code").fill("ABCD0123456");
+  await page.getByRole("button", { name: "Save refund details" }).click();
+  await expect(page.getByRole("alert")).toHaveText("Bank account numbers do not match");
+  expect(writes).toBe(0);
+  await page.getByLabel("Confirm bank account number").fill("01234567890");
+  await page.getByRole("button", { name: "Save refund details" }).click();
+  await expect(page.getByRole("heading", { name: "Refund details received" })).toBeVisible();
+  expect(writes).toBe(1);
+});
+
+test("online refund orders never request UPI or bank details", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user" } })));
+  await page.route("**/api/orders/my-orders", (route) => route.fulfill({ json: [{ ...codOrder, paymentMethod: "Online", paymentStatus: "Paid", status: "Refund Pending" }] }));
+  await page.goto("/my-orders");
+  await expect(page.getByText("Refund Pending", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Refund payment details" })).toHaveCount(0);
 });
 
 test("registration makes shopping email consent optional", async ({ page }) => {

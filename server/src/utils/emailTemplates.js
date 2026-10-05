@@ -2,6 +2,12 @@ import { escapeHtml } from "./html.js";
 import { paymentMethodLabel, paymentStatusLabel } from "./paymentPresentation.js";
 import { detailBox, emailButton, emailLayout, money } from "./emailLayout.js";
 
+export const refundDetailsRequestEmailTemplate = (order) => emailLayout({
+  preheader: "Provide UPI or bank details securely in your account to receive your COD refund",
+  eyebrow: "ACTION REQUIRED", title: "Choose where to receive your refund",
+  body: `<p>Hello <strong>${escapeHtml(order.customerName || "Customer")}</strong>,</p><p>Your cash-on-delivery order <strong>#${escapeHtml(String(order._id).slice(-8).toUpperCase())}</strong> is awaiting a refund. Sign in and provide your UPI ID or bank details using the private form in My orders.</p>${emailButton("Provide refund details", `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/my-orders#${encodeURIComponent(String(order._id))}`)}${detailBox("Please submit details through your signed-in account. Do not reply with bank details. We will never ask for a UPI PIN, OTP or password.")}<p>Submitting details does not mean the refund has been paid. We will update your order after payment is completed.</p>`,
+});
+
 const orderUrl = (order) => `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/my-orders#${escapeHtml(String(order._id || ""))}`;
 const itemsHtml = (order) => (order.products || []).map((item) => `<tr><td style="padding:12px 0;border-bottom:1px solid #e5e7eb"><strong style="color:#172033">${escapeHtml(item.name || "Product")}</strong><br><span style="color:#64748b;font-size:13px">${item.selectedColor ? `Colour: ${escapeHtml(item.selectedColor)} &nbsp;·&nbsp; ` : ""}Size: ${escapeHtml(item.selectedSize || "-")} &nbsp;·&nbsp; Qty: ${Number(item.qty || 0)}</span></td><td align="right" style="padding:12px 0;border-bottom:1px solid #e5e7eb;color:#172033;font-weight:700">${money(Number(item.price || 0) * Number(item.qty || 0))}</td></tr>`).join("");
 

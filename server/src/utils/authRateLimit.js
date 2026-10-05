@@ -9,6 +9,8 @@ const limitedExactRoutes = new Set([
   "POST /admin-login/resend",
   "POST /phone-verification/send",
   "POST /phone-verification/check",
+  "POST /phone-login/send",
+  "POST /phone-login/check",
 ]);
 
 export function isRateLimitedAuthRequest(method, path) {

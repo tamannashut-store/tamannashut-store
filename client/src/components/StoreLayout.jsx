@@ -4,6 +4,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import WhatsAppButton from "./WhatsAppButton";
 import PageMeta from "./PageMeta";
+import CustomerNotifications from "./CustomerNotifications";
 
 function StoreLayout() {
   const { pathname } = useLocation();
@@ -16,6 +17,7 @@ function StoreLayout() {
     <div className="flex min-h-screen flex-col bg-brand-background text-brand-dark">
       <a href="#main-content" className="fixed left-4 top-3 z-[100] -translate-y-24 rounded-xl bg-white px-4 py-3 font-semibold text-brand-primary shadow-xl transition-transform focus:translate-y-0">Skip to main content</a>
       <Navbar />
+      <CustomerNotifications />
       <PageMeta />
       <div id="main-content" tabIndex={-1} className="flex-1 outline-none"><Outlet /></div>
       <WhatsAppButton />

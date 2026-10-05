@@ -21,8 +21,12 @@ import streamifier from "streamifier";
 import { recordAudit } from "../utils/recordAudit.js";
 import { isPlatformAdmin } from "../utils/accountRoles.js";
 import { fulfillmentStatusForOrder, syncOrderSettlementsSafely } from "../services/sellerSettlementService.js";
+import refundDetailsRoutes from "./refundDetailsRoutes.js";
+import { notifyRefundDetails } from "../services/refundDetailsNotification.js";
+import { needsRefundDetails } from "../utils/refundDestination.js";
 
 const router = express.Router();
+router.use("/refund-details", refundDetailsRoutes);
 const serializeOrder = (order) => { const value = order.toObject ? order.toObject() : order; return value.status === "Processing" ? { ...value, status: "Confirmed" } : value; };
 const sendStatusUpdate = (order) => sendEmail(order.email, `Order ${order.status} - Tamanna's Hut`, orderStatusEmailTemplate(order));
 
@@ -284,13 +288,16 @@ router.put("/:id", protect, admin, async (req, res) => {
       syncCodPaymentStatus(order, nextStatus);
       order.statusHistory.push({ status: nextStatus, note: String(req.body.note || "Status updated by admin").slice(0, 300) });
     }
+    if (needsRefundDetails(order)) order.refund.detailsRequestedAt ||= new Date();
     const updatedOrder = await order.save();
     await syncOrderSettlementsSafely(updatedOrder);
 
     if (previousStatus !== order.status) await recordAudit({ user: req.user, action: "order.status_changed", entityType: "order", entityId: order._id, summary: `${previousStatus} to ${order.status}`, metadata: { from: previousStatus, to: order.status } });
     if (previousTrackingId !== order.tracking?.trackingId) await recordAudit({ user: req.user, action: "order.tracking_changed", entityType: "order", entityId: order._id, summary: "Tracking information updated", metadata: { courier: order.tracking?.courier || "" } });
 
-    if (previousStatus !== order.status || previousTrackingId !== order.tracking?.trackingId) await Promise.allSettled([sendStatusUpdate(order)]);
+    if (needsRefundDetails(order)) {
+      await notifyRefundDetails(order).catch(() => undefined);
+    } else if (previousStatus !== order.status || previousTrackingId !== order.tracking?.trackingId) await Promise.allSettled([sendStatusUpdate(order)]);
     return res.json({ ...updatedOrder.toObject(), allowedNextStatuses: getNextOrderStatuses(updatedOrder.status) });
   } catch (error) {
     return res.status(error.status || 500).json({ message: error.message });

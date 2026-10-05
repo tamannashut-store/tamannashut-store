@@ -36,6 +36,9 @@ const userSchema = new mongoose.Schema(
     phoneNormalized: { type: String, default: "", select: false },
     phoneVerifiedAt: { type: Date, default: null },
     phoneVerificationSentAt: { type: Date, default: null, select: false },
+    phoneLoginSentAt: { type: Date, default: null, select: false },
+    phoneLoginChallengeHash: { type: String, default: null, select: false },
+    phoneLoginAttempts: { type: Number, default: 0, select: false, min: 0 },
 
     address: {
       type: String,
@@ -101,6 +104,11 @@ const userSchema = new mongoose.Schema(
         delete value.twoFactorCodeHash;
         delete value.twoFactorExpires;
         delete value.twoFactorAttempts;
+        delete value.phoneLoginSentAt;
+        delete value.phoneLoginChallengeHash;
+        delete value.phoneLoginAttempts;
+        delete value.phoneNormalized;
+        delete value.phoneVerificationSentAt;
         return value;
       },
     },
