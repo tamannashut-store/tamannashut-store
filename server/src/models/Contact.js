@@ -12,7 +12,7 @@ const contactSchema = new mongoose.Schema(
   {
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
     name: { type: String, required: true, trim: true, minlength: 2, maxlength: 80 },
-    email: { type: String, required: true, trim: true, lowercase: true, maxlength: 254 },
+    email: { type: String, required: function () { return !this.customerId; }, trim: true, lowercase: true, maxlength: 254 },
     topic: { type: String, enum: ["general", "order", "delivery", "return", "payment"], default: "general" },
     orderReference: { type: String, trim: true, maxlength: 40, default: "" },
     message: { type: String, required: true, trim: true, minlength: 10, maxlength: 2000 },

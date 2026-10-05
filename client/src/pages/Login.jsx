@@ -18,7 +18,7 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [loginMode, setLoginMode] = useState("email");
+  const [loginMode, setLoginMode] = useState("emailOtp");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [challengeToken, setChallengeToken] = useState("");
@@ -28,7 +28,7 @@ function Login() {
     setError("");
     setLoading(true);
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/phone-login/send`, { phone });
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/${loginMode === "phone" ? "phone-login/send" : "customer-otp/send"}`, loginMode === "phone" ? { phone } : { purpose: "login", channel: "email", contact: formData.email });
       setChallengeToken(data.challengeToken);
       setCode("");
       setResendAt(Date.now() + 60_000);
@@ -45,11 +45,11 @@ function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (loginMode === "phone" && !challengeToken) { await sendCode(); return; }
+    if (loginMode !== "email" && !challengeToken) { await sendCode(); return; }
     setError("");
     setLoading(true);
     try {
-      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/${loginMode === "phone" ? "phone-login/check" : "login"}`, loginMode === "phone" ? { challengeToken, code } : {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/${loginMode === "phone" ? "phone-login/check" : loginMode === "emailOtp" ? "customer-otp/check" : "login"}`, loginMode !== "email" ? { challengeToken, code, purpose: "login" } : {
         email: formData.email.trim(),
         password: formData.password,
       });
@@ -89,8 +89,8 @@ function Login() {
 
   return <AuthShell eyebrow="Customer account" title="Welcome back" description="Sign in to view orders, manage your profile and continue checkout." asideTitle="Continue your shopping journey." asideCopy="Access saved bags, order tracking, returns and a faster checkout experience." asideItems={["Your bag follows you across devices", "Track every order in one place", "Secure account access"]} icon={FiShoppingBag}>
         <form onSubmit={handleSubmit}>
-          <div className="mt-6 grid grid-cols-2 gap-2" aria-label="Sign-in method">
-            {[['email', 'Email & password'], ['phone', 'Mobile & OTP']].map(([mode, label]) => <button key={mode} type="button" disabled={loading} aria-pressed={loginMode === mode} onClick={() => { setLoginMode(mode); setError(""); setChallengeToken(""); setCode(""); }} className={loginMode === mode ? "btn-primary" : "btn-secondary"}>{label}</button>)}
+          <div className="mt-6 grid grid-cols-3 gap-2" aria-label="Sign-in method">
+            {[['emailOtp', 'Email code'], ['phone', 'Mobile & OTP'], ['email', 'Password']].map(([mode, label]) => <button key={mode} type="button" disabled={loading} aria-pressed={loginMode === mode} onClick={() => { setLoginMode(mode); setError(""); setChallengeToken(""); setCode(""); }} className={loginMode === mode ? "btn-primary" : "btn-secondary"}>{label}</button>)}
           </div>
 
           {error && <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">{error}{error.includes("Seller Centre") && <Link to="/admin-login" className="mt-2 flex items-center gap-2 font-semibold underline">Open Seller Centre <FiArrowRight /></Link>}{error.toLowerCase().includes("verify your email") && <Link to={`/verify-email?email=${encodeURIComponent(formData.email.trim())}`} className="mt-2 flex items-center gap-2 font-semibold underline">Resend verification email <FiArrowRight /></Link>}</div>}
@@ -98,16 +98,17 @@ function Login() {
           <div className="mt-7 space-y-5">
             {loginMode === "phone" ? <>
               <label className="block text-sm font-semibold text-slate-700">Mobile number<input type="tel" value={phone} onChange={(event) => { setPhone(event.target.value); setChallengeToken(""); setCode(""); setError(""); }} autoComplete="tel" placeholder="10-digit Indian mobile number" required maxLength={16} disabled={loading} className="field-control mt-2" /></label>
-              <p className="text-sm text-slate-500">Use the mobile number verified in your customer profile. First time? Sign in with email and verify your number in Profile.</p>
+              <p className="text-sm text-slate-500">Use the verified mobile number linked to your account. New here? Create an account with just your mobile number.</p>
               {challengeToken && <><label className="block text-sm font-semibold text-slate-700">One-time code<input type="text" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} required minLength={4} maxLength={10} className="field-control mt-2" /></label><button type="button" disabled={loading} onClick={() => { if (Date.now() < resendAt) setError("Please wait one minute before requesting another code"); else sendCode(); }} className="text-sm font-semibold text-brand-primary">Resend code</button></>}
             </> : <>
-            <label className="block text-sm font-semibold text-slate-700">Email address<input type="email" name="email" value={formData.email} onChange={handleChange} autoComplete="email" placeholder="you@example.com" required className="field-control mt-2" /></label>
-            <label className="block text-sm font-semibold text-slate-700">Password<div className="relative mt-2"><input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} autoComplete="current-password" placeholder="Enter your password" required className="field-control pr-12" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500">{showPassword ? <FiEyeOff /> : <FiEye />}</button></div></label>
+            <label className="block text-sm font-semibold text-slate-700">Email address<input type="email" name="email" value={formData.email} onChange={(event) => { handleChange(event); setChallengeToken(""); setCode(""); }} autoComplete="email" placeholder="you@example.com" required className="field-control mt-2" /></label>
+            {loginMode === "email" && <label className="block text-sm font-semibold text-slate-700">Password<div className="relative mt-2"><input type={showPassword ? "text" : "password"} name="password" value={formData.password} onChange={handleChange} autoComplete="current-password" placeholder="Enter your password" required className="field-control pr-12" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500">{showPassword ? <FiEyeOff /> : <FiEye />}</button></div></label>}
+            {loginMode === "emailOtp" && challengeToken && <><label className="block text-sm font-semibold text-slate-700">One-time code<input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))} required minLength={6} maxLength={6} className="field-control mt-2"/></label><button type="button" disabled={loading} onClick={() => Date.now() < resendAt ? setError("Please wait one minute before requesting another code") : sendCode()} className="text-sm font-semibold text-brand-primary">Resend code</button></>}
             </>}
           </div>
 
           {loginMode === "email" && <div className="mt-4 text-right"><Link to="/forgot-password" className="text-sm font-semibold text-brand-primary hover:underline">Forgot password?</Link></div>}
-          <button type="submit" disabled={loading} className="btn-primary mt-6 w-full py-4 text-base disabled:cursor-wait disabled:opacity-60"><FiLock className="mr-2" />{loading ? "Please wait…" : loginMode === "phone" && !challengeToken ? "Send login code" : "Sign in securely"}</button>
+          <button type="submit" disabled={loading} className="btn-primary mt-6 w-full py-4 text-base disabled:cursor-wait disabled:opacity-60"><FiLock className="mr-2" />{loading ? "Please wait…" : loginMode !== "email" && !challengeToken ? "Send login code" : "Sign in securely"}</button>
           <p className="mt-7 border-t pt-6 text-center text-sm text-slate-600">New to Tamanna&apos;s Hut? <Link to="/register" className="font-semibold text-brand-primary hover:underline">Create an account</Link></p>
         </form>
   </AuthShell>;

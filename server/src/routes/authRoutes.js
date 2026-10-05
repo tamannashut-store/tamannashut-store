@@ -22,6 +22,7 @@ import { normalizeIndianPhone } from "../utils/phone.js";
 import { checkPhoneVerification, phoneVerificationConfigured, sendPhoneVerification } from "../services/phoneVerificationService.js";
 import { isValidEmailAddress } from "../utils/inputSecurity.js";
 import { phoneLoginHandlers } from "../services/phoneLoginService.js";
+import { customerOtpHandlers } from "../services/customerOtpService.js";
 
 const router = express.Router();
 
@@ -29,6 +30,17 @@ const sessionPayload = (user) => ({
     token: jwt.sign({ id: user._id, sessionVersion: user.sessionVersion || 0 }, process.env.JWT_SECRET, { expiresIn: "7d" }),
     user: publicAccount(user),
 });
+
+const customerOtp = customerOtpHandlers({ sessionPayload });
+const customerOtpOnly = (req, res, next) => {
+    if (!["register", "login"].includes(req.body.purpose)) return res.status(400).json({ message: "Choose signup or sign-in" });
+    req.otpPurpose = req.body.purpose;
+    next();
+};
+router.post("/customer-otp/send", customerOtpOnly, customerOtp.send);
+router.post("/customer-otp/check", (req, res, next) => { req.otpPurpose = req.body.purpose; if (!["register", "login"].includes(req.otpPurpose)) return res.status(400).json({ message: "Choose signup or sign-in" }); next(); }, customerOtp.check);
+router.post("/delete-otp/send", protect, (req, _res, next) => { req.otpPurpose = "delete"; next(); }, customerOtp.send);
+router.post("/delete-otp/check", protect, (req, _res, next) => { req.otpPurpose = "delete"; next(); }, customerOtp.check);
 
 const sendVerificationEmail = async (user) => {
     const verification = createEmailVerification();
@@ -112,7 +124,7 @@ const loginForPortal = (adminPortal = false) => async (req, res) => {
         if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
 
         const user = await User.findOne({ email }).select("+password +emailVerificationRequiredAt");
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ message: "Invalid email or password" });
         }
 
@@ -241,9 +253,12 @@ router.post("/phone-verification/send", protect, async (req, res) => {
         const user = await User.findById(req.user._id).select("+phoneNormalized +phoneVerificationSentAt");
         if (user.phoneVerificationSentAt && Date.now() - user.phoneVerificationSentAt.getTime() < 60_000) return res.status(429).json({ message: "Please wait one minute before requesting another code" });
         await sendPhoneVerification(phone);
-        if (user.phoneNormalized !== phone) user.phoneVerifiedAt = null;
-        user.phone = phone;
-        user.phoneNormalized = phone;
+        // Preserve mobile-only login until the replacement number is verified.
+        if (user.email) {
+            if (user.phoneNormalized !== phone) user.phoneVerifiedAt = null;
+            user.phone = phone;
+            user.phoneNormalized = phone;
+        }
         user.phoneVerificationSentAt = new Date();
         await user.save();
         return res.json({ message: "Verification code sent", phone });
@@ -562,6 +577,7 @@ router.post("/reset-password/:token", async (req, res) => {
         const user = await User.findOne({ passwordResetToken: tokenHash, passwordResetExpires: { $gt: new Date() } }).select("+passwordResetToken +passwordResetExpires");
         if (!user) return res.status(400).json({ message: "This reset link is invalid or has expired" });
         user.password = await bcrypt.hash(password, 10);
+        user.passwordLoginEnabled = true;
         user.passwordChangedAt = new Date();
         user.sessionVersion = (user.sessionVersion || 0) + 1;
         user.passwordResetToken = undefined;
@@ -624,6 +640,7 @@ router.put("/profile/:id", protect, async (req, res) => {
         if (!/^\d{6}$/.test(pincode)) return res.status(400).json({ message: "Enter a valid 6-digit pincode" });
         const locality = await verifyShiprocketDeliveryPostcode(pincode, false);
         user.name = name;
+        if (!user.email && user.phoneNormalized !== normalizedPhone) return res.status(400).json({ message: "Verify the new mobile number with an SMS code before saving it" });
         if (user.phoneNormalized && user.phoneNormalized !== normalizedPhone) user.phoneVerifiedAt = null;
         user.phone = normalizedPhone;
         user.phoneNormalized = normalizedPhone;
@@ -656,8 +673,15 @@ router.delete("/profile/:id", protect, async (req, res) => {
         if (!user) return res.status(404).json({ message: "User not found" });
         if (accountTypeFor(user) !== "customer") return res.status(400).json({ message: "Seller Centre accounts cannot be deleted from the customer profile" });
         const password = String(req.body.password || "");
-        if (!password || !(await bcrypt.compare(password, user.password))) return res.status(400).json({ message: "Enter your current password to delete the account" });
-        const activeStatuses = ["Pending", "Processing", "Confirmed", "Packed", "Shipped", "Cancellation Requested", "Return Requested", "Return Approved", "Return Picked Up", "Refund Pending", "RTO Initiated"];
+        let deletionVerified = false;
+        if (req.body.deletionToken) {
+            try {
+                const proof = jwt.verify(String(req.body.deletionToken), process.env.JWT_SECRET);
+                deletionVerified = proof.type === "customer-delete" && String(proof.id) === String(user._id) && proof.sessionVersion === (user.sessionVersion || 0);
+            } catch { /* Invalid proofs cannot authorize deletion. */ }
+        }
+        if (!deletionVerified && (!password || !user.password || !(await bcrypt.compare(password, user.password)))) return res.status(400).json({ message: "Verify a deletion code or enter your current password to delete the account" });
+        const activeStatuses = ["Pending", "Processing", "Confirmed", "Packed", "Shipped", "Cancellation Requested", "Return Requested", "Return Approved", "Return Picked Up", "Returned", "Refund Pending", "RTO Initiated"];
         if (await Order.exists({ userId: user._id, status: { $in: activeStatuses } })) return res.status(409).json({ message: "Your account has an active order, return or refund. Complete it before deleting your account" });
         await Product.updateMany({ "reviews.userId": String(user._id) }, { $set: { "reviews.$[review].name": "Deleted customer", "reviews.$[review].userId": "" } }, { arrayFilters: [{ "review.userId": String(user._id) }] });
         await User.deleteOne({ _id: user._id });
@@ -683,7 +707,7 @@ const changePassword = async (req, res) => {
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
-        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        const isMatch = user.password && await bcrypt.compare(currentPassword, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: "Current password is incorrect" });
         }

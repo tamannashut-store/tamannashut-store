@@ -64,7 +64,7 @@ function ReturnPolicy() {
           </h2>
 
           <p>
-            Once the returned item is received and inspected, eligible refunds will be initiated within 5–7 business days. Prepaid orders are refunded to the original payment method. For cash-on-delivery orders, we will request bank or UPI details through our official support channel. Banks and payment providers may require additional time to credit the refund.
+            Once the returned item is received and inspected, eligible refunds will be initiated within 5–7 business days. Prepaid orders are refunded to the original payment method. For cash-on-delivery orders, we request bank or UPI details securely through your signed-in account when your order is marked Refund Pending. An email reminder is sent if your order includes an email address. Banks and payment providers may require additional time to credit the refund.
           </p>
 
           <h2 className="text-2xl font-semibold">Cancellations</h2>

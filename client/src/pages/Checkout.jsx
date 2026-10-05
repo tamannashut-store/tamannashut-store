@@ -271,7 +271,7 @@ function Checkout() {
             <div className="mt-6 grid gap-5 sm:grid-cols-2">
               {[
                 ["name", "Recipient full name", "text"],
-                ["email", "Email", "email"],
+                ["email", user?.user?.email ? "Email" : "Email (optional)", "email"],
                 ["phone", "Phone number", "tel"],
                 ["pincode", "Pincode", "text"],
                 ["city", "City", "text"],
@@ -280,7 +280,7 @@ function Checkout() {
               ].map(([name, label, type]) => (
                 <label key={name} className="min-w-0">
                   <span className="mb-2 block text-sm font-medium">{label}</span>
-                  <input required name={name} type={type} value={formData[name]} onChange={updateField} minLength={name === "name" ? 2 : undefined} maxLength={name === "pincode" ? 6 : name === "phone" ? 13 : undefined} pattern={name === "pincode" ? "[0-9]{6}" : name === "phone" ? "[+]?[0-9]{10,13}" : undefined} inputMode={name === "pincode" ? "numeric" : name === "phone" ? "tel" : undefined} autoComplete={name === "name" ? "name" : name === "email" ? "email" : name === "phone" ? "tel" : name === "pincode" ? "postal-code" : name === "city" ? "address-level2" : name === "state" ? "address-level1" : name === "country" ? "country-name" : undefined} readOnly={["email", "city", "state", "country"].includes(name) || (name === "phone" && phoneVerified)} className="w-full min-w-0 max-w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
+                  <input required={name !== "email"} name={name} type={type} value={formData[name]} onChange={updateField} minLength={name === "name" ? 2 : undefined} maxLength={name === "pincode" ? 6 : name === "phone" ? 13 : undefined} pattern={name === "pincode" ? "[0-9]{6}" : name === "phone" ? "[+]?[0-9]{10,13}" : undefined} inputMode={name === "pincode" ? "numeric" : name === "phone" ? "tel" : undefined} autoComplete={name === "name" ? "name" : name === "email" ? "email" : name === "phone" ? "tel" : name === "pincode" ? "postal-code" : name === "city" ? "address-level2" : name === "state" ? "address-level1" : name === "country" ? "country-name" : undefined} readOnly={(["city", "state", "country"].includes(name) || (name === "email" && Boolean(user?.user?.email))) || (name === "phone" && phoneVerified)} className="w-full min-w-0 max-w-full rounded-xl border bg-white p-3.5 outline-none focus:border-brand-primary read-only:bg-gray-50" />
                   {name === "phone" && phoneVerified && <span className="mt-2 block text-xs font-medium text-emerald-700">✓ Verified phone · Change it from your profile</span>}
                 </label>
               ))}

@@ -234,9 +234,11 @@ test("an expired saved session does not block the public storefront", async ({ p
 
 test("login offers recovery and registration and accepts a safe mocked session", async ({ page }) => {
   await page.goto("/login");
+  await page.getByRole("button", { name: "Password", exact: true }).click();
   await expect(page.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");
   await expect(page.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/register");
   await page.getByPlaceholder("you@example.com").fill("test@example.com");
+  await page.getByRole("button", { name: "Password", exact: true }).click();
   await page.getByPlaceholder("Enter your password").fill("safe-password");
   await page.getByRole("button", { name: "Sign in securely" }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -265,6 +267,7 @@ test("failed guest bag merge preserves both saved copies", async ({ page }) => {
   await page.route("**/api/cart/merge", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Temporarily unavailable" }) }));
   await page.goto("/login");
   await page.getByPlaceholder("you@example.com").fill("test@example.com");
+  await page.getByRole("button", { name: "Password", exact: true }).click();
   await page.getByPlaceholder("Enter your password").fill("safe-password");
   await page.getByRole("button", { name: "Sign in securely" }).click();
   await expect(page).toHaveURL(/\/$/);
@@ -336,6 +339,7 @@ test("bank refund form requires matching confirmation and preserves the email li
   await page.goto(`/my-orders#${order._id}`);
   await expect(page).toHaveURL(/\/login$/);
   await page.getByPlaceholder("you@example.com").fill("test@example.com");
+  await page.getByRole("button", { name: "Password", exact: true }).click();
   await page.getByPlaceholder("Enter your password").fill("safe-password");
   await page.getByRole("button", { name: "Sign in securely" }).click();
   await expect(page).toHaveURL(new RegExp(`/my-orders#${order._id}$`));
@@ -364,12 +368,13 @@ test("online refund orders never request UPI or bank details", async ({ page }) 
 test("registration makes shopping email consent optional", async ({ page }) => {
   await page.goto("/register");
   await expect(page.getByRole("heading", { name: "Join Tamanna's Hut" })).toBeVisible();
-  await expect(page.getByLabel("Full name")).toBeVisible();
+  await expect(page.getByLabel("Name (optional)")).toBeVisible();
+  await page.getByRole("button", { name: "Email address", exact: true }).click();
   await expect(page.getByRole("main").getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
-  const consent = page.getByRole("checkbox", { name: /Helpful shopping emails/ });
+  const consent = page.getByRole("checkbox", { name: /Send me shopping emails/ });
   await expect(consent).toBeVisible();
   await expect(consent).not.toBeChecked();
-  await expect(page.getByLabel("Confirm password")).toBeVisible();
+  await expect(page.locator("input[type=password]")).toHaveCount(0);
   await expect(page.getByRole("checkbox", { name: /I accept the Terms/ })).toBeVisible();
 });
 
@@ -565,4 +570,64 @@ test("admin settlement reconciliation shows an auditable payout action", async (
   await expect(page.getByRole("button", { name: "Start payout" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Statement" })).toBeVisible();
   await expect(page.getByText("Adjustment ledger (1)")).toBeVisible();
+});
+
+for (const channel of ['phone', 'email']) {
+  test(`${channel}-only signup verifies a code without requiring a password or another contact`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    let signup;
+    await page.route('**/api/auth/customer-otp/send', async route => { signup=route.request().postDataJSON(); await route.fulfill({json:{challengeToken:'safe-signup-challenge',message:'Code sent'}}); });
+    await page.route('**/api/auth/customer-otp/check', async route => {
+      expect(route.request().postDataJSON()).toEqual({purpose:'register',challengeToken:'safe-signup-challenge',code:'123456'});
+      await route.fulfill({json:{token:'safe-signup-session',user:{id:'signup-test',name:'Customer',passwordLoginEnabled:false,...(channel==='email'?{email:'new@example.com'}:{phone:'+919876543210'})}}});
+    });
+    await page.goto('/register');
+    if(channel==='email') await page.getByRole('button',{name:'Email address',exact:true}).click();
+    await page.getByLabel(channel==='phone'?'Mobile number':'Email address',{exact:true}).fill(channel==='phone'?'9876543210':'new@example.com');
+    await page.getByRole('checkbox',{name:/I accept/}).check();
+    await expect(page.locator('input[type=password]')).toHaveCount(0);
+    await expect(page.getByLabel(channel==='phone'?'Email address':'Mobile number',{exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'Send verification code'}).click();
+    expect(signup.channel).toBe(channel);expect(signup.name).toBe('');expect(signup.termsAccepted).toBe(true);expect(signup.password).toBeUndefined();
+    await page.getByLabel('One-time code').fill('123456');
+    await page.getByRole('button',{name:'Verify & create account'}).click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect.poll(()=>page.evaluate(()=>JSON.parse(localStorage.getItem('user'))?.token)).toBe('safe-signup-session');
+  });
+}
+test('email code login supports passwordless customers',async({page})=>{
+  await page.route('**/api/auth/customer-otp/send',route=>route.fulfill({json:{challengeToken:'safe-email-challenge',message:'Code sent'}}));
+  await page.route('**/api/auth/customer-otp/check',route=>route.fulfill({json:{token:'safe-email-session',user:{id:'test-user',name:'Customer',email:'test@example.com',passwordLoginEnabled:false}}}));
+  await page.goto('/login');await page.getByLabel('Email address').fill('test@example.com');await expect(page.locator('input[type=password]')).toHaveCount(0);
+  await page.getByRole('button',{name:'Send login code'}).click();await page.getByLabel('One-time code').fill('123456');await page.getByRole('button',{name:'Sign in securely'}).click();await expect(page).toHaveURL(/\/$/);
+});
+test('mobile-only checkout submits COD order without email',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('user',JSON.stringify({token:'safe-mobile-session',user:{id:'mobile-test',name:'Test Parent',phone:'+919876543210',passwordLoginEnabled:false}})));
+  await page.route('**/api/cart',route=>route.fulfill({json:{items:[{...product,selectedSize:'0-3M',selectedSku:'TEST-MAR-03',qty:1}]}}));
+  await page.route('**/api/auth/profile/mobile-test',route=>route.fulfill({json:{name:'Test Parent',phone:'+919876543210',phoneVerifiedAt:'2026-10-06',address:'12 Sample Street',pincode:'711310',city:'Howrah',state:'West Bengal'}}));
+  await page.route('**/api/logistics/postcode/**',route=>route.fulfill({json:{pincode:'711310',city:'Howrah',state:'West Bengal',cod:true}}));
+  let submitted;
+  await page.route('**/api/orders',async route=>{submitted=route.request().postDataJSON();await route.fulfill({json:{order:{...codOrder,email:''}}});});
+  await page.goto('/checkout');await expect(page.getByLabel('Email (optional)',{exact:true})).toBeVisible();await expect(page.getByLabel('Email (optional)',{exact:true})).not.toHaveAttribute('required','');
+  await page.getByRole('radio',{name:/Cash on delivery/}).check();await page.getByRole('button',{name:'Place COD order'}).click();await expect(page).toHaveURL(/\/success$/);expect(submitted.customer.email).toBe('');
+});
+test('mobile-only support can send a message without email',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('user',JSON.stringify({token:'safe-mobile-session',user:{id:'mobile-test',name:'Test Parent',phone:'+919876543210'}})));
+  await page.goto('/contact');await page.getByLabel('How can we help?').fill('Please help me with my return request.');await page.getByRole('button',{name:/Send support request/i}).click();await expect(page.getByText('B06F8E07')).toBeVisible();
+});
+
+test('passwordless profile verifies deletion by code and preserves account updates without email',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('user',JSON.stringify({token:'safe-mobile-session',user:{id:'mobile-test',name:'Test Parent',phone:'+919876543210',passwordLoginEnabled:false}})));
+  await page.route('**/api/auth/profile/mobile-test',route=>route.fulfill({json:{name:'Test Parent',phone:'+919876543210',phoneVerifiedAt:'2026-10-06',passwordLoginEnabled:false}}));
+  await page.route('**/api/auth/phone-verification/status',route=>route.fulfill({json:{configured:true,verified:true}}));
+  await page.route('**/api/auth/delete-otp/send',route=>route.fulfill({json:{challengeToken:'safe-deletion-challenge',message:'Code sent'}}));
+  await page.goto('/profile');await expect(page.getByRole('link',{name:'Password',exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Start account deletion'}).click();await expect(page.locator('input[type=password]')).toHaveCount(0);await page.getByRole('button',{name:'Send deletion code'}).click();await expect(page.getByPlaceholder('Account deletion code')).toBeVisible();
+});
+test('admin can view submitted customer refund details after the refund is recorded',async({page})=>{
+  await page.addInitScript(()=>localStorage.setItem('user',JSON.stringify({token:'safe-admin-session',user:{id:'admin-test',isAdmin:true,email:'admin@example.com'}})));
+  const order={...codOrder,status:'Refunded',paymentStatus:'Refunded',refund:{detailsSubmittedAt:'2026-10-06',amount:299,method:'UPI',reference:'TEST-REFUND'}};
+  await page.route('**/api/orders',route=>route.fulfill({json:[order]}));
+  await page.route(`**/api/orders/refund-details/${order._id}/admin`,route=>route.fulfill({json:{submitted:true,submittedAt:'2026-10-06',details:{method:'UPI',holderName:'Test Parent',upiId:'test@bank'}}}));
+  await page.goto('/admin/orders');await page.getByRole('button',{name:/Test Customer/}).click();await page.getByRole('button',{name:'View customer refund details'}).click();await expect(page.getByText('test@bank',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Retry request email'})).toHaveCount(0);
 });

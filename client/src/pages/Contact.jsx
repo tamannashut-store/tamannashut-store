@@ -35,7 +35,7 @@ function Contact() {
     const cleanEmail = email.trim();
     const cleanMessage = message.trim();
     if (cleanName.length < 2) return setSubmission({ type: "error", message: "Please enter your full name." });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return setSubmission({ type: "error", message: "Please enter a valid email address." });
+    if ((!initialUser.id || cleanEmail) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) return setSubmission({ type: "error", message: "Please enter a valid email address." });
     if (cleanMessage.length < 10) return setSubmission({ type: "error", message: "Please describe how we can help in at least 10 characters." });
     try {
       setLoading(true);
@@ -71,7 +71,7 @@ function Contact() {
         {submission && <div role={submission.type === "error" ? "alert" : "status"} aria-live="polite" className={`mt-6 rounded-2xl border p-4 ${submission.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-red-200 bg-red-50 text-red-800"}`}><div className="flex items-start gap-3">{submission.type === "success" && <FiCheckCircle aria-hidden="true" className="mt-0.5 shrink-0 text-xl"/>}<div><p className="font-semibold">{submission.message}</p>{submission.reference && <p className="mt-1 text-sm">Support reference: <strong className="font-mono">{submission.reference}</strong>. Keep this number for follow-up.</p>}{submission.accountLinked && <Link to="/support" className="mt-3 inline-flex font-semibold underline underline-offset-4">View support requests</Link>}</div></div></div>}
         <form onSubmit={handleSubmit} className="mt-6 grid gap-5 sm:grid-cols-2">
           <label className="field-label">Your name<input type="text" value={name} onChange={(event) => setName(event.target.value)} className="field-control mt-2" minLength="2" maxLength="80" autoComplete="name" required/></label>
-          <label className="field-label">Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="field-control mt-2" maxLength="254" autoComplete="email" required/></label>
+          <label className="field-label">Email address{initialUser.id && " (optional)"}<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="field-control mt-2" maxLength="254" autoComplete="email" required={!initialUser.id}/></label>
           <label className="field-label">Support topic<select value={topic} onChange={(event) => setTopic(event.target.value)} className="field-control mt-2">{Object.entries(topics).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           {(topic !== "general" || orderReference) ? <label className="field-label">Order number <span className="font-normal text-slate-400">(if available)</span><input value={orderReference} onChange={(event) => setOrderReference(event.target.value)} placeholder="Shown in My Orders" className="field-control mt-2" maxLength="40" autoComplete="off"/></label> : <div className="hidden sm:block"/>}
           <label className="field-label sm:col-span-2">How can we help?<textarea rows="7" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Describe the issue, what you expected and any relevant details" className="field-control mt-2 resize-y" minLength="10" maxLength="1800" aria-describedby="message-count" required/><span id="message-count" className="mt-2 block text-right text-xs font-normal text-slate-400">{message.length} / 1800 characters</span></label>

@@ -29,9 +29,11 @@ export const publicAccount = (user) => ({
   id: user._id,
   name: user.name,
   email: user.email,
+  phone: user.phone || "",
+  passwordLoginEnabled: user.passwordLoginEnabled !== false,
   isAdmin: isPlatformAdmin(user),
   accountType: accountTypeFor(user),
   sellerRole: user.sellerRole || "",
   sellerAccessStatus: user.sellerAccessStatus || "active",
-  emailVerified: Boolean(user.emailVerifiedAt || !user.emailVerificationRequiredAt),
+  emailVerified: Boolean(user.email && (user.emailVerifiedAt || !user.emailVerificationRequiredAt)),
 });

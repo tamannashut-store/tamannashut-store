@@ -29,12 +29,14 @@ import crypto from "crypto";
 import * as Sentry from "@sentry/node";
 import Product from "./models/Product.js";
 import User from "./models/User.js";
+import CustomerAuthChallenge from "./models/CustomerAuthChallenge.js";
 import SellerProfile from "./models/SellerProfile.js";
 import { backfillProductSlugs } from "./utils/productSlug.js";
 import { migrateMarketplaceOwnership } from "./utils/marketplaceMigration.js";
 import { backfillSellerSettlements } from "./utils/settlementMigration.js";
 import { reconcileSellerCompliance } from "./utils/sellerComplianceMigration.js";
 import { isRateLimitedAuthRequest } from "./utils/authRateLimit.js";
+import { prepareCustomerEmailIndex } from "./utils/customerEmailIndex.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -113,6 +115,8 @@ const start = async () => {
   if (!process.env.MONGO_URI || !process.env.JWT_SECRET) throw new Error("Required server configuration is missing");
   await mongoose.connect(process.env.MONGO_URI);
   console.log("MongoDB connected");
+  await prepareCustomerEmailIndex(User.collection);
+  await CustomerAuthChallenge.init();
   const marketplaceMigration = await migrateMarketplaceOwnership({ User, Product });
   if (marketplaceMigration.sellersSeparated || marketplaceMigration.productsAssigned) console.log("Marketplace ownership prepared", marketplaceMigration);
   const complianceMigration = await reconcileSellerCompliance({ User, SellerProfile, Product });

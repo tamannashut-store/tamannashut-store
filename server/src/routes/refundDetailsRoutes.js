@@ -64,6 +64,7 @@ router.post("/:id/remind", admin, async (req, res) => {
     if (!validId(req.params.id)) return res.status(400).json({ message: "Invalid order" });
     const order = await Order.findById(req.params.id);
     if (!order || !needsRefundDetails(order) || order.refund?.detailsSubmittedAt) return res.status(409).json({ message: "This order does not need a refund-details request" });
+    if (!order.email) return res.status(409).json({ message: "This order has no email address. The customer can provide refund details through their account notification." });
     const result = await notifyRefundDetails(order);
     return res.status(result.sent ? 200 : result.skipped ? 409 : 502).json({ message: result.sent ? "Refund details email sent" : result.skipped ? "An email was already sent or recently attempted" : "Email delivery failed. The account notification remains available." });
   } catch (error) { return fail(res, error); }

@@ -4,7 +4,7 @@ import { refundDetailsRequestEmailTemplate } from "../utils/emailTemplates.js";
 import { needsRefundDetails } from "../utils/refundDestination.js";
 
 export const notifyRefundDetails = async (order, { model = Order, send = sendEmail } = {}) => {
-  if (!needsRefundDetails(order) || order.refund?.detailsSubmittedAt) return { sent: false, skipped: true };
+  if (!needsRefundDetails(order) || order.refund?.detailsSubmittedAt || !order.email) return { sent: false, skipped: true };
   const claimed = await model.findOneAndUpdate({
     _id: order._id, status: "Refund Pending", paymentMethod: "COD", paymentStatus: "Paid",
     "refund.detailsSubmittedAt": null, "refund.detailsEmailSentAt": null,

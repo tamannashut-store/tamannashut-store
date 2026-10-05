@@ -6,14 +6,15 @@ const userSchema = new mongoose.Schema(
 
     email: {
       type: String,
-      required: true,
-      unique: true,
+      required: function () { return this.accountType !== "customer"; },
+      set: (value) => String(value || "").trim() || undefined,
       lowercase: true,
       trim: true,
       maxlength: 254,
     },
 
-    password: { type: String, required: true, select: false },
+    password: { type: String, required: function () { return this.accountType !== "customer" || this.passwordLoginEnabled !== false; }, select: false },
+    passwordLoginEnabled: { type: Boolean, default: true },
     passwordChangedAt: { type: Date, default: null, select: false },
     sessionVersion: { type: Number, default: 0, min: 0 },
     passwordResetToken: { type: String, select: false, index: true },
@@ -114,6 +115,7 @@ const userSchema = new mongoose.Schema(
     },
   }
 );
+userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique", partialFilterExpression: { email: { $type: "string" } } });
 userSchema.index(
   { phoneNormalized: 1 },
   { unique: true, partialFilterExpression: { phoneVerifiedAt: { $type: "date" } } }
