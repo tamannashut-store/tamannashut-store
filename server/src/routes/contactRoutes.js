@@ -152,7 +152,7 @@ router.post("/", optionalProtect, contactLimiter, async (req, res) => {
         const emailRegex =
             /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (!emailRegex.test(email)) {
+        if ((!accountCustomer || email) && !emailRegex.test(email)) {
             return res.status(400).json({
                 success: false,
                 message: "Invalid email address",

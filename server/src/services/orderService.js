@@ -38,13 +38,13 @@ export const normalizeCustomer = (customer) => {
     requiredFields.map((field) => [field, String(customer?.[field] || "").trim().slice(0, field === "address" ? 500 : 150)])
   );
   cleanCustomer.state = String(customer?.state || customer?.State || "").trim().slice(0, 150);
-  if (requiredFields.some((field) => !cleanCustomer[field])) {
+  if (requiredFields.some((field) => field !== "email" && !cleanCustomer[field])) {
     throw Object.assign(new Error("Complete all delivery address fields"), { status: 400 });
   }
   if (cleanCustomer.name.length < 2 || cleanCustomer.address.length < 10) {
     throw Object.assign(new Error("Enter the recipient's full name and a complete delivery address"), { status: 400 });
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanCustomer.email)) {
+  if (cleanCustomer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanCustomer.email)) {
     throw Object.assign(new Error("Enter a valid email address"), { status: 400 });
   }
   if (!/^\+?[0-9]{10,13}$/.test(cleanCustomer.phone.replace(/\s/g, "")) || !/^\d{6}$/.test(cleanCustomer.pincode)) {

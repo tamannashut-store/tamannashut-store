@@ -27,7 +27,7 @@ const sections = [
     questions: [
       { id: "request-return", question: "How do I request a return?", answer: "For an eligible delivered order, open My Orders and choose Request return. Explain the issue clearly and add photographs when the item is damaged, incorrect or incomplete.", keywords: "exchange damaged wrong item photo" },
       { id: "refund-time", question: "How long do refunds take?", answer: "After an approved return is received and inspected, an eligible refund is normally initiated within 5–7 business days. Your bank or payment provider may need additional time.", keywords: "money credit processing days" },
-      { id: "cod-refund", question: "How is a COD refund paid?", answer: "Support will request suitable bank or UPI details through an official channel after the return is approved. Never post sensitive bank details in a public message.", keywords: "cash refund bank upi" },
+      { id: "cod-refund", question: "How is a COD refund paid?", answer: "When your COD order is marked Refund Pending, open the notification in your account to securely provide bank or UPI details. Never post sensitive bank details in a public message.", keywords: "cash refund bank upi" },
       { id: "return-eligibility", question: "Which items are eligible for return?", answer: "Eligibility depends on the return window, item condition and the reason selected. Review the Returns, refunds and cancellations policy before submitting a request.", keywords: "window condition policy" },
     ],
   },

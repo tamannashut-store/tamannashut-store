@@ -23,6 +23,7 @@ export const protect = async (req, res, next) => {
             token,
             process.env.JWT_SECRET
         );
+        if (decoded.type || !decoded.id) return res.status(401).json({ message: "A sign-in session is required" });
 
         const user = await User.findById(decoded.id)
             .select("-password +passwordChangedAt");
@@ -72,6 +73,7 @@ export const optionalProtect = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
+        if (decoded.type || !decoded.id) return next();
         const user = await User.findById(decoded.id).select("-password +passwordChangedAt");
         if (!user || (decoded.sessionVersion ?? 0) !== (user.sessionVersion ?? 0)) return next();
         const passwordChangedAt = user.passwordChangedAt ? Math.floor(user.passwordChangedAt.getTime() / 1000) : 0;
