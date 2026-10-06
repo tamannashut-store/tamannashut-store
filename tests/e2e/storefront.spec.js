@@ -109,6 +109,21 @@ test("home categories come from the full published catalogue", async ({ page }) 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
 });
 
+test("marketplace home keeps product photos fully visible and offers direct search", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  const photo = page.getByRole("region", { name: "Featured products" }).getByRole("img", { name: `${product.name} view 1`, exact: true }).first();
+  await expect(photo).toBeVisible();
+  const framing = await photo.evaluate((element) => ({ fit: getComputedStyle(element).objectFit, padding: getComputedStyle(element).padding, height: element.getBoundingClientRect().height }));
+  expect(framing.fit).toBe("contain");
+  expect(framing.padding).toBe("0px");
+  expect(framing.height).toBeLessThanOrEqual(300);
+  await expect(page.getByText("Home & kitchen", { exact: true })).toBeVisible();
+  await page.getByRole("search", { name: "Find products" }).getByLabel("Search products, brands and categories").fill("steel bottle");
+  await page.getByRole("search", { name: "Find products" }).getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page).toHaveURL(/\/shop\?search=steel%20bottle/);
+});
+
 test("owner can save a private name-only product draft", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", isAdmin: true } })));
   let saved = false;
@@ -161,7 +176,7 @@ test("customer adds a single SKU product without selecting a size", async ({ pag
 
 test("storefront renders catalogue data without horizontal overflow", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Good finds for every part of your day." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "One store. More possibilities." })).toBeVisible();
   await expect(page.getByRole("heading", { name: product.name }).first()).toBeVisible();
   await expect(page.locator(`a[href="/product/${product.slug}"]`).first()).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
@@ -273,7 +288,7 @@ test("corrupted browser storage is cleared without crashing the storefront", asy
     localStorage.setItem("guest_cart", "{broken-cart");
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Good finds for every part of your day." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "One store. More possibilities." })).toBeVisible();
   await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]"))).toEqual([]);
@@ -286,7 +301,7 @@ test("an expired saved session does not block the public storefront", async ({ p
     localStorage.setItem("user", JSON.stringify({ token, user: { id: "expired-user", email: "expired@example.com", isAdmin: false } }));
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Good finds for every part of your day." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "One store. More possibilities." })).toBeVisible();
   await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
 });

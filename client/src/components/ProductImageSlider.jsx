@@ -36,7 +36,7 @@ function ProductImageSlider({ product, className = "h-72" }) {
               decoding="async"
               width="520"
               height="650"
-              className="h-full w-full object-cover"
+              className="h-full w-full bg-[#f7f8fa] object-contain"
             />
           </SwiperSlide>
         ))}
