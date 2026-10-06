@@ -10,6 +10,22 @@ const productSchema = new mongoose.Schema(
     baseSku: { type: String, trim: true, uppercase: true },
     hsnCode: { type: String, trim: true },
     description: String,
+    productType: { type: String, enum: ["simple", "variable"], default: "variable" },
+    optionLabel: { type: String, default: "Size" },
+    brand: String,
+    modelNumber: String,
+    manufacturer: String,
+    countryOfOrigin: String,
+    subcategory: String,
+    specifications: String,
+    warranty: String,
+    packageContents: String,
+    gstMode: { type: String, enum: ["apparel", "custom"] },
+    gstRate: { type: Number, min: 0, max: 100 },
+    weightKg: { type: Number, min: 0 },
+    lengthCm: { type: Number, min: 0 },
+    widthCm: { type: Number, min: 0 },
+    heightCm: { type: Number, min: 0 },
     images: [
       {
         url: {

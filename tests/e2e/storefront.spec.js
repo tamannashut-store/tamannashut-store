@@ -100,9 +100,68 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
+test("home categories come from the full published catalogue", async ({ page }) => {
+  await page.route("**/api/products/categories", (route) => route.fulfill({ json: { categories: [{ key: "home-kitchen", label: "Home & Kitchen", count: 4, image }, { key: "electronics", label: "Electronics", count: 2, image }] } }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: /Home & Kitchen 4 products/ })).toHaveAttribute("href", "/shop?category=home-kitchen");
+  await expect(page.getByRole("link", { name: /Electronics 2 products/ })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+});
+
+test("owner can save a private name-only product draft", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", isAdmin: true } })));
+  let saved = false;
+  await page.route("**/api/products", async (route) => {
+    if (route.request().method() !== "POST") return route.fulfill({ json: { products: [] } });
+    const body = route.request().postData();
+    expect(body).toContain("Work in progress");
+    expect(body).toMatch(/name="status"\r\n\r\ndraft/);
+    saved = true;
+    return route.fulfill({ status: 201, json: { name: "Work in progress", status: "draft" } });
+  });
+  await page.goto("/admin");
+  await page.getByRole("button", { name: "+ Add product" }).click();
+  await page.getByLabel("Product name", { exact: true }).fill("Work in progress");
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect.poll(() => saved).toBe(true);
+  await expect(page.getByRole("button", { name: "+ Add product" })).toBeVisible();
+});
+
+test("single SKU listing preserves generic details, tax and images through editing", async ({ page }) => {
+  const bottle = { ...product, name: "Steel bottle", category: "home-kitchen", productType: "simple", gstMode: "custom", gstRate: 18, hsnCode: "7323", brand: "Example", specifications: "Capacity: 1 litre", weightKg: 0.4, variants: [{ sku: "BOTTLE-1", size: "Standard", color: "", price: 299, stock: 3 }], status: "active" };
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", isAdmin: true } })));
+  await page.route(`**/api/products/admin/item/${product._id}`, (route) => route.fulfill({ json: bottle }));
+  let updated = false;
+  await page.route(`**/api/products/${product._id}`, async (route) => {
+    const body = route.request().postData();
+    for (const value of ["Updated features", "home-kitchen", "7323", "Example", "custom", "BOTTLE-1"]) expect(body).toContain(value);
+    expect(body).toMatch(/name="gstRate"\r\n\r\n18/);
+    updated = true;
+    return route.fulfill({ json: bottle });
+  });
+  await page.goto(`/admin/edit/${product._id}`);
+  await expect(page.getByLabel("Brand", { exact: true })).toHaveValue("Example");
+  await expect(page.getByLabel("GST percentage *")).toHaveValue("18");
+  await page.getByLabel("Specifications / key features").fill("Updated features");
+  await page.getByRole("button", { name: /4 Review & publish/ }).click();
+  await page.getByRole("button", { name: "Save listing", exact: true }).click();
+  await expect.poll(() => updated).toBe(true);
+});
+
+test("customer adds a single SKU product without selecting a size", async ({ page }) => {
+  const bottle = { ...product, name: "Steel bottle", category: "home-kitchen", productType: "simple", brand: "Example", specifications: "Capacity: 1 litre", variants: [{ sku: "BOTTLE-1", size: "Standard", color: "", price: 299, stock: 3 }], sizeStock: [{ size: "Standard", stock: 3 }] };
+  await page.route(`**/api/products/${product.slug}`, (route) => route.fulfill({ json: bottle }));
+  await page.goto(`/product/${product.slug}`);
+  await expect(page.getByRole("heading", { name: "Steel bottle", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Select size/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Add to bag", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]")[0]?.selectedSku)).toBe("BOTTLE-1");
+});
+
 test("storefront renders catalogue data without horizontal overflow", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Beautiful clothes for their biggest little moments." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Good finds for every part of your day." })).toBeVisible();
   await expect(page.getByRole("heading", { name: product.name }).first()).toBeVisible();
   await expect(page.locator(`a[href="/product/${product.slug}"]`).first()).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
@@ -129,7 +188,7 @@ test("mobile navigation exposes storefront and account destinations", async ({ p
   await page.getByRole("button", { name: "Menu" }).click();
   const dialog = page.getByRole("dialog", { name: "Navigation menu" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("link", { name: "Girls" })).toBeVisible();
+  await expect(dialog.getByRole("link", { name: "Shop all" })).toBeVisible();
   await expect(dialog.getByRole("link", { name: "Cart" })).toBeVisible();
   await expect(dialog.getByRole("link", { name: "Sign in" })).toBeVisible();
 });
@@ -214,7 +273,7 @@ test("corrupted browser storage is cleared without crashing the storefront", asy
     localStorage.setItem("guest_cart", "{broken-cart");
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Beautiful clothes for their biggest little moments." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Good finds for every part of your day." })).toBeVisible();
   await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]"))).toEqual([]);
@@ -227,7 +286,7 @@ test("an expired saved session does not block the public storefront", async ({ p
     localStorage.setItem("user", JSON.stringify({ token, user: { id: "expired-user", email: "expired@example.com", isAdmin: false } }));
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Beautiful clothes for their biggest little moments." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Good finds for every part of your day." })).toBeVisible();
   await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
 });

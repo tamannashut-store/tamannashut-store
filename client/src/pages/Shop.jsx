@@ -11,13 +11,6 @@ import { isCanceledRequest } from "../utils/retryRequest";
 import { getProducts } from "../api/productApi";
 import { useReloadOnPageResume } from "../utils/useReloadOnPageResume";
 
-const categories = [
-  { label: "All", value: "" },
-  { label: "Girls", value: "girls" },
-  { label: "Boys", value: "boys" },
-  { label: "New Arrivals", value: "new-arrivals" },
-];
-
 function Shop() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
@@ -33,6 +26,7 @@ function Shop() {
   const [searchMode, setSearchMode] = useState("exact");
   const [sponsored, setSponsored] = useState([]);
 
+  const categories = [{ label: "All", value: "" }, ...[...new Set([...(filterOptions.categories || []), ...products.map((product) => product.category), searchParams.get("category")].filter(Boolean))].sort().map((value) => ({ value, label: value.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()) }))];
   const category = searchParams.get("category") || "";
   const selectedSize = searchParams.get("size") || "";
   const sort = searchParams.get("sort") || "newest";
@@ -127,8 +121,8 @@ function Shop() {
   return (
     <>
       <Helmet>
-        <title>Shop Kids Clothing | Tamanna&apos;s Hut</title>
-        <meta name="description" content="Browse baby dresses, kids wear, girls fashion and boys clothing." />
+        <title>Shop All Products | Tamanna&apos;s Hut</title>
+        <meta name="description" content="Explore products across every published category in our growing catalogue." />
         <link rel="canonical" href="https://www.tamannashut.com/shop" />
       </Helmet>
 
@@ -184,9 +178,9 @@ function Shop() {
             </div>
 
             <div className="mt-6 border-t pt-5">
-              <h3 className="font-medium">Available size</h3>
+              <h3 className="font-medium">Product option</h3>
               <select value={selectedSize} onChange={(event) => updateParams({ size: event.target.value })} className="mt-3 w-full rounded-xl border p-3">
-                <option value="">All sizes</option>
+                <option value="">All options</option>
                 {availableSizes.map((size) => <option key={size} value={size}>{size}</option>)}
               </select>
             </div>

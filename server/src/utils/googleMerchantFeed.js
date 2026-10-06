@@ -1,3 +1,4 @@
+import { legacyApparelCategory } from "./productFields.js";
 import { inventoryItems } from "./inventory.js";
 
 const SITE_URL = "https://www.tamannashut.com";
@@ -70,8 +71,11 @@ export const googleMerchantItems = (product) => productVariants(product).map((va
     price: Number(variant.price ?? product.price ?? 0),
     color,
     size,
-    gender: merchantGender(product),
-    ageGroup: merchantAgeGroup(product, variant),
+    brand: product.brand || "Tamanna's Hut",
+    category: legacyApparelCategory(product.category) ? "Apparel & Accessories > Clothing" : "",
+    productType: [product.category, product.subcategory].filter(Boolean).join(" > "),
+    gender: legacyApparelCategory(product.category) ? merchantGender(product) : "",
+    ageGroup: legacyApparelCategory(product.category) ? merchantAgeGroup(product, variant) : "",
   };
 });
 
@@ -90,14 +94,15 @@ ${item.additionalImages.map((url) => element("g:additional_image_link", url)).jo
 ${element("g:availability", item.availability)}
 <g:condition>new</g:condition>
 ${element("g:price", `${item.price.toFixed(2)} INR`)}
-<g:brand>Tamanna&apos;s Hut</g:brand>
+${element("g:brand", item.brand)}
 <g:identifier_exists>false</g:identifier_exists>
 ${element("g:color", item.color)}
 ${element("g:size", item.size)}
 ${element("g:gender", item.gender)}
 ${element("g:age_group", item.ageGroup)}
 <g:shipping><g:country>IN</g:country><g:service>Standard</g:service><g:price>0 INR</g:price></g:shipping>
-<g:google_product_category>Apparel &amp; Accessories &gt; Clothing</g:google_product_category>
+${element("g:google_product_category", item.category)}
+${element("g:product_type", item.productType)}
 </item>`).join("");
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -105,7 +110,7 @@ ${element("g:age_group", item.ageGroup)}
 <channel>
 <title>Tamanna&apos;s Hut</title>
 <link>${SITE_URL}</link>
-<description>Kids Fashion Store</description>${items}
+<description>Online Product Catalogue</description>${items}
 </channel>
 </rss>`;
 };

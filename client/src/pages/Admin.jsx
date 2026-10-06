@@ -1,3 +1,5 @@
+import { generalListingDefaults } from "../utils/listingDefaults";
+import GeneralListingFields, { CategoryField } from "../components/GeneralListingFields";
 import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +26,7 @@ function Admin() {
   const [selected, setSelected] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
+  const [form, setForm] = useState({ ...generalListingDefaults, name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
   const [variants, setVariants] = useState(initialVariants);
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -52,7 +54,7 @@ function Admin() {
 
   useEffect(() => () => previewUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
 
-  const changeForm = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
+  const changeForm = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value, ...(event.target.name === "category" ? { gstMode: "", gstRate: "" } : {}) }));
   const variantColors = [...new Set(variants.map((variant) => variant.color).filter(Boolean))];
 
   const selectImages = (event, color = "") => {
@@ -87,7 +89,7 @@ function Admin() {
   const resetCreate = () => {
     previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
     previewUrls.current = [];
-    setForm({ name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
+    setForm({ ...generalListingDefaults, name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
     setVariants(initialVariants);
     setImages([]);
     setPreviews([]);
@@ -96,12 +98,12 @@ function Admin() {
     setCreateStep(0);
   };
 
-  const createProduct = async (event) => {
+  const createProduct = async (event, saveDraft = false) => {
     event.preventDefault();
-    if (createStep < 3) return nextCreateStep();
-    if (!images.length) return toast.error("Add at least one product image");
-    if (!variants.length) return toast.error("Add at least one colour style");
-    if (variants.some((variant) => !variant.color?.trim() || !variant.size?.trim())) return toast.error("Every variant needs a colour and size");
+    if (!saveDraft && createStep < 3) return nextCreateStep();
+    if (!saveDraft && !images.length) return toast.error("Add at least one product image");
+    if (!saveDraft && !variants.length) return toast.error("Add at least one colour style");
+    if (variants.some((variant) => !variant.size?.trim())) return toast.error("Every SKU needs an option");
     if (variants.some((variant) => !variant.sku)) return toast.error("Generate or enter every variant SKU");
     try {
       setLoading(true);
@@ -110,13 +112,14 @@ function Admin() {
         if (key !== "tags") data.append(key, value);
       });
       data.append("tags", JSON.stringify(form.tags.split(",").map((tag) => tag.trim()).filter(Boolean)));
+      if (saveDraft) data.set("status", "draft");
       data.append("variants", JSON.stringify(variants));
       data.append("sizeStock", JSON.stringify(variants.map(({ size, stock }) => ({ size, stock }))));
       data.append("imageColors", JSON.stringify(imageColors));
       data.append("imageSizes", JSON.stringify(imageSizes));
       images.forEach((image) => data.append("images", image));
       await axios.post(`${import.meta.env.VITE_API_URL}/api/products`, data);
-      toast.success(sellerAccount ? "Listing submitted for platform approval" : "Product listing created");
+      toast.success(saveDraft ? "Private draft saved" : sellerAccount ? "Listing submitted for platform approval" : "Product listing created");
       resetCreate();
       setShowCreate(false);
       fetchProducts(1);
@@ -146,7 +149,7 @@ function Admin() {
   };
   const nextCreateStep = () => {
     if (createStep === 0 && (!form.name.trim() || !form.price || !form.mrp || !form.baseSku.trim() || !/^\d{4,8}$/.test(form.hsnCode) || !form.category || !form.description.trim())) return toast.error("Complete the required product information, including the correct HSN code");
-    if (createStep === 1 && (!variants.length || variants.some((variant) => !variant.color?.trim() || !variant.size?.trim()))) return toast.error("Add at least one complete colour style");
+    if (createStep === 1 && (!variants.length || variants.some((variant) => !variant.size?.trim()))) return toast.error("Add at least one complete inventory row");
     if (createStep === 2 && !images.length) return toast.error("Upload at least one product photo");
     setCreateStep((step) => Math.min(step + 1, 3));
   };
@@ -166,27 +169,28 @@ function Admin() {
               <label className="md:col-span-2"><span className="field-label">Product name</span><input required name="name" value={form.name} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">Selling price (₹)</span><input required min="0" type="number" name="price" value={form.price} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">MRP (₹)</span><input required min="0" type="number" name="mrp" value={form.mrp} onChange={changeForm} className="field-control" /></label>
-              <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} placeholder="TH-DRESS-001" className="field-control uppercase" /></label>
-              <label><span className="field-label">HSN code *</span><input required inputMode="numeric" pattern="[0-9]{4,8}" name="hsnCode" value={form.hsnCode} onChange={changeForm} placeholder="Confirm with your tax adviser" className="field-control" /><span className="mt-1 block text-xs text-slate-500">Use the exact 4–8 digit apparel classification; do not guess between knitted and non-knitted garments.</span></label>
-              <label><span className="field-label">Category</span><select required name="category" value={form.category} onChange={changeForm} className="field-control"><option value="">Select</option><option value="girls">Girls</option><option value="boys">Boys</option><option value="new-arrivals">New arrivals</option></select></label>
+              <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} placeholder="TH-PRODUCT-001" className="field-control uppercase" /></label>
+              <label><span className="field-label">HSN code *</span><input required inputMode="numeric" pattern="[0-9]{4,8}" name="hsnCode" value={form.hsnCode} onChange={changeForm} placeholder="Confirm with your tax adviser" className="field-control" /><span className="mt-1 block text-xs text-slate-500">Use the exact HSN classification for this product.</span></label>
+              <CategoryField value={form.category} onChange={changeForm} />
               <label><span className="field-label">Fabric</span><input name="fabric" value={form.fabric} onChange={changeForm} className="field-control" /></label>
               <label><span className="field-label">Age group</span><input name="ageGroup" value={form.ageGroup} onChange={changeForm} placeholder="0–12 months" className="field-control" /></label>
               <label><span className="field-label">Tags</span><input name="tags" value={form.tags} onChange={changeForm} placeholder="party, cotton, summer" className="field-control" /></label>
               <label className="md:col-span-2"><span className="field-label">Description</span><textarea required rows="5" name="description" value={form.description} onChange={changeForm} className="field-control" /></label>
             </div></section>
 
+            <GeneralListingFields form={form} onChange={changeForm} />
           </div>}
 
-          {createStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} lowStockThreshold={form.lowStockThreshold} onRenameColor={(oldColor, nextColor) => setImageColors((current) => current.map((color) => color === oldColor ? nextColor : color))} /></div>}
+          {createStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor productType={form.productType} optionLabel={form.optionLabel} variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} lowStockThreshold={form.lowStockThreshold} onRenameColor={(oldColor, nextColor) => setImageColors((current) => current.map((color) => color === oldColor ? nextColor : color))} /></div>}
 
           {createStep === 2 && <div className="mx-auto max-w-5xl">
             <ColorImageManager colors={variantColors} variants={variants} images={previews.map((url, index) => ({ id: url, url, color: imageColors[index] || "", size: imageSizes[index] || "" }))} onUpload={selectImages} onAssign={(index, assignment) => { setImageColors((current) => current.map((value, itemIndex) => itemIndex === index ? assignment.color : value)); setImageSizes((current) => current.map((value, itemIndex) => itemIndex === index ? assignment.size : value)); }} onMove={moveImage} onRemove={removeImage} />
           </div>}
           {createStep === 3 && <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_340px]">
             <section className="surface-card p-6"><p className="eyebrow">Ready to publish</p><h2 className="mt-2 text-2xl font-semibold">Review your listing</h2><div className="mt-6 flex gap-5">{previews[0] && <img src={previews[0]} alt="" className="h-32 w-28 rounded-xl object-cover" />}<div><h3 className="text-lg font-semibold">{form.name}</h3><p className="mt-1 text-slate-500">{form.category} · {variantColors.length} colours · {variants.length} SKUs</p><p className="mt-3 text-xl font-bold text-brand-primary">₹{Number(form.price || 0).toLocaleString("en-IN")}</p></div></div><div className="mt-6 grid grid-cols-3 gap-3 text-center"><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{variants.length}</strong><span className="text-xs text-slate-500">SKUs</span></div><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{images.length}</strong><span className="text-xs text-slate-500">Photos</span></div><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{variants.reduce((sum, item) => sum + Number(item.stock || 0), 0)}</strong><span className="text-xs text-slate-500">Units</span></div></div></section>
-            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Listing status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert at</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label><p className="mt-4 text-xs leading-5 text-slate-500">Active listings become visible in the storefront immediately.</p></section>
+            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Listing status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert at</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label><p className="mt-4 text-xs leading-5 text-slate-500">Drafts remain private. Seller listings require platform approval; platform listings become visible when active.</p></section>
           </div>}
-          <WizardActions current={createStep} onBack={() => setCreateStep((step) => Math.max(0, step - 1))} onNext={nextCreateStep} busy={loading} submitLabel="Create listing" />
+          <WizardActions onSaveDraft={(event) => createProduct(event, true)} current={createStep} onBack={() => setCreateStep((step) => Math.max(0, step - 1))} onNext={nextCreateStep} busy={loading} submitLabel="Create listing" />
         </form>
       )}
 

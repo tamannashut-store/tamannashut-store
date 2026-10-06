@@ -79,7 +79,7 @@ export const createShiprocketOrder = async (order, parcel) => request("/orders/c
       selling_price: Number(item.price),
       discount: 0,
       tax: 0,
-      hsn: "",
+      hsn: item.hsnCode || "",
     })),
     payment_method: order.paymentMethod === "COD" ? "COD" : "Prepaid",
     shipping_charges: 0,

@@ -12,6 +12,8 @@ import { createUniqueProductSlug, productIdentifierFilter } from "../utils/produ
 import { isMarketplaceSeller, scopeSellerOwned } from "../utils/accountRoles.js";
 import { storefrontProductFilter } from "../utils/productVisibility.js";
 
+import { parseProductFields, assertPublishable } from "../utils/productFields.js";
+
 const router = express.Router();
 const sellerProductFilter = (req, filter = {}) => scopeSellerOwned(req.user, filter);
 const approvedReviews = (reviews = []) => reviews.filter((review) => !review.status || review.status === "approved");
@@ -35,94 +37,6 @@ const lowStockExpression = {
     } } },
   ],
 };
-const parseProductFields = (body) => {
-  const name = String(body.name || "").trim();
-  const price = Number(body.price);
-  const mrp = Number(body.mrp || body.price);
-  const description = String(body.description || "").trim().slice(0, 5000);
-  const category = String(body.category || "").trim().toLowerCase().replace(/\s+/g, "-");
-  const sizeStock = JSON.parse(body.sizeStock || "[]");
-  const baseSku = String(body.baseSku || "").trim().toUpperCase().slice(0, 60);
-  const hsnCode = String(body.hsnCode || "").trim().replace(/\s/g, "").slice(0, 8);
-  const color = String(body.color || "").trim().slice(0, 80);
-  const fabric = String(body.fabric || "").trim().slice(0, 120);
-  const ageGroup = String(body.ageGroup || "").trim().slice(0, 80);
-  const status = ["draft", "active", "archived"].includes(body.status) ? body.status : "active";
-  const lowStockThreshold = Math.max(Number(body.lowStockThreshold) || 0, 0);
-  const tags = JSON.parse(body.tags || "[]")
-    .map((tag) => String(tag).trim().toLowerCase())
-    .filter(Boolean)
-    .slice(0, 20);
-
-  if (!name || name.length > 200) {
-    throw Object.assign(new Error("Product name is required and must be under 200 characters"), { status: 400 });
-  }
-  if (!Number.isFinite(price) || price < 0) {
-    throw Object.assign(new Error("Enter a valid product price"), { status: 400 });
-  }
-  if (!Number.isFinite(mrp) || mrp < price) {
-    throw Object.assign(new Error("MRP must be equal to or greater than the selling price"), { status: 400 });
-  }
-  if (!["girls", "boys", "new-arrivals"].includes(category)) {
-    throw Object.assign(new Error("Select a valid product category"), { status: 400 });
-  }
-  if (!Array.isArray(sizeStock) || sizeStock.length > 30) {
-    throw Object.assign(new Error("Invalid size inventory"), { status: 400 });
-  }
-  if (!/^\d{4,8}$/.test(hsnCode)) {
-    throw Object.assign(new Error("Enter the correct 4 to 8 digit HSN code for this garment"), { status: 400 });
-  }
-
-  const normalizedStock = sizeStock.map((item) => {
-    const size = String(item.size || "").trim().slice(0, 30);
-    const stock = Number(item.stock);
-    if (!size || !Number.isInteger(stock) || stock < 0) {
-      throw Object.assign(new Error("Every size must have a valid non-negative stock quantity"), { status: 400 });
-    }
-    return { size, stock };
-  });
-
-  const submittedVariants = body.variants ? JSON.parse(body.variants) : [];
-  const normalizedVariants = (submittedVariants.length ? submittedVariants : normalizedStock.map((item) => ({
-    sku: `${baseSku || name.replace(/[^a-z0-9]/gi, "-")}-${item.size}`,
-    size: item.size,
-    color,
-    stock: item.stock,
-    price,
-    active: true,
-  }))).map((variant) => {
-    const sku = String(variant.sku || "").trim().toUpperCase().slice(0, 80);
-    const size = String(variant.size || "").trim().slice(0, 30);
-    const variantStock = Number(variant.stock);
-    const variantPrice = variant.price === "" || variant.price == null ? price : Number(variant.price);
-    if (!sku || !size || !Number.isInteger(variantStock) || variantStock < 0 || !Number.isFinite(variantPrice) || variantPrice < 0) {
-      throw Object.assign(new Error("Every variant requires a SKU, size, valid price and non-negative stock"), { status: 400 });
-    }
-    return {
-      sku,
-      size,
-      color: String(variant.color || color).trim().slice(0, 80),
-      stock: variantStock,
-      price: variantPrice,
-      active: variant.active !== false,
-    };
-  });
-  if (new Set(normalizedVariants.map((variant) => variant.sku)).size !== normalizedVariants.length) {
-    throw Object.assign(new Error("Variant SKUs must be unique within a product"), { status: 400 });
-  }
-  if (!normalizedVariants.length) {
-    throw Object.assign(new Error("Add at least one product variant"), { status: 400 });
-  }
-  const stockBySize = new Map();
-  normalizedVariants.forEach((variant) => stockBySize.set(variant.size, (stockBySize.get(variant.size) || 0) + variant.stock));
-  const syncedSizeStock = [...stockBySize].map(([size, stock]) => ({ size, stock }));
-
-  return {
-    name, price, mrp, baseSku, hsnCode, description, category, color: color || normalizedVariants[0]?.color || "", fabric, ageGroup,
-    tags, status, lowStockThreshold, variants: normalizedVariants, sizeStock: syncedSizeStock,
-  };
-};
-
 const uploadToCloudinary = (fileBuffer) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -135,6 +49,22 @@ const uploadToCloudinary = (fileBuffer) => {
 
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
+};
+
+const imageMetadata = (value, name) => {
+  let rows;
+  try { rows = JSON.parse(value || "[]"); } catch { throw Object.assign(new Error(`Invalid ${name}`), { status: 400 }); }
+  if (!Array.isArray(rows) || rows.length > 30) throw Object.assign(new Error(`Invalid ${name}`), { status: 400 });
+  return rows;
+};
+const uploadProductImages = async (files) => {
+  const results = await Promise.allSettled(files.map((file) => uploadToCloudinary(file.buffer)));
+  const uploaded = results.filter((result) => result.status === "fulfilled").map((result) => result.value);
+  if (results.some((result) => result.status === "rejected")) {
+    await Promise.allSettled(uploaded.map((image) => cloudinary.uploader.destroy(image.public_id)));
+    throw new Error("Image upload failed. Please try again.");
+  }
+  return uploaded;
 };
 
 // router.get("/", async (req, res) => {
@@ -155,22 +85,18 @@ const uploadToCloudinary = (fileBuffer) => {
 // });
 
 router.post("/", protect, sellerCentre, upload.array("images", 30), validateUploadedImages, async (req, res) => {
+  let images = [];
+  let saved = false;
   try {
+    const imageColors = imageMetadata(req.body.imageColors, "image colours");
+    const imageSizes = imageMetadata(req.body.imageSizes, "image options");
     const fields = parseProductFields(req.body);
-    let images = [];
 
     if (req.files && req.files.length > 0) {
 
       try {
 
-        const uploadPromises = req.files.map(
-          (file) => uploadToCloudinary(file.buffer)
-        );
-
-        const results = await Promise.all(uploadPromises);
-
-        const imageColors = JSON.parse(req.body.imageColors || "[]");
-        const imageSizes = JSON.parse(req.body.imageSizes || "[]");
+        const results = await uploadProductImages(req.files);
         images = results.map((result, index) => ({
           url: result.secure_url,
           public_id: result.public_id,
@@ -189,24 +115,27 @@ router.post("/", protect, sellerCentre, upload.array("images", 30), validateUplo
       }
     }
 
-    if (images.length === 0) {
-      return res.status(400).json({ message: "At least one product image is required" });
+    if (images.length === 0 && fields.status !== "draft") {
+      throw Object.assign(new Error("At least one product image is required"), { status: 400 });
     }
 
+    if (fields.status !== "draft") assertPublishable({ ...fields, images });
     const sellerSubmission = isMarketplaceSeller(req.user);
     const product = new Product({
       ...fields,
       images,
       sellerId: req.user._id,
       status: sellerSubmission ? "draft" : fields.status,
-      approvalStatus: sellerSubmission ? "pending" : "not_required",
+      approvalStatus: sellerSubmission ? (fields.status === "draft" ? "not_required" : "pending") : "not_required",
     });
     product.slug = await createUniqueProductSlug(Product, product.name, product._id);
 
     await product.save();
+    saved = true;
 
     return res.status(201).json(product);
   } catch (error) {
+    if (!saved) await Promise.allSettled(images.map((image) => cloudinary.uploader.destroy(image.public_id)));
     console.log(error);
     return res.status(error.status || 500).json({ message: error.message });
   }
@@ -228,7 +157,7 @@ router.get("/", async (req, res) => {
         { color: searchRegex },
         { fabric: searchRegex },
         { ageGroup: searchRegex },
-        { tags: searchRegex },
+        { tags: searchRegex }, { brand: searchRegex }, { modelNumber: searchRegex }, { subcategory: searchRegex },
       ];
     }
 
@@ -240,11 +169,11 @@ router.get("/", async (req, res) => {
       filter.category = new RegExp(categoryPattern, "i");
     }
 
-    const size = String(req.query.size || "").trim().slice(0, 20);
+    const size = String(req.query.size || "").trim().slice(0, 30);
     if (size) {
-      filter.$and = [...(filter.$and || []), { $or: [{ sizeStock: { $elemMatch: { size, stock: { $gt: 0 } } } }, { variants: { $elemMatch: { size, stock: { $gt: 0 }, active: { $ne: false } } } }] }];
+      filter.$and = [...(filter.$and || []), { $or: [{ "variants.0": { $exists: false }, sizeStock: { $elemMatch: { size, stock: { $gt: 0 } } } }, { variants: { $elemMatch: { size, stock: { $gt: 0 }, active: { $ne: false } } } }] }];
     } else if (req.query.inStock === "true") {
-      filter.$and = [...(filter.$and || []), { $or: [{ sizeStock: { $elemMatch: { stock: { $gt: 0 } } } }, { variants: { $elemMatch: { stock: { $gt: 0 }, active: { $ne: false } } } }] }];
+      filter.$and = [...(filter.$and || []), { $or: [{ "variants.0": { $exists: false }, sizeStock: { $elemMatch: { stock: { $gt: 0 } } } }, { variants: { $elemMatch: { stock: { $gt: 0 }, active: { $ne: false } } } }] }];
     }
 
     const color = String(req.query.color || "").trim().slice(0, 60);
@@ -280,7 +209,7 @@ router.get("/", async (req, res) => {
         { color: fuzzyRegex },
         { fabric: fuzzyRegex },
         { ageGroup: fuzzyRegex },
-        { tags: fuzzyRegex },
+        { tags: fuzzyRegex }, { brand: fuzzyRegex }, { modelNumber: fuzzyRegex }, { subcategory: fuzzyRegex },
       ];
       searchMode = "fuzzy";
     }
@@ -288,7 +217,7 @@ router.get("/", async (req, res) => {
     const skip = (page - 1) * limit;
 
     const activeFilter = storefrontProductFilter();
-    const [products, total, variantSizes, legacySizes, colors, variantColors, fabrics, ageGroups, priceRange] = await Promise.all([
+    const [products, total, variantSizes, legacySizes, colors, variantColors, fabrics, ageGroups, priceRange, categories] = await Promise.all([
       Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       Product.countDocuments(filter),
       Product.distinct("variants.size", activeFilter),
@@ -298,6 +227,7 @@ router.get("/", async (req, res) => {
       Product.distinct("fabric", activeFilter),
       Product.distinct("ageGroup", activeFilter),
       Product.aggregate([{ $match: activeFilter }, { $group: { _id: null, min: { $min: "$price" }, max: { $max: "$price" } } }]),
+      Product.distinct("category", activeFilter),
     ]);
 
     res.set(
@@ -319,6 +249,7 @@ router.get("/", async (req, res) => {
       searchMode,
       availableSizes: [...new Set([...variantSizes, ...legacySizes].filter(Boolean))].sort((left, right) => left.localeCompare(right, undefined, { numeric: true })),
       filterOptions: {
+        categories: categories.filter(Boolean).sort(),
         colors: [...new Set([...colors, ...variantColors].filter(Boolean))].sort(),
         fabrics: fabrics.filter(Boolean).sort(),
         ageGroups: ageGroups.filter(Boolean).sort(),
@@ -337,14 +268,14 @@ router.get("/suggestions/search", async (req, res) => {
     if (query.length < 2) return res.json({ suggestions: [] });
     let regex = buildSearchRegex(query);
     const baseFilter = storefrontProductFilter();
-    let suggestionFilter = { ...baseFilter, $or: [{ name: regex }, { tags: regex }, { category: regex }, { color: regex }, { "variants.color": regex }] };
+    let suggestionFilter = { ...baseFilter, $or: [{ name: regex }, { tags: regex }, { brand: regex }, { modelNumber: regex }, { subcategory: regex }, { category: regex }, { color: regex }, { "variants.color": regex }] };
     if (await Product.countDocuments(suggestionFilter) === 0 && query.length >= 3) {
       regex = buildSearchRegex(query, { fuzzy: true });
-      suggestionFilter = { ...baseFilter, $or: [{ name: regex }, { tags: regex }, { category: regex }, { color: regex }, { "variants.color": regex }] };
+      suggestionFilter = { ...baseFilter, $or: [{ name: regex }, { tags: regex }, { brand: regex }, { modelNumber: regex }, { subcategory: regex }, { category: regex }, { color: regex }, { "variants.color": regex }] };
     }
     const products = await Product.find(suggestionFilter).select("name slug category images price").sort({ averageRating: -1, createdAt: -1 }).limit(6).lean();
     return res.set("Cache-Control", "public, max-age=60").json({ suggestions: products.map((product) => ({ id: product._id, slug: product.slug, name: product.name, category: product.category, image: product.images?.[0]?.url || "", price: product.price })) });
-  } catch (error) { return res.status(500).json({ message: error.message }); }
+  } catch (error) { return res.status(error.status || 500).json({ message: error.message }); }
 });
 
 router.get("/:id/related", async (req, res) => {
@@ -387,6 +318,10 @@ router.patch("/admin/bulk-status", protect, sellerCentre, async (req, res) => {
     }
     if (isMarketplaceSeller(req.user) && status === "active") return res.status(403).json({ message: "Seller listings require platform approval before activation" });
     const filter = sellerProductFilter(req, { _id: { $in: ids } });
+    if (status === "active" || (isMarketplaceSeller(req.user) && status === "draft")) {
+      const selectedProducts = await Product.find(filter).lean();
+      selectedProducts.forEach(assertPublishable);
+    }
     const update = isMarketplaceSeller(req.user)
       ? status === "archived"
         ? { $set: { status: "archived" } }
@@ -460,6 +395,7 @@ router.patch("/admin/:id/approval", protect, admin, async (req, res) => {
     if (approvalStatus === "rejected" && approvalNote.length < 5) return res.status(400).json({ message: "Explain what the seller must correct" });
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
+    if (approvalStatus === "approved") assertPublishable(product.toObject());
     product.approvalStatus = approvalStatus;
     product.approvalNote = approvalNote;
     product.reviewedAt = new Date();
@@ -467,6 +403,19 @@ router.patch("/admin/:id/approval", protect, admin, async (req, res) => {
     product.status = approvalStatus === "approved" ? "active" : "draft";
     await product.save();
     return res.json({ message: approvalStatus === "approved" ? "Seller listing approved" : "Seller listing returned for correction", product });
+  } catch (error) { return res.status(500).json({ message: error.message }); }
+});
+
+router.get("/categories", async (req, res) => {
+  try {
+    const categories = await Product.aggregate([
+      { $match: storefrontProductFilter() },
+      { $sort: { createdAt: -1 } },
+      { $group: { _id: "$category", count: { $sum: 1 }, image: { $first: { $arrayElemAt: ["$images.url", 0] } } } },
+      { $match: { _id: { $nin: [null, ""] } } },
+      { $sort: { _id: 1 } },
+    ]);
+    return res.set("Cache-Control", "public, max-age=30, s-maxage=300").json({ categories: categories.map((entry) => ({ key: entry._id, label: String(entry._id).replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()), count: entry.count, image: entry.image || "" })) });
   } catch (error) { return res.status(500).json({ message: error.message }); }
 });
 
@@ -497,6 +446,7 @@ router.put(
   validateUploadedImages,
   async (req, res) => {
     let uploadedImages = [];
+    let saved = false;
     try {
 
       const product = await Product.findOne(sellerProductFilter(req, { _id: req.params.id }));
@@ -514,8 +464,13 @@ router.put(
       const previousVariants = product.variants?.length
         ? product.variants.map((variant) => ({ sku: variant.sku, size: variant.size, stock: variant.stock }))
         : product.sizeStock.map((item) => ({ sku: `${product.baseSku || product._id}-${item.size}`, size: item.size, stock: item.stock }));
+      const newImageColors = imageMetadata(req.body.newImageColors, "image colours");
+      const newImageSizes = imageMetadata(req.body.newImageSizes, "image options");
+      const requestedImages = req.body.existingImages !== undefined ? imageMetadata(req.body.existingImages, "existing images") : null;
+      const requestedOrder = req.body.imageOrder ? imageMetadata(req.body.imageOrder, "image order") : null;
       const fields = parseProductFields(req.body);
       if (!product.slug) product.slug = await createUniqueProductSlug(Product, fields.name, product._id);
+      Object.assign(product, fields);
       product.name = fields.name;
       product.price = fields.price;
       product.description = fields.description;
@@ -529,7 +484,7 @@ router.put(
       product.tags = fields.tags;
       product.status = isMarketplaceSeller(req.user) ? "draft" : fields.status;
       if (isMarketplaceSeller(req.user)) {
-        product.approvalStatus = "pending";
+        product.approvalStatus = fields.status === "draft" ? "not_required" : "pending";
         product.approvalNote = "";
         product.reviewedAt = null;
         product.reviewedBy = null;
@@ -547,7 +502,6 @@ router.put(
 
       let retainedImages = originalImages;
       if (req.body.existingImages !== undefined) {
-        const requestedImages = JSON.parse(req.body.existingImages || "[]");
         const originalById = new Map(
           originalImages.map((image) => [image.public_id, image])
         );
@@ -560,11 +514,7 @@ router.put(
       }
 
       if (req.files?.length) {
-        const results = await Promise.all(
-          req.files.map((file) => uploadToCloudinary(file.buffer))
-        );
-        const newImageColors = JSON.parse(req.body.newImageColors || "[]");
-        const newImageSizes = JSON.parse(req.body.newImageSizes || "[]");
+        const results = await uploadProductImages(req.files);
         uploadedImages = results.map((result, index) => ({
           url: result.secure_url,
           public_id: result.public_id,
@@ -575,7 +525,7 @@ router.put(
 
       let nextImages = [...retainedImages, ...uploadedImages];
       if (req.body.imageOrder) {
-        const imageOrder = JSON.parse(req.body.imageOrder);
+        const imageOrder = requestedOrder;
         const retainedById = new Map(
           retainedImages.map((image) => [image.public_id, image])
         );
@@ -597,7 +547,7 @@ router.put(
         });
       }
 
-      if (nextImages.length === 0) {
+      if (nextImages.length === 0 && fields.status !== "draft") {
         const imageError = new Error("At least one product image is required");
         imageError.status = 400;
         throw imageError;
@@ -609,10 +559,12 @@ router.put(
       }
 
       product.images = nextImages;
+      if (fields.status !== "draft") assertPublishable({ ...fields, images: nextImages });
 
 
       const updatedProduct =
         await product.save();
+      saved = true;
 
       const previousBySku = new Map(previousVariants.map((variant) => [variant.sku, variant]));
       const inventoryChanges = fields.variants
@@ -630,7 +582,7 @@ router.put(
             changedBy: req.user._id,
           };
         });
-      if (inventoryChanges.length) await InventoryLog.insertMany(inventoryChanges);
+      if (inventoryChanges.length) await InventoryLog.insertMany(inventoryChanges).catch((error) => console.error("Inventory history could not be recorded", error.message));
 
       const retainedIds = new Set(nextImages.map((image) => image.public_id));
       const removedImages = originalImages.filter(
@@ -646,7 +598,7 @@ router.put(
 
     } catch (error) {
 
-      if (uploadedImages.length > 0) {
+      if (!saved && uploadedImages.length > 0) {
         await Promise.allSettled(
           uploadedImages.map((image) => cloudinary.uploader.destroy(image.public_id))
         );

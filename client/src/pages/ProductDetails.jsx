@@ -23,7 +23,7 @@ function DiscoveryCard({ item }) {
         <img src={item.images?.[0]?.url || "/placeholder.png"} alt={item.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
       </div>
       <div className="p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-primary">{item.category?.replace(/-/g, " ") || "Kidswear"}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-primary">{item.category?.replace(/-/g, " ") || "Products"}</p>
         <h3 className="mt-2 line-clamp-2 min-h-12 font-semibold leading-6">{item.name}</h3>
         <div className="mt-3 flex items-center gap-2"><span className="text-lg font-bold text-brand-primary">₹{Number(item.price || 0).toLocaleString("en-IN")}</span>{Number(item.mrp) > Number(item.price) && <span className="text-sm text-gray-400 line-through">₹{Number(item.mrp).toLocaleString("en-IN")}</span>}</div>
       </div>
@@ -251,10 +251,10 @@ function ProductDetails() {
 
               {colorOptions.length > 0 && <div className="mt-8 border-t pt-7"><div className="flex items-center justify-between"><h2 className="font-semibold">Choose colour</h2><span className="text-sm text-gray-500">{selectedColor}</span></div><div className="mt-4 flex flex-wrap gap-3">{colorOptions.map((color) => { const preview = allImages.find((image) => image.color?.toLowerCase() === color.toLowerCase()) || allImages[0]; return <button key={color} type="button" onClick={() => { setSelectedColor(color); setSelectedSize(""); setSelectedImageIndex(0); }} className={`w-24 overflow-hidden rounded-xl border-2 bg-white text-left transition ${selectedColor === color ? "border-brand-primary shadow-md" : "border-gray-200 hover:border-brand-primary"}`}><img src={preview.url} alt={`${product.name} in ${color}`} className="h-24 w-full object-cover"/><span className="block truncate px-2 py-2 text-center text-xs font-semibold">{color}</span></button>; })}</div></div>}
 
-              <div className="mt-8 border-t pt-7">
+              {product.productType !== "simple" && <div className="mt-8 border-t pt-7">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-semibold">Select size</h2>
-                  <span className="text-sm text-gray-500">Age range</span>
+                  <h2 className="font-semibold">Select {product.optionLabel || "size"}</h2>
+                  <span className="text-sm text-gray-500">Product option</span>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3">
                   {sizeOptions.map((item) => (
@@ -263,8 +263,8 @@ function ProductDetails() {
                     </button>
                   ))}
                 </div>
-                {selectedSize && <p className={`mt-3 text-sm ${availableStock > 0 ? "text-green-700" : "text-red-600"}`}>{availableStock > 0 ? `${availableStock} available for this size` : "No more available in this size"}</p>}
-              </div>
+                {selectedSize && <p className={`mt-3 text-sm ${availableStock > 0 ? "text-green-700" : "text-red-600"}`}>{availableStock > 0 ? `${availableStock} available for this option` : "No more available in this option"}</p>}
+              </div>}
 
               <div className="mt-8 grid gap-3 sm:grid-cols-2">
                 <button type="button" onClick={addSelectedToCart} disabled={totalStock <= 0} className="w-full rounded-xl border-2 border-brand-primary bg-white py-4 text-lg font-semibold text-brand-primary transition hover:bg-green-50 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400">{totalStock > 0 ? "Add to bag" : "Out of stock"}</button>
@@ -283,7 +283,8 @@ function ProductDetails() {
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-semibold">Product details</h2>
               <p className="mt-5 whitespace-pre-line leading-8 text-gray-600">{product.description || "Beautifully designed kidswear focused on comfort and style."}</p>
-              <dl className="mt-7 grid gap-4 border-t pt-6 sm:grid-cols-3">{product.color && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Colour</dt><dd className="mt-1 font-medium">{product.color}</dd></div>}{product.fabric && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Fabric</dt><dd className="mt-1 font-medium">{product.fabric}</dd></div>}{product.ageGroup && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Age group</dt><dd className="mt-1 font-medium">{product.ageGroup}</dd></div>}</dl>
+              {product.specifications && <section className="mt-6"><h2 className="font-semibold">Specifications & features</h2><p className="mt-2 whitespace-pre-line text-sm leading-7 text-gray-600">{product.specifications}</p></section>}
+              <dl className="mt-7 grid gap-4 border-t pt-6 sm:grid-cols-3">{[["brand","Brand"],["modelNumber","Model"],["manufacturer","Manufacturer"],["countryOfOrigin","Country of origin"],["warranty","Warranty"],["packageContents","In the box"]].filter(([key]) => product[key]).map(([key,label]) => <div key={key}><dt className="text-xs uppercase tracking-wider text-gray-400">{label}</dt><dd className="mt-1 font-medium">{product[key]}</dd></div>)}{product.color && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Colour</dt><dd className="mt-1 font-medium">{product.color}</dd></div>}{product.fabric && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Fabric</dt><dd className="mt-1 font-medium">{product.fabric}</dd></div>}{product.ageGroup && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Age group</dt><dd className="mt-1 font-medium">{product.ageGroup}</dd></div>}</dl>
             </div>
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-2xl font-semibold">Care and assurance</h2>
