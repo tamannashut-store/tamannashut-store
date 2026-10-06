@@ -7,7 +7,7 @@ function AuthShell({ eyebrow, title, description, asideTitle, asideCopy, asideIt
         <div className="absolute -right-24 -top-24 h-64 w-64 rounded-full border border-white/10" />
         <p className="relative text-xs font-bold uppercase tracking-[.24em] text-white/55">Tamanna&apos;s Hut</p>
         <div className="relative py-16"><p className="text-xs font-bold uppercase tracking-[.24em] text-white/55">Secure customer account</p><h2 className="mt-4 font-serif text-5xl leading-tight">{asideTitle}</h2><p className="mt-5 max-w-sm leading-7 text-white/65">{asideCopy}</p>{asideItems.length > 0 && <ul className="mt-8 space-y-3 text-sm text-white/75">{asideItems.map((item) => <li key={item} className="flex items-center gap-3"><FiCheck /> {item}</li>)}</ul>}</div>
-        <p className="relative text-xs text-white/40">Comfort-first kidswear, thoughtfully delivered.</p>
+        <p className="relative text-xs text-white/40">Everyday discoveries, thoughtfully delivered.</p>
       </section>
       <section className="flex items-center justify-center p-5 sm:p-10 lg:p-14">
         <div className="w-full max-w-md">

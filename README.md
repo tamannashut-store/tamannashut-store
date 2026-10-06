@@ -1,6 +1,6 @@
 # Tamanna's Hut ecommerce platform
 
-Tamanna's Hut is a production ecommerce application for children's clothing. The repository contains the customer storefront, customer accounts and checkout, an administration centre, and isolated marketplace-seller workflows.
+Tamanna's Hut is a production ecommerce application with flexible product categories and inventory options. The repository contains the customer storefront, customer accounts and checkout, an administration centre, and isolated marketplace-seller workflows.
 
 ## Architecture
 

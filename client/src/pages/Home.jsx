@@ -17,12 +17,6 @@ import { productPath } from "../utils/productUrl";
 import { isCanceledRequest } from "../utils/retryRequest";
 import { useReloadOnPageResume } from "../utils/useReloadOnPageResume";
 
-const categories = [
-  { key: "girls", label: "Girls", copy: "Dresses and sets for celebrations and everyday moments." },
-  { key: "boys", label: "Boys", copy: "Comfortable, polished styles made for active days." },
-  { key: "new-arrivals", label: "New arrivals", copy: "The newest pieces added to our growing collection." },
-];
-
 function ProductCard({ product, onWishlist, campaignId }) {
   const mrp = Number(product.mrp || product.price);
   const price = Number(product.price);
@@ -38,7 +32,7 @@ function ProductCard({ product, onWishlist, campaignId }) {
         {campaignId && <span className="absolute bottom-3 left-3 z-10 rounded-full bg-white/95 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700 shadow-sm">Sponsored</span>}
       </div>
       <div className="p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{String(product.category || "Kidswear").replace("-", " ")}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{String(product.category || "Products").replace("-", " ")}</p>
         <h3 className="mt-2 line-clamp-2 min-h-12 text-lg font-semibold text-slate-900">{product.name}</h3>
         <div className="mt-3 flex items-baseline gap-2">
           <span className="text-xl font-bold text-[#183d2b]">₹{price.toLocaleString("en-IN")}</span>
@@ -54,6 +48,7 @@ function ProductCard({ product, onWishlist, campaignId }) {
 
 function Home() {
   const [products, setProducts] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -74,6 +69,12 @@ function Home() {
   useReloadOnPageResume(setReloadKey);
 
   useEffect(() => {
+    const controller = new AbortController();
+    fetch(`${import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL}/api/products/categories`, { signal: controller.signal }).then((response) => response.ok ? response.json() : {}).then((data) => setDepartments(Array.isArray(data.categories) ? data.categories : [])).catch(() => {});
+    return () => controller.abort();
+  }, [reloadKey]);
+
+  useEffect(() => {
     let active = true;
     fetch(`${import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL}/api/social/instagram`)
       .then((response) => response.ok ? response.json() : { posts: [] })
@@ -88,17 +89,14 @@ function Home() {
     return () => { active = false; };
   }, []);
 
-  const categoryCards = useMemo(() => categories.map((category) => ({
-    ...category,
-    image: products.find((product) => product.category === category.key)?.images?.[0]?.url || null,
-  })), [products]);
+  const categoryCards = useMemo(() => departments.length ? departments : [...new Set(products.map((product) => product.category).filter(Boolean))].map((key) => ({ key, label: key.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()), image: products.find((product) => product.category === key)?.images?.[0]?.url || null })), [products, departments]);
   const heroProducts = products.slice(0, 6);
 
   return (
     <>
       <Helmet>
-        <title>Tamanna&apos;s Hut | Premium Kidswear</title>
-        <meta name="description" content="Shop thoughtfully selected kidswear for girls and boys at Tamanna's Hut." />
+        <title>Tamanna&apos;s Hut | Discover Your Everyday</title>
+        <meta name="description" content="Discover products across our growing catalogue at Tamanna's Hut. Shop securely and track every order." />
         <link rel="canonical" href="https://www.tamannashut.com/" />
       </Helmet>
 
@@ -106,12 +104,12 @@ function Home() {
         <section className="border-b border-[#e7e3da]">
           <div className="mx-auto grid max-w-[1400px] items-center gap-10 px-5 py-10 md:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:py-16">
             <div className="max-w-xl py-6">
-              <p className="eyebrow">New season · Thoughtful essentials</p>
-              <h1 className="mt-5 font-serif text-4xl leading-[1.06] text-slate-950 sm:text-5xl md:text-6xl lg:text-7xl">Beautiful clothes for their biggest little moments.</h1>
-              <p className="mt-6 max-w-lg text-lg leading-8 text-slate-600">Comfort-first kidswear selected for quality, easy movement and celebrations worth remembering.</p>
+              <p className="eyebrow">Discover · Explore · Shop</p>
+              <h1 className="mt-5 font-serif text-4xl leading-[1.06] text-slate-950 sm:text-5xl md:text-6xl lg:text-7xl">Good finds for every part of your day.</h1>
+              <p className="mt-6 max-w-lg text-lg leading-8 text-slate-600">Explore our growing catalogue, find something you love and enjoy a simple shopping experience—all in one place.</p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link to="/shop" className="btn-primary">Shop the collection <FiArrowRight /></Link>
-                <Link to="/shop?category=new-arrivals" className="btn-secondary">See what&apos;s new</Link>
+                <Link to="/shop" className="btn-primary">Explore all products <FiArrowRight /></Link>
+                <Link to="/shop?sort=newest" className="btn-secondary">See what&apos;s new</Link>
               </div>
               <div className="mt-10 grid grid-cols-3 gap-4 border-t border-slate-200 pt-6 text-sm text-slate-600">
                 <span>Secure checkout</span><span>Easy returns</span><span>India-wide delivery</span>
@@ -119,7 +117,7 @@ function Home() {
             </div>
             <div className="min-w-0 overflow-hidden rounded-[2rem] bg-[radial-gradient(circle_at_75%_25%,#dce9df_0,#8dab96_65%,#52705b_100%)]">
               {heroProducts.length ? <Swiper modules={[Autoplay, Navigation, Pagination]} navigation pagination={{ clickable: true }} autoplay={{ delay: 4200, disableOnInteraction: false }} loop={heroProducts.length > 1} className="commerce-slider hero-slider h-[480px] lg:h-[620px]">
-                {heroProducts.map((product, index) => <SwiperSlide key={product._id}><Link to={productPath(product)} className="relative block h-full"><img src={optimizedImage(product.images?.[0]?.url, 900)} srcSet={imageSrcSet(product.images?.[0]?.url)} sizes="(min-width: 1024px) 55vw, 100vw" alt={product.name} width="900" height="1125" loading={index === 0 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10"><p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p><h2 className="mt-2 font-serif text-3xl md:text-4xl">{product.name}</h2><p className="mt-2 text-lg">From ₹{Number(product.price).toLocaleString("en-IN")}</p></div></Link></SwiperSlide>)}
+                {heroProducts.map((product, index) => <SwiperSlide key={product._id}><Link to={productPath(product)} className="relative block h-full"><img src={optimizedImage(product.images?.[0]?.url, 900)} srcSet={imageSrcSet(product.images?.[0]?.url)} sizes="(min-width: 1024px) 55vw, 100vw" alt={product.name} width="900" height="1125" loading={index === 0 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" className="h-full w-full object-contain p-6"/><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"/><div className="absolute inset-x-0 bottom-0 p-7 text-white md:p-10"><p className="text-xs font-semibold uppercase tracking-[0.22em]">Featured now</p><h2 className="mt-2 font-serif text-3xl md:text-4xl">{product.name}</h2><p className="mt-2 text-lg">From ₹{Number(product.price).toLocaleString("en-IN")}</p></div></Link></SwiperSlide>)}
               </Swiper> : <Link to="/shop" className="flex h-[480px] items-end p-8 text-white lg:h-[620px]"><div><p className="text-xs font-semibold uppercase tracking-[0.22em]">Tamanna&apos;s Hut</p><h2 className="mt-3 font-serif text-4xl">Our collection is being prepared</h2></div></Link>}
             </div>
           </div>
@@ -127,15 +125,15 @@ function Home() {
 
         <section className="mx-auto max-w-[1400px] px-5 py-14 sm:py-20 md:px-8">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-            <div><p className="eyebrow">Shop their world</p><h2 className="mt-3 font-serif text-4xl text-slate-950 md:text-5xl">Made for every moment</h2></div>
+            <div><p className="eyebrow">Browse by category</p><h2 className="mt-3 font-serif text-4xl text-slate-950 md:text-5xl">Find your next favourite</h2></div>
             <Link to="/shop" className="inline-flex items-center gap-2 font-semibold text-[#183d2b]">View all products <FiArrowRight /></Link>
           </div>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
+          <div className="mt-8 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             {categoryCards.map((category) => (
-              <Link key={category.key} to={`/shop?category=${category.key}`} className="group relative min-h-[420px] overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#dbe8dd,#879e8d)]">
+              <Link key={category.key} to={`/shop?category=${encodeURIComponent(category.key)}`} className="group relative min-h-[240px] overflow-hidden rounded-2xl bg-[linear-gradient(145deg,#dbe8dd,#879e8d)]">
                 {category.image && <img src={optimizedImage(category.image, 640)} srcSet={imageSrcSet(category.image, [360, 640, 900])} sizes="(min-width: 768px) 33vw, 100vw" alt={`${category.label} collection`} loading="lazy" decoding="async" width="640" height="800" className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-7 text-white"><h3 className="font-serif text-3xl">{category.label}</h3><p className="mt-2 max-w-xs text-sm leading-6 text-white/80">{category.copy}</p></div>
+                <div className="absolute inset-x-0 bottom-0 p-7 text-white"><h3 className="text-xl font-semibold">{category.label}</h3><p className="mt-2 max-w-xs text-sm leading-6 text-white/80">{category.count ? `${category.count} products` : "Explore the collection"}</p></div>
               </Link>
             ))}
           </div>
@@ -161,7 +159,7 @@ function Home() {
 
         <section className="bg-[#183d2b] text-white">
           <div className="mx-auto flex max-w-[1400px] flex-col justify-between gap-8 px-5 py-16 md:flex-row md:items-center md:px-8">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">Need help choosing?</p><h2 className="mt-3 font-serif text-4xl">Talk to our team before you order.</h2><p className="mt-3 text-white/70">Sizing, availability or delivery—we&apos;re happy to help.</p></div>
+            <div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">Need help choosing?</p><h2 className="mt-3 font-serif text-4xl">Talk to our team before you order.</h2><p className="mt-3 text-white/70">Product details, availability or delivery—we&apos;re happy to help.</p></div>
             <Link to="/contact" className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-[#183d2b]">Contact us <FiArrowRight /></Link>
           </div>
         </section>

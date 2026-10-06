@@ -1,0 +1,1 @@
+export const generalListingDefaults = { productType: "variable", optionLabel: "Size", brand: "", modelNumber: "", manufacturer: "", countryOfOrigin: "", subcategory: "", specifications: "", warranty: "", packageContents: "", gstMode: "", gstRate: "", weightKg: "", lengthCm: "", widthCm: "", heightCm: "" };

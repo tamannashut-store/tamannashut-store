@@ -3,6 +3,17 @@ const normalizeState = (value) => String(value || "").trim().toLowerCase().repla
 
 export const gstRateForApparelUnit = (unitTransactionValue) => Number(unitTransactionValue || 0) <= 2500 ? 5 : 18;
 
+export const gstRateForProduct = (product, value) => {
+  if (product.gstMode === "custom") {
+    const rate = Number(product.gstRate);
+    if (product.gstRate == null || !Number.isFinite(rate) || rate < 0 || rate > 100) {
+      throw Object.assign(new Error("This product's GST rate needs confirmation before checkout"), { status: 409 });
+    }
+    return rate;
+  }
+  return gstRateForApparelUnit(value);
+};
+
 export const calculateApparelGst = (order) => {
   const products = Array.isArray(order.products) ? order.products : [];
   const itemSubtotal = Number(order.subtotal ?? products.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0), 0));
@@ -15,7 +26,7 @@ export const calculateApparelGst = (order) => {
     const inclusiveValue = gross * (1 - discountRatio);
     const unitTransactionValue = qty ? inclusiveValue / qty : 0;
     const storedRate = Number(item.gstRate);
-    const rate = [5, 18].includes(storedRate) ? storedRate : gstRateForApparelUnit(unitTransactionValue);
+    const rate = item.gstRate != null && Number.isFinite(storedRate) && storedRate >= 0 && storedRate <= 100 ? storedRate : gstRateForApparelUnit(unitTransactionValue);
     const taxable = inclusiveValue / (1 + rate / 100);
     const tax = inclusiveValue - taxable;
     return { ...item, hsnCode: String(item.hsnCode || "").trim(), rate, gross, inclusiveValue, taxable, tax };

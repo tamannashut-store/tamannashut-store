@@ -14,7 +14,7 @@ export const productStructuredData = (product, path, images = []) => ({
   description: product.description,
   ...(product.baseSku ? { sku: product.baseSku } : {}),
   ...(product.category ? { category: product.category } : {}),
-  brand: { "@type": "Brand", name: "Tamanna's Hut" },
+  brand: { "@type": "Brand", name: product.brand || "Tamanna's Hut" },
   offers: {
     "@type": "Offer",
     url: `${SITE_URL}${path}`,

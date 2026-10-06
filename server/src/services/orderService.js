@@ -8,7 +8,7 @@ import { sendEmail } from "../utils/sendEmail.js";
 import { adminNewOrderEmailTemplate, orderEmailTemplate } from "../utils/emailTemplates.js";
 import { sendWhatsApp } from "../utils/sendWhatsApp.js";
 import { nextInvoiceNumber } from "../utils/invoiceNumber.js";
-import { gstRateForApparelUnit } from "../utils/gst.js";
+import { gstRateForProduct } from "../utils/gst.js";
 import { storefrontProductFilter } from "../utils/productVisibility.js";
 import { groupSellerLines, syncOrderSettlementsSafely } from "./sellerSettlementService.js";
 import crypto from "crypto";
@@ -77,8 +77,8 @@ export const calculateCart = async (items, couponCode = "", context = {}) => {
   const lines = normalized.map((item) => {
     const product = productById.get(item.productId);
     if (!product) throw Object.assign(new Error("A product in your cart is no longer available"), { status: 409 });
-    const variant = product.variants?.find((entry) => (item.selectedSku ? entry.sku === item.selectedSku : entry.size === item.selectedSize) && entry.active !== false);
-    const sizeData = variant || product.sizeStock?.find((entry) => entry.size === item.selectedSize);
+    const variant = product.variants?.find((entry) => (item.selectedSku ? entry.sku === item.selectedSku : entry.size === item.selectedSize) && entry.size === item.selectedSize && entry.active !== false);
+    const sizeData = product.variants?.length ? variant : product.sizeStock?.find((entry) => entry.size === item.selectedSize);
     if (!sizeData || Number(sizeData.stock) < item.qty) {
       throw Object.assign(new Error(`${product.name} (${item.selectedSize}) has insufficient stock`), { status: 409 });
     }
@@ -94,6 +94,12 @@ export const calculateCart = async (items, couponCode = "", context = {}) => {
       selectedColor: variant?.color || "",
       sku: variant?.sku || "",
       hsnCode: product.hsnCode || "",
+      optionLabel: product.optionLabel || "Size",
+      brand: product.brand || "",
+      weightKg: product.weightKg ?? null,
+      lengthCm: product.lengthCm ?? null,
+      widthCm: product.widthCm ?? null,
+      heightCm: product.heightCm ?? null,
       image: image?.url || "",
       lineTotal: money(price * item.qty),
     };
@@ -131,7 +137,7 @@ export const calculateCart = async (items, couponCode = "", context = {}) => {
   }
   const discountRatio = subtotal > 0 ? discount / subtotal : 0;
   lines.forEach((line) => {
-    line.gstRate = gstRateForApparelUnit(line.price * (1 - discountRatio));
+    line.gstRate = gstRateForProduct(productById.get(String(line._id)), line.price * (1 - discountRatio));
   });
 
   return {
