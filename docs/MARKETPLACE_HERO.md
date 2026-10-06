@@ -1,0 +1,7 @@
+# Marketplace homepage image
+
+Generated with the built-in imagegen tool for the expanded homepage. The image is decorative campaign photography and is not a product listing. The final compressed asset is `client/src/assets/marketplace-hero.jpg` (1536 × 1024 pixels, approximately 260 KB).
+
+## Generation prompt
+
+Use case: ads-marketing. Create a premium editorial still-life photograph for the hero of Tamanna's Hut, an Indian general marketplace expanding across everyday categories. Landscape composition about 3:2, no text, no logo, no people. A thoughtfully composed collection of unbranded everyday objects: sculptural cream ceramic mug and bowl, sage green insulated bottle, charcoal wireless over-ear headphones, two simple linen-bound books, tan canvas tote bag, amber glass skincare bottle, small leafy plant. All objects physically plausible and clearly separated; balanced varied heights on softly rounded cream and warm stone plinths. Warm ivory backdrop with subtle sage green architectural arch, natural sunlight from upper left, soft realistic shadows, tactile materials, sophisticated ecommerce campaign photography, restrained olive, terracotta and cream palette. Fill frame elegantly, ample breathing space around objects, crisp product shapes. This is a decorative concept banner, not a catalogue listing. Avoid fashion models, clothing storefront, fake product labels, lettering, price labels, sale text, watermarks, collage borders.

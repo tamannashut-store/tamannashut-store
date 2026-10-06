@@ -124,6 +124,18 @@ test("marketplace home keeps product photos fully visible and offers direct sear
   await expect(page).toHaveURL(/\/shop\?search=steel%20bottle/);
 });
 
+test("expanded homepage keeps budget browsing and seller onboarding usable on mobile", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await expect(page.getByRole("region", { name: "Shopping support" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Sell with us" }).getByRole("link", { name: "Apply to become a seller" })).toHaveAttribute("href", "/seller/register");
+  const budget = page.getByRole("region", { name: "Shop by budget" });
+  await budget.getByRole("link", { name: /Under ₹499/ }).click();
+  await expect(page).toHaveURL(/\/shop\?maxPrice=499/);
+  await expect(page.getByPlaceholder("Max ₹")).toHaveValue("499");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+});
+
 test("owner can save a private name-only product draft", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", isAdmin: true } })));
   let saved = false;
