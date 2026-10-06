@@ -21,6 +21,9 @@ test("auth throttling targets public credential endpoints only", () => {
   assert.equal(isRateLimitedAuthRequest("POST", "/phone-verification/send"), true);
   assert.equal(isRateLimitedAuthRequest("POST", "/phone-verification/check"), true);
   assert.equal(isRateLimitedAuthRequest("POST", "/seller-invitations/token/accept"), true);
+  assert.equal(isRateLimitedAuthRequest("POST", "/seller-applications"), true);
+  assert.equal(isRateLimitedAuthRequest("POST", "/seller-application/email/send"), true);
+  assert.equal(isRateLimitedAuthRequest("POST", "/seller-application/email/check"), true);
   assert.equal(isRateLimitedAuthRequest("GET", "/seller/profile"), false);
   assert.equal(isRateLimitedAuthRequest("PUT", "/change-password"), false);
   assert.equal(isRateLimitedAuthRequest("POST", "/seller-invitations"), false);

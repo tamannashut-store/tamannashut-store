@@ -1,6 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FiUserPlus } from "react-icons/fi";
 import toast from "react-hot-toast";
 import AuthShell from "../components/AuthShell";
@@ -8,7 +8,8 @@ import { startCustomerSession } from "../utils/customerSession";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [channel, setChannel] = useState("phone");
+  const [searchParams] = useSearchParams();
+  const [channel, setChannel] = useState(searchParams.get("channel") === "email" ? "email" : "phone");
   const [contact, setContact] = useState("");
   const [name, setName] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);

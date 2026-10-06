@@ -110,3 +110,21 @@ test('mobile-only refund requests remain in the account without attempting an em
   const {notifyRefundDetails}=await import('../server/src/services/refundDetailsNotification.js');
   const result=await notifyRefundDetails({_id:'66aa11bb22cc33dd44ee55ff',status:'Refund Pending',paymentMethod:'COD',paymentStatus:'Paid',refund:{}},{model:{findOneAndUpdate:()=>{throw new Error('Email should not be claimed');}},send:()=>{throw new Error('No email should be sent');}});assert.deepEqual(result,{sent:false,skipped:true});
 });
+
+
+test('mobile-only customers can attach a verified email without replacing their account',async()=>{
+  const user={_id:'66aa11bb22cc33dd44ee55ff',accountType:'customer',sessionVersion:0,phone:'+919876543210'};const f=fixture([user]);
+  const r=await send(f,{purpose:'link-email',channel:'email',contact:emailSignup.contact},user);assert.equal(r.statusCode,200);
+  const result=await check(f,r.body.challengeToken,f.code(),user,'link-email');assert.equal(result.statusCode,200);
+  assert.equal(f.users.length,1);assert.equal(f.users[0]._id,user._id);assert.equal(f.users[0].phone,user.phone);assert.equal(f.users[0].email,emailSignup.contact);assert.ok(f.users[0].emailVerifiedAt);
+  assert.equal((await check(f,r.body.challengeToken,f.code(),user,'link-email')).statusCode,400);
+});
+
+test('email linking rejects unauthenticated, wrong-account, reused-contact and existing-email requests',async()=>{
+  const user={_id:'customer-one',accountType:'customer',sessionVersion:0};const f=fixture([user]);const request={purpose:'link-email',channel:'email',contact:emailSignup.contact};
+  assert.equal((await send(f,request)).statusCode,403);
+  const r=await send(f,request,user);assert.equal((await check(f,r.body.challengeToken,f.code(),{_id:'other'},'link-email')).statusCode,400);
+  assert.equal((await check(f,r.body.challengeToken,f.code(),user,'login')).statusCode,400);
+  const taken=fixture([user,{_id:'another',email:emailSignup.contact}]);assert.equal((await send(taken,request,user)).statusCode,409);
+  assert.equal((await send(f,request,{...user,email:'existing@example.com'})).statusCode,403);
+});

@@ -183,10 +183,12 @@ test("storefront renders catalogue data without horizontal overflow", async ({ p
   expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 });
 
-test("seller registration is invitation-only", async ({ page }) => {
+test("public seller applications start with verified email sign-in", async ({ page }) => {
   await page.goto("/seller/register");
-  await expect(page.getByRole("heading", { name: "Invitation required" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to seller sign in" })).toHaveAttribute("href", "/admin-login");
+  await expect(page.getByRole("heading", { name: "Sell on Tamanna's Hut" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Create an account with email" })).toHaveAttribute("href", "/register?channel=email");
+  await page.getByRole("link", { name: "Sign in with an email code" }).click();
+  expect(await page.evaluate(() => sessionStorage.getItem("redirectAfterLogin"))).toBe("/seller/register");
 });
 
 test("store owner can open the seller invitation workspace", async ({ page }) => {
@@ -704,4 +706,53 @@ test('admin can view submitted customer refund details after the refund is recor
   await page.route('**/api/orders',route=>route.fulfill({json:[order]}));
   await page.route(`**/api/orders/refund-details/${order._id}/admin`,route=>route.fulfill({json:{submitted:true,submittedAt:'2026-10-06',details:{method:'UPI',holderName:'Test Parent',upiId:'test@bank'}}}));
   await page.goto('/admin/orders');await page.getByRole('button',{name:/Test Customer/}).click();await page.getByRole('button',{name:'View customer refund details'}).click();await expect(page.getByText('test@bank',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Retry request email'})).toHaveCount(0);
+});
+
+
+test("existing customer invitation requires matching account sign-in", async ({ page }) => {
+  await page.route("**/api/auth/seller-invitations/test-invitation", route => route.fulfill({ json: { email: "test@example.com", existingAccount: true } }));
+  await page.goto("/seller/register/test-invitation");
+  await expect(page.getByText(/Sign in to the customer account for/)).toBeVisible();
+  await page.getByRole("link", { name: "Sign in with an email code" }).click();
+  expect(await page.evaluate(() => sessionStorage.getItem("redirectAfterLogin"))).toBe("/seller/register/test-invitation");
+});
+
+test("verified customer can submit a public seller application using the existing account", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user", accountType: "customer" } })));
+  await page.route("**/api/auth/seller-application/account", route => route.fulfill({ json: { id: "test-user", name: "Test Seller", email: "test@example.com", emailVerified: true, accountType: "customer", passwordLoginEnabled: false } }));
+  let submitted;
+  await page.route("**/api/auth/seller-applications", async route => { submitted = route.request().postDataJSON(); expect(route.request().headers().authorization).toBe("Bearer safe-local-token"); await route.fulfill({ status: 201, json: { message: "Submitted" } }); });
+  await page.goto("/seller/register");
+  await expect(page.getByRole("heading", { name: "Apply to become a seller" })).toBeVisible();
+  for (const [label, value] of [["Business phone", "9876543210"], ["Seller Centre password", "SellerSecure42"], ["Confirm password", "SellerSecure42"], ["Legal business name", "Example Business"], ["Trade / storefront name", "Example Store"], ["Authorised signatory", "Test Seller"], ["GSTIN", "19ABCDE1234F1Z5"], ["PAN", "ABCDE1234F"], ["Registered address", "123 Example Road"], ["City", "Howrah"], ["State", "West Bengal"], ["Pincode", "711310"], ["Account holder name", "Test Seller"], ["IFSC code", "ABCD0123456"], ["Account number", "1234567890"], ["Confirm account number", "1234567890"]]) await page.getByLabel(label, { exact: true }).fill(value);
+  await page.getByLabel("Business constitution", { exact: true }).selectOption("proprietorship");
+  await page.getByLabel("Account type", { exact: true }).selectOption("savings");
+  await page.getByRole("checkbox", { name: /I checked the GSTIN/ }).check();
+  await page.getByRole("checkbox", { name: /The settlement bank account/ }).check();
+  await page.getByRole("checkbox", { name: /I accept the seller terms/ }).check();
+  await page.getByRole("button", { name: "Submit seller application" }).click();
+  await expect(page.getByRole("heading", { name: "Application submitted" })).toBeVisible();
+  expect(submitted.termsAccepted).toBe(true);
+  expect(await page.evaluate(() => localStorage.getItem("user"))).toBeNull();
+});
+
+test("password customers confirm their existing password when applying", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user", accountType: "customer" } })));
+  await page.route("**/api/auth/seller-application/account", route => route.fulfill({ json: { id: "test-user", name: "Test Seller", email: "test@example.com", emailVerified: true, accountType: "customer", passwordLoginEnabled: true } }));
+  await page.goto("/seller/register");
+  await expect(page.getByLabel("Existing account password", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Confirm password", { exact: true })).toHaveCount(0);
+});
+
+test("mobile-only customer verifies an email before seeing the business application", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user", accountType: "customer" } })));
+  await page.route("**/api/auth/seller-application/account", route => route.fulfill({ json: { id: "test-user", name: "Test Seller", accountType: "customer", passwordLoginEnabled: false } }));
+  await page.route("**/api/auth/seller-application/email/send", route => route.fulfill({ json: { challengeToken: "email-link-test" } }));
+  await page.route("**/api/auth/seller-application/email/check", route => route.fulfill({ json: { token: "safe-linked-token", user: { id: "test-user", name: "Test Seller", email: "test@example.com", emailVerified: true, accountType: "customer", passwordLoginEnabled: false } } }));
+  await page.goto("/seller/register");
+  await page.getByLabel("Email address", { exact: true }).fill("test@example.com");
+  await page.getByRole("button", { name: "Send email code" }).click();
+  await page.getByLabel("Email verification code", { exact: true }).fill("123456");
+  await page.getByRole("button", { name: "Verify email", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Apply to become a seller" })).toBeVisible();
 });
