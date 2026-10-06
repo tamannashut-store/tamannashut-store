@@ -1,3 +1,4 @@
+import ProductRating from "../components/ProductRating";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useSearchParams } from "react-router-dom";
@@ -236,7 +237,7 @@ function Shop() {
                           <h2 className="mt-2 line-clamp-2 text-xl font-bold">{product.name}</h2>
                           <div className="mt-3 flex items-center justify-between">
                             <div><p className="text-xl font-bold text-brand-primary">₹{Number(product.price).toLocaleString("en-IN")}</p>{Number(product.mrp) > Number(product.price) && <p className="text-xs text-gray-400"><span className="line-through">₹{Number(product.mrp).toLocaleString("en-IN")}</span><span className="ml-1 font-semibold text-green-700">{Math.round((1 - Number(product.price) / Number(product.mrp)) * 100)}% off</span></p>}</div>
-                            <p className="text-sm text-amber-600">★ {Number(product.averageRating || 0).toFixed(1)}</p>
+                            <ProductRating product={product} />
                           </div>
                           <Link to={productPath(product)} className="mt-5 block rounded-full bg-brand-primary py-3 text-center font-medium text-white transition hover:bg-[#2d4d33]">View product</Link>
                         </div>

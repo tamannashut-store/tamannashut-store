@@ -132,7 +132,7 @@ router.get("/placements/:placement", async (req, res) => {
   try {
     const placement = String(req.params.placement || ""); if (!placements.has(placement)) return res.status(404).json({ message: "Placement not found" });
     await AdCampaign.updateMany({ status: { $in: ["active", "paused"] }, endsAt: { $lte: new Date() } }, { $set: { status: "completed" } });
-    const campaigns = await AdCampaign.find({ status: "active", placement, startsAt: { $lte: new Date() }, endsAt: { $gt: new Date() } }).sort({ impressions: 1, createdAt: 1 }).limit(8).populate({ path: "productId", match: storefrontProductFilter(), select: "name slug images price mrp category averageRating variants sizeStock" }).lean();
+    const campaigns = await AdCampaign.find({ status: "active", placement, startsAt: { $lte: new Date() }, endsAt: { $gt: new Date() } }).sort({ impressions: 1, createdAt: 1 }).limit(8).populate({ path: "productId", match: storefrontProductFilter(), select: "name slug images price mrp category averageRating approvedReviewCount variants sizeStock" }).lean();
     const visible = campaigns.filter((item) => item.productId);
     if (visible.length) await AdCampaign.updateMany({ _id: { $in: visible.map((item) => item._id) } }, { $inc: { impressions: 1 } });
     res.set("Cache-Control", "public, max-age=20, s-maxage=60");

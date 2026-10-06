@@ -15,6 +15,7 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { productPath } from "../utils/productUrl";
 import { productStructuredData } from "../utils/productStructuredData";
+import ProductRating from "../components/ProductRating";
 import DeliveryInformation from "../components/DeliveryInformation";
 
 function DiscoveryCard({ item }) {
@@ -25,7 +26,7 @@ function DiscoveryCard({ item }) {
       </div>
       <div className="p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-brand-primary">{item.category?.replace(/-/g, " ") || "Products"}</p>
-        <h3 className="mt-2 line-clamp-2 min-h-12 font-semibold leading-6">{item.name}</h3>
+        <h3 className="mt-2 line-clamp-2 min-h-12 font-semibold leading-6">{item.name}</h3><ProductRating product={item} className="mt-2" />
         <div className="mt-3 flex items-center gap-2"><span className="text-lg font-bold text-brand-primary">₹{Number(item.price || 0).toLocaleString("en-IN")}</span>{Number(item.mrp) > Number(item.price) && <span className="text-sm text-gray-400 line-through">₹{Number(item.mrp).toLocaleString("en-IN")}</span>}</div>
       </div>
     </Link>
@@ -80,6 +81,7 @@ function ProductDetails() {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`, { signal });
       if (signal?.aborted) return;
+      if (!data || typeof data !== "object" || !data._id || !data.name || !Number.isFinite(Number(data.price))) throw new Error("Invalid product response");
       const requested = new URLSearchParams(window.location.search);
       setProduct(data);
       if (data.slug && id !== data.slug) window.history.replaceState(window.history.state, "", `${productPath(data)}${window.location.search}`);
@@ -94,7 +96,7 @@ function ProductDetails() {
         const stored = JSON.parse(localStorage.getItem("recently_viewed_products") || "[]");
         const previous = Array.isArray(stored) ? stored.filter((item) => item?._id && item._id !== data._id) : [];
         setRecentlyViewed(previous.slice(0, 8));
-        const compactProduct = { _id: data._id, slug: data.slug, name: data.name, price: data.price, mrp: data.mrp, category: data.category, images: data.images?.slice(0, 1) || [] };
+        const compactProduct = { _id: data._id, slug: data.slug, name: data.name, price: data.price, mrp: data.mrp, category: data.category, averageRating: data.averageRating, approvedReviewCount: data.approvedReviewCount, images: data.images?.slice(0, 1) || [] };
         localStorage.setItem("recently_viewed_products", JSON.stringify([compactProduct, ...previous].slice(0, 8)));
       } catch {
         setRecentlyViewed([]);
@@ -243,16 +245,13 @@ function ProductDetails() {
               </div>
             </section>
 
-            <section className="h-fit rounded-3xl border bg-white p-6 shadow-sm md:p-8 lg:sticky lg:top-6">
+            <section className="min-w-0 h-fit rounded-3xl border bg-white p-6 shadow-sm md:p-8 lg:sticky lg:top-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">{product.category?.replace(/-/g, " ")}</p>
                 <span className={`rounded-full px-3 py-1 text-xs font-medium ${totalStock > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{totalStock > 0 ? "In stock" : "Out of stock"}</span>
               </div>
               <h1 className="mt-4 text-3xl font-bold leading-tight md:text-4xl">{product.name}</h1>
-              <div className="mt-4 flex items-center gap-3">
-                {product.reviews?.length > 0 && <span className="rounded-lg bg-green-700 px-2.5 py-1 text-sm font-semibold text-white">★ {Number(product.averageRating || 0).toFixed(1)}</span>}
-                <a href="#reviews" className="text-sm text-gray-500 underline">{product.reviews?.length ? `${product.reviews.length} reviews` : "No reviews yet"}</a>
-              </div>
+              <a href="#reviews" className="mt-4 block w-fit hover:underline"><ProductRating product={product} /></a>
               <div className="mt-6 flex flex-wrap items-end gap-3"><p className="text-4xl font-bold text-brand-primary">₹{selectedPrice.toLocaleString("en-IN")}</p>{Number(product.mrp) > selectedPrice && <><p className="pb-1 text-lg text-gray-400 line-through">₹{Number(product.mrp).toLocaleString("en-IN")}</p><span className="mb-1 rounded-full bg-green-50 px-2.5 py-1 text-sm font-semibold text-green-700">{Math.round((1 - selectedPrice / Number(product.mrp)) * 100)}% off</span></>}</div>
               <p className="mt-2 text-sm text-gray-500">Inclusive of all taxes</p>
 

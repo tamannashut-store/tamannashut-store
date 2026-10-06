@@ -100,6 +100,37 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
+test("approved ratings and review counts appear on home, shop, wishlist and recommendations", async ({ page }) => {
+  const rated = { ...product, averageRating: 4.6, approvedReviewCount: 8 };
+  await page.route(/\/api\/products(?:\?.*)?$/, route => route.fulfill({ json: { products: [rated], totalProducts: 1 } }));
+  await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: rated }));
+  await page.goto("/");
+  const featured = page.getByRole("region", { name: "Featured products" });
+  await expect(featured.getByText("4.6", { exact: true })).toBeVisible();
+  await expect(featured.getByText("(8 reviews)", { exact: true })).toBeVisible();
+  await featured.getByRole("button", { name: `Save ${product.name}` }).click();
+  await page.goto("/wishlist");
+  await expect(page.getByText("(8 reviews)", { exact: true })).toBeVisible();
+  await page.goto("/shop");
+  await expect(page.getByText("4.6", { exact: true })).toBeVisible();
+  await page.goto(`/product/${product.slug}`);
+  await expect(page.getByRole("link", { name: "Rated 4.6 out of 5 from 8 approved reviews" })).toHaveAttribute("href", "#reviews");
+  const other = { ...rated, _id: "related-rated", slug: "related-rated", name: "Reviewed recommendation" };
+  await page.route(`**/api/products/${product._id}/related`, route => route.fulfill({ json: { products: [other] } }));
+  await page.reload();
+  await expect(page.getByRole("link", { name: /Reviewed recommendation/ }).filter({ visible: true }).getByText("(8 reviews)", { exact: true })).toBeVisible();
+});
+
+test("unreviewed listings never show an invented zero-star or cached rating", async ({ page }) => {
+  await page.route(/\/api\/products(?:\?.*)?$/, route => route.fulfill({ json: { products: [{ ...product, averageRating: 5, approvedReviewCount: 0 }], totalProducts: 1 } }));
+  await page.goto("/");
+  await expect(page.getByRole("region", { name: "Featured products" }).getByText("No reviews yet", { exact: true })).toBeVisible();
+  await page.goto("/shop");
+  await expect(page.getByText("No reviews yet", { exact: true })).toBeVisible();
+  await expect(page.getByText("0.0", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("5.0", { exact: true })).toHaveCount(0);
+});
+
 test("product purchase uses active SKU stock and requires a deliberate option choice", async ({ page }) => {
   const item = { ...product, optionLabel: "Capacity", sizeStock: [], variants: [{ sku: "ONE-LITRE", size: "1 litre", price: 449, stock: 1, color: "" }, { sku: "HIDDEN", size: "2 litres", price: 599, stock: 9, active: false }] };
   await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: item }));
