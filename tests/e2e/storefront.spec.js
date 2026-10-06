@@ -100,6 +100,112 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
+test("product purchase uses active SKU stock and requires a deliberate option choice", async ({ page }) => {
+  const item = { ...product, optionLabel: "Capacity", sizeStock: [], variants: [{ sku: "ONE-LITRE", size: "1 litre", price: 449, stock: 1, color: "" }, { sku: "HIDDEN", size: "2 litres", price: 599, stock: 9, active: false }] };
+  await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: item }));
+  await page.goto(`/product/${product.slug}`);
+  await expect(page.getByText("In stock", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "2 litres", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Add to bag", exact: true }).click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]").length)).toBe(0);
+  await page.getByRole("button", { name: "1 litre", exact: true }).click();
+  await page.getByRole("button", { name: "Add to bag", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]")[0]?.price)).toBe(449);
+  await expect(page.getByRole("button", { name: "Add to bag", exact: true })).toBeDisabled();
+});
+
+test("product navigation failure clears the previous product and supports retry", async ({ page }) => {
+  const next = { ...product, _id: "next-product", slug: "next-product", name: "Next product" };
+  let failed = true;
+  await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: product }));
+  await page.route(`**/api/products/${product._id}/related`, route => route.fulfill({ json: { products: [next] } }));
+  await page.route("**/api/products/next-product", route => route.fulfill(failed ? { status: 503, json: { message: "Unavailable" } } : { json: next }));
+  await page.goto(`/product/${product.slug}`);
+  await page.getByRole("link", { name: /Next product/ }).filter({ visible: true }).click();
+  await expect(page.getByRole("heading", { name: "Product unavailable" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: product.name, exact: true })).toHaveCount(0);
+  failed = false;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByRole("heading", { name: next.name, exact: true })).toBeVisible();
+});
+
+test("mobile product page checks prepaid and COD delivery and clears stale results", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user" } })));
+  await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: product }));
+  let modes = [];
+  await page.route("**/api/logistics/postcode/**", route => { const url = new URL(route.request().url()); modes.push(url.searchParams.get("cod")); return route.fulfill({ json: { pincode: "711310", city: "Howrah", state: "West Bengal", serviceable: true } }); });
+  await page.goto(`/product/${product.slug}`);
+  const delivery = page.getByRole("region", { name: "Delivery and returns" });
+  await delivery.getByLabel("Check delivery to your pincode").fill("711310");
+  await delivery.getByRole("button", { name: "Check", exact: true }).click();
+  await expect(delivery.getByRole("status")).toContainText("Prepaid delivery available to Howrah");
+  await delivery.getByLabel("Check cash on delivery availability").check();
+  await expect(delivery.getByRole("status")).toHaveCount(0);
+  await delivery.getByRole("button", { name: "Check", exact: true }).click();
+  await expect(delivery.getByRole("status")).toContainText("Cash on delivery available");
+  expect(modes).toEqual(["0", "1"]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+  await expect(page.getByRole("img", { name: `${product.name} view 1` })).toHaveCSS("object-fit", "contain");
+});
+
+test("failed customer order loading shows retry instead of an empty purchase history", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user" } })));
+  let failed = true;
+  await page.route("**/api/orders/my-orders", route => route.fulfill(failed ? { status: 503, json: { message: "Unavailable" } } : { json: [codOrder] }));
+  await page.goto("/my-orders");
+  await expect(page.getByRole("alert")).toContainText("couldn't load your orders");
+  await expect(page.getByRole("heading", { name: "No orders yet" })).toHaveCount(0);
+  failed = false;
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByText("Cash on delivery · Payment pending")).toBeVisible();
+});
+
+test("customer return journey displays review, reverse tracking and refund completion", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user" } })));
+  let order = { ...codOrder, status: "Delivered", paymentStatus: "Paid", statusHistory: [{ status: "Delivered", createdAt: new Date().toISOString() }] };
+  await page.route("**/api/orders/my-orders", route => route.fulfill({ json: [order] }));
+  await page.route(`**/api/orders/return/${order._id}`, route => { expect(route.request().postData()).toContain("The item arrived damaged"); order = { ...order, status: "Return Requested", returnRequest: { reason: "The item arrived damaged", reviewStatus: "Pending" } }; return route.fulfill({ json: { success: true, order } }); });
+  await page.goto("/my-orders");
+  await page.getByRole("button", { name: "Request return", exact: true }).click();
+  await page.getByLabel("Reason for return").fill("The item arrived damaged");
+  await page.getByRole("button", { name: "Submit request", exact: true }).click();
+  const progress = page.getByRole("region", { name: "Return and refund progress" });
+  await expect(progress).toContainText("Your request is being reviewed");
+  order = { ...order, status: "Return Approved", returnRequest: { ...order.returnRequest, reverseAwb: "RET123", reverseCourierName: "Test Courier", reversePickupScheduled: true } };
+  await page.reload();
+  await expect(progress).toContainText("Return pickup scheduled");
+  await expect(progress.getByRole("link", { name: "Track return package" })).toHaveAttribute("href", /tracking_id=RET123$/);
+  order = { ...order, status: "Refunded", paymentStatus: "Refunded", refund: { status: "Processed", amount: 299, method: "UPI", reference: "REFUND-TEST" } };
+  await page.reload();
+  await expect(progress).toContainText("Your refund is completed");
+  await expect(page.getByText("Cash on delivery · Refunded")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Refund payment details" })).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+});
+
+test("expired delivered orders explain the closed return window", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user" } })));
+  await page.route("**/api/orders/my-orders", route => route.fulfill({ json: [{ ...codOrder, status: "Delivered", statusHistory: [{ status: "Delivered", createdAt: new Date(Date.now() - 8 * 86400000).toISOString() }] }] }));
+  await page.goto("/my-orders");
+  await expect(page.getByText(/7-day online return window has closed/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Request return", exact: true })).toHaveCount(0);
+});
+
+test("refund details lookup failure cannot overwrite saved details and can be retried", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user" } })));
+  await page.route("**/api/orders/my-orders", route => route.fulfill({ json: [{ ...codOrder, status: "Refund Pending", paymentStatus: "Paid" }] }));
+  let failed = true;
+  await page.route(`**/api/orders/refund-details/${codOrder._id}`, route => route.fulfill(failed ? { status: 503, json: { message: "Unavailable" } } : { json: { submitted: true, method: "UPI", maskedDestination: "te***@bank" } }));
+  await page.goto("/my-orders");
+  await expect(page.getByRole("alert")).toContainText("could not be checked");
+  await expect(page.getByLabel("UPI ID", { exact: true })).toHaveCount(0);
+  failed = false;
+  await page.getByRole("button", { name: "Retry saved details" }).click();
+  await expect(page.getByRole("heading", { name: "Refund details received" })).toBeVisible();
+});
+
 test("home categories come from the full published catalogue", async ({ page }) => {
   await page.route("**/api/products/categories", (route) => route.fulfill({ json: { categories: [{ key: "home-kitchen", label: "Home & Kitchen", count: 4, image }, { key: "electronics", label: "Electronics", count: 2, image }] } }));
   await page.setViewportSize({ width: 390, height: 844 });

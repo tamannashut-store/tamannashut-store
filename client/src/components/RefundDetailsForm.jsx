@@ -9,11 +9,13 @@ export default function RefundDetailsForm({ orderId }) {
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState("");
+  const [checkFailed, setCheckFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    axios.get(`${import.meta.env.VITE_API_URL}/api/orders/refund-details/${orderId}`).then(({ data }) => { if (active) setSaved(data.submitted ? data : null); }).catch(() => { if (active) setError("Saved refund details could not be checked. Please try again."); }).finally(() => { if (active) setChecking(false); });
+    axios.get(`${import.meta.env.VITE_API_URL}/api/orders/refund-details/${orderId}`).then(({ data }) => { if (active) { setSaved(data.submitted ? data : null); setCheckFailed(false); } }).catch(() => { if (active) { setCheckFailed(true); setError("Saved refund details could not be checked. Please try again."); } }).finally(() => { if (active) setChecking(false); });
     return () => { active = false; };
-  }, [orderId]);
+  }, [orderId, attempt]);
   const change = (key, value) => { setForm((current) => ({ ...current, [key]: value })); setError(""); };
   const submit = async (event) => {
     event.preventDefault();
@@ -32,7 +34,7 @@ export default function RefundDetailsForm({ orderId }) {
     <p className="mt-2 text-sm text-slate-600">Your COD refund is pending. Choose UPI or bank transfer. We will update your order once payment is completed.</p>
     <p className="mt-2 text-xs text-slate-600">These details are stored encrypted and available to the store administrator to arrange your refund.</p>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-    {saved && !editing ? <><p role="status" className="mt-3 text-sm font-semibold">{saved.method} · {saved.maskedDestination}</p><button type="button" onClick={() => setEditing(true)} className="btn-secondary mt-3">Update refund details</button></> : <form onSubmit={submit} className="mt-4 space-y-4" autoComplete="off">
+    {checkFailed ? <button type="button" disabled={checking} onClick={() => { setChecking(true); setError(""); setAttempt((current) => current + 1); }} className="btn-secondary mt-4">{checking ? "Checking…" : "Retry saved details"}</button> : saved && !editing ? <><p role="status" className="mt-3 text-sm font-semibold">{saved.method} · {saved.maskedDestination}</p><button type="button" onClick={() => setEditing(true)} className="btn-secondary mt-3">Update refund details</button></> : <form onSubmit={submit} className="mt-4 space-y-4" autoComplete="off">
       <label className="block text-sm font-semibold">Refund method<select className="field-control mt-2" value={form.method} disabled={busy} onChange={(event) => setForm({ ...blank, method: event.target.value })}><option>UPI</option><option>Bank transfer</option></select></label>
       {field("holderName", "Account holder name", { minLength: 2, maxLength: 120 })}
       {form.method === "UPI" ? field("upiId", "UPI ID", { placeholder: "name@bank", maxLength: 165 }) : <>{field("accountNumber", "Bank account number", { inputMode: "numeric", pattern: "[0-9]{6,20}", maxLength: 20 })}{field("confirmAccountNumber", "Confirm bank account number", { inputMode: "numeric", maxLength: 20 })}{field("ifsc", "IFSC code", { maxLength: 11 })}</>}
