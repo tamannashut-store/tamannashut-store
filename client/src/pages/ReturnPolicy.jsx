@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 
 function ReturnPolicy() {
@@ -40,7 +41,7 @@ function ReturnPolicy() {
           </p>
 
           <h2 className="text-2xl font-semibold">How to request a return</h2>
-          <p>Email <a className="text-brand-primary underline" href="mailto:support@tamannashut.com">support@tamannashut.com</a> within 7 days of delivery with your order number, item, reason and photographs where relevant. Do not send an item before receiving return instructions. We will confirm eligibility and provide the return address or pickup instructions.</p>
+          <p>Open <Link to="/my-orders" className="text-brand-primary underline">Orders and tracking</Link> in your account, choose your delivered order, and select Request return within 7 days of delivery. Add your reason and photographs where relevant. You can also email <a className="text-brand-primary underline" href="mailto:support@tamannashut.com">support@tamannashut.com</a> within 7 days of delivery with your order number, item, reason and photographs where relevant. Do not send an item before receiving return instructions. We will confirm eligibility and provide the return address or pickup instructions.</p>
 
           <h2 className="text-2xl font-semibold">
             Exchanges

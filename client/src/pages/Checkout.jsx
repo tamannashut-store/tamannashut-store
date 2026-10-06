@@ -204,7 +204,7 @@ function Checkout() {
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
         name: "Tamanna's Hut",
-        description: "Kids fashion order",
+        description: "Store order",
         order_id: razorpayOrder.id,
         prefill: { name: customer.name, email: customer.email, contact: customer.phone },
         theme: { color: "#355E3B" },

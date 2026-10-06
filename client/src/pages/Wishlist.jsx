@@ -1,4 +1,5 @@
-﻿import { useContext } from "react";
+import ProductRating from "../components/ProductRating";
+import { useContext } from "react";
 import WishlistContext from "../context/wishlistState";
 import { Link } from "react-router-dom";
 import { productPath } from "../utils/productUrl";
@@ -48,8 +49,8 @@ function Wishlist() {
 
               <img
               src={product.images?.[0]?.url || "/placeholder.png"}
-              alt={`${product.name} - Tamanna's Hut Kids Fashion`}
-              className="w-full h-72 object-cover rounded-2xl"
+              alt={`${product.name} - Tamanna's Hut`}
+              className="w-full h-72 object-contain rounded-2xl"
             />
 
             <h2 className="text-2xl font-bold mt-5">
@@ -60,6 +61,7 @@ function Wishlist() {
               ₹{product.price}
             </p>
 
+            <ProductRating product={product} className="mt-3" />
             <div className="mt-6 flex flex-col gap-3 min-[380px]:flex-row">
 
               <Link
