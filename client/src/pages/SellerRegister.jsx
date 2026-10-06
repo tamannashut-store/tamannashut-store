@@ -19,61 +19,93 @@ const Field = ({ label, children, wide = false }) => <label className={`field-la
 function SellerRegister() {
   const { token } = useParams();
   const [invitation, setInvitation] = useState(null);
+  const [account, setAccount] = useState(null);
   const [form, setForm] = useState(initialForm);
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(Boolean(token));
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [complete, setComplete] = useState(false);
+  const [applicationEmail, setApplicationEmail] = useState("");
+  const [emailCode, setEmailCode] = useState("");
+  const [emailChallenge, setEmailChallenge] = useState("");
 
   useEffect(() => {
-    if (!token) return;
     let active = true;
-    axios.get(`${import.meta.env.VITE_API_URL}/api/auth/seller-invitations/${token}`)
-      .then(({ data }) => { if (active) setInvitation(data); })
-      .catch((requestError) => { if (active) setError(requestError.response?.data?.message || "This seller invitation could not be verified"); })
-      .finally(() => { if (active) setLoading(false); });
+    const load = async () => {
+      try {
+        if (token) {
+          const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/seller-invitations/${token}`);
+          if (active) setInvitation(data);
+        }
+        if (axios.defaults.headers.common.Authorization) {
+          const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/seller-application/account`);
+          if (active) { setAccount(data); setForm((current) => ({ ...current, name: data.name || "" })); }
+        }
+      } catch (requestError) {
+        if (active) setError(requestError.response?.data?.message || "Your application could not be loaded");
+      } finally { if (active) setLoading(false); }
+    };
+    load();
     return () => { active = false; };
   }, [token]);
+
+  const existingPassword = account?.passwordLoginEnabled !== false && Boolean(account);
+  const returnToApplication = () => sessionStorage.setItem("redirectAfterLogin", token ? `/seller/register/${token}` : "/seller/register");
+  const linkEmail = async (event) => {
+    event.preventDefault(); setSubmitting(true); setError("");
+    try {
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/seller-application/email/${emailChallenge ? "check" : "send"}`, emailChallenge ? { challengeToken: emailChallenge, code: emailCode } : { channel: "email", contact: applicationEmail });
+      if (emailChallenge) {
+        localStorage.setItem("user", JSON.stringify(data));
+        axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+        setAccount(data.user);
+      } else setEmailChallenge(data.challengeToken);
+    } catch (requestError) { setError(requestError.response?.data?.message || "Email could not be verified"); }
+    finally { setSubmitting(false); }
+  };
 
   const change = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const submit = async (event) => {
     event.preventDefault();
     setError("");
-    if (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password)) return setError("Use at least 8 characters with at least one letter and one number");
-    if (form.password !== form.confirmPassword) return setError("Passwords do not match");
+    if (!existingPassword && (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password))) return setError("Use at least 8 characters with at least one letter and one number");
+    if (!existingPassword && form.password !== form.confirmPassword) return setError("Passwords do not match");
     if (form.bankAccountNumber !== form.confirmBankAccountNumber) return setError("Bank account numbers do not match");
     setSubmitting(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/seller-invitations/${token}/accept`, form);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/${token ? `seller-invitations/${token}/accept` : "seller-applications"}`, form);
+      if (account) { localStorage.removeItem("user"); delete axios.defaults.headers.common.Authorization; }
       setComplete(true);
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Seller account could not be created");
     } finally { setSubmitting(false); }
   };
 
-  if (!token) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border bg-white p-8 text-center shadow-xl"><img src={logo} alt="Tamanna's Hut" className="mx-auto h-16"/><FiLock className="mx-auto mt-7 text-3xl text-brand-primary"/><h1 className="mt-4 text-3xl font-bold">Invitation required</h1><p className="mt-3 leading-7 text-slate-600">Seller registration starts from a private invitation sent by the platform administrator.</p><Link to="/admin-login" className="btn-primary mt-7 w-full">Back to seller sign in</Link></section></main>;
-  if (loading) return <PageLoader title="Checking your invitation" message="We’re verifying this secure seller invitation." />;
+  if (loading) return <PageLoader title="Loading seller application" message="Checking your account and application options." />;
   if (complete) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border bg-white p-8 text-center shadow-xl"><FiCheckCircle className="mx-auto text-5xl text-emerald-600"/><h1 className="mt-5 text-3xl font-bold">Application submitted</h1><p className="mt-3 leading-7 text-slate-600">Your seller account is separate from the platform administrator. Access stays locked until GST and settlement details are reviewed.</p><Link to="/admin-login" className="btn-primary mt-7 w-full">Go to seller sign in</Link></section></main>;
-  if (!invitation) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border border-red-200 bg-white p-8 text-center shadow-xl"><h1 className="text-3xl font-bold">Invitation unavailable</h1><p role="alert" className="mt-4 text-red-700">{error}</p><Link to="/admin-login" className="btn-secondary mt-7 w-full">Back to seller sign in</Link></section></main>;
+  if (token && !invitation) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border border-red-200 bg-white p-8 text-center shadow-xl"><h1 className="text-3xl font-bold">Invitation unavailable</h1><p role="alert" className="mt-4 text-red-700">{error}</p><Link to="/seller/register" className="btn-secondary mt-7 w-full">Apply without an invitation</Link></section></main>;
+  if (account && account.accountType !== "customer") return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border bg-white p-8 text-center"><h1 className="text-3xl font-bold">Seller Centre account</h1><p className="mt-4 text-slate-600">Manage your existing account and application through Seller Centre.</p><Link to="/admin-login" className="btn-primary mt-7 w-full">Go to Seller Centre</Link></section></main>;
+  if (account && !account.email) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border bg-white p-8 shadow-xl"><h1 className="text-3xl font-bold">Add your seller email</h1><p className="mt-3 leading-7 text-slate-600">Seller Centre uses email for security codes and application updates. Verify an email to add it to your existing mobile account and keep your purchases linked.</p><form onSubmit={linkEmail} className="mt-5 space-y-4"><Field label="Email address"><input required type="email" value={applicationEmail} disabled={Boolean(emailChallenge)} onChange={(event) => setApplicationEmail(event.target.value)} className="field-control mt-2"/></Field>{emailChallenge && <Field label="Email verification code"><input required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" value={emailCode} onChange={(event) => setEmailCode(event.target.value.replace(/\D/g, ""))} className="field-control mt-2"/></Field>}{error && <p role="alert" className="text-sm text-red-700">{error}</p>}<button disabled={submitting} className="btn-primary w-full">{submitting ? "Please wait…" : emailChallenge ? "Verify email" : "Send email code"}</button>{emailChallenge && <button type="button" onClick={() => { setEmailChallenge(""); setEmailCode(""); }} className="text-sm font-semibold text-brand-primary">Change email or request another code</button>}</form><Link to="/login" onClick={returnToApplication} className="mt-5 block text-sm font-semibold text-brand-primary">Already use this email? Sign in to that account</Link></section></main>;
+  if ((!token && !account) || (invitation && ((invitation.existingAccount && !account) || (account && account.email !== invitation.email))) || (account && (!account.email || (!account.emailVerified && !token)))) return <main className="grid min-h-screen place-items-center bg-[#f7f5ef] px-5"><section className="w-full max-w-lg rounded-3xl border bg-white p-8 text-center shadow-xl"><img src={logo} alt="Tamanna's Hut" className="mx-auto h-16"/><FiLock className="mx-auto mt-7 text-3xl text-brand-primary"/><h1 className="mt-4 text-3xl font-bold">Sell on Tamanna&apos;s Hut</h1><p className="mt-3 leading-7 text-slate-600">Applications are open to everyone. Verify your email, submit your business and settlement details, and wait for administrator approval before selling.</p>{invitation?.existingAccount && <p className="mt-3 text-sm text-slate-600">Sign in to the customer account for <strong>{invitation.email}</strong> to keep your existing purchases linked.</p>}{error && <p role="alert" className="mt-3 text-red-700">{error}</p>}<Link to="/login" onClick={returnToApplication} className="btn-primary mt-7 w-full">Sign in with an email code</Link><Link to="/register?channel=email" onClick={returnToApplication} className="btn-secondary mt-3 w-full">Create an account with email</Link><Link to="/admin-login" className="mt-5 block text-sm font-semibold text-brand-primary">Already a seller? Sign in to Seller Centre</Link></section></main>;
 
   return <main className="min-h-screen bg-[#f7f5ef] px-4 py-7 sm:px-8 sm:py-10"><div className="mx-auto max-w-5xl">
     <header className="mb-7 flex items-center justify-between gap-4"><img src={logo} alt="Tamanna's Hut" className="h-14 rounded-xl bg-white px-2 py-1 shadow-sm sm:h-16"/><span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 sm:px-4 sm:text-sm"><FiShield/> Secure onboarding</span></header>
     <form onSubmit={submit} className="overflow-hidden rounded-3xl border bg-white shadow-[0_24px_70px_rgba(20,45,32,.12)]">
-      <div className="bg-[#123b29] px-5 py-7 text-white sm:px-10 sm:py-9"><p className="text-xs font-bold uppercase tracking-[0.2em] text-white/55">Marketplace seller</p><h1 className="mt-3 text-3xl font-bold sm:text-4xl">Create your independent seller account</h1><p className="mt-3 text-white/70">Invited email: <strong className="text-white">{invitation.email}</strong></p></div>
+      <div className="bg-[#123b29] px-5 py-7 text-white sm:px-10 sm:py-9"><p className="text-xs font-bold uppercase tracking-[0.2em] text-white/55">Marketplace seller</p><h1 className="mt-3 text-3xl font-bold sm:text-4xl">Apply to become a seller</h1><p className="mt-3 text-white/70">Application email: <strong className="text-white">{invitation?.email || account?.email}</strong></p>{account && <p className="mt-3 text-sm leading-6 text-white/80">This adds a seller application to your existing account and keeps your purchases linked. After submitting, use Seller Centre to sign in with your password and an emailed security code.</p>}</div>
       <div className="space-y-9 p-5 sm:p-10">
         {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
         <section><h2 className="text-xl font-bold">1. Account owner</h2><div className="mt-5 grid gap-5 md:grid-cols-2">
           <Field label="Full name"><input required minLength="2" maxLength="80" autoComplete="name" value={form.name} onChange={(e) => change("name", e.target.value)} className="field-control mt-2"/></Field>
           <Field label="Business phone"><input required inputMode="tel" autoComplete="tel" value={form.businessPhone} onChange={(e) => change("businessPhone", e.target.value)} className="field-control mt-2" placeholder="10-digit mobile number"/></Field>
-          <Field label="Password"><div className="relative mt-2"><input required minLength="8" maxLength="128" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.password} onChange={(e) => change("password", e.target.value)} className="field-control pr-12"/><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500">{showPassword ? <FiEyeOff/> : <FiEye/>}</button></div><span className="mt-2 block text-xs font-normal text-slate-500">At least 8 characters with a letter and a number.</span></Field>
-          <Field label="Confirm password"><input required minLength="8" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.confirmPassword} onChange={(e) => change("confirmPassword", e.target.value)} className="field-control mt-2"/></Field>
+          <Field label={existingPassword ? "Existing account password" : "Seller Centre password"}><div className="relative mt-2"><input aria-label={existingPassword ? "Existing account password" : "Seller Centre password"} required minLength={existingPassword ? undefined : 8} maxLength="128" type={showPassword ? "text" : "password"} autoComplete={existingPassword ? "current-password" : "new-password"} value={form.password} onChange={(e) => change("password", e.target.value)} className="field-control pr-12"/><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "Hide password" : "Show password"} className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-500">{showPassword ? <FiEyeOff/> : <FiEye/>}</button></div><span className="mt-2 block text-xs font-normal text-slate-500">{existingPassword ? "Use your current password. Your password will stay the same." : "At least 8 characters with a letter and a number."}</span></Field>
+          {!existingPassword && <Field label="Confirm password"><input required minLength="8" type={showPassword ? "text" : "password"} autoComplete="new-password" value={form.confirmPassword} onChange={(e) => change("confirmPassword", e.target.value)} className="field-control mt-2"/></Field>}
         </div></section>
 
         <section className="border-t pt-8"><h2 className="text-xl font-bold">2. Legal business and GST</h2><p className="mt-2 text-sm leading-6 text-slate-500">Enter the names exactly as shown on the GST registration certificate.</p><div className="mt-5 grid gap-5 md:grid-cols-2">
           <Field label="Legal business name"><input required maxLength="120" value={form.legalBusinessName} onChange={(e) => change("legalBusinessName", e.target.value)} className="field-control mt-2"/></Field>
           <Field label="Trade / storefront name"><input required maxLength="120" value={form.tradeName} onChange={(e) => change("tradeName", e.target.value)} className="field-control mt-2"/></Field>
-          <Field label="Business constitution"><select required value={form.businessType} onChange={(e) => change("businessType", e.target.value)} className="field-control mt-2"><option value="">Select type</option><option value="proprietorship">Proprietorship</option><option value="partnership">Partnership</option><option value="llp">LLP</option><option value="private_limited">Private limited company</option><option value="public_limited">Public limited company</option><option value="trust">Trust</option><option value="society">Society</option><option value="other">Other</option></select></Field>
+          <Field label="Business constitution"><select aria-label="Business constitution" required value={form.businessType} onChange={(e) => change("businessType", e.target.value)} className="field-control mt-2"><option value="">Select type</option><option value="proprietorship">Proprietorship</option><option value="partnership">Partnership</option><option value="llp">LLP</option><option value="private_limited">Private limited company</option><option value="public_limited">Public limited company</option><option value="trust">Trust</option><option value="society">Society</option><option value="other">Other</option></select></Field>
           <Field label="Authorised signatory"><input required maxLength="120" value={form.authorizedSignatoryName} onChange={(e) => change("authorizedSignatoryName", e.target.value)} className="field-control mt-2"/></Field>
           <Field label="GSTIN"><input required minLength="15" maxLength="15" value={form.gstin} onChange={(e) => change("gstin", e.target.value.toUpperCase())} className="field-control mt-2 uppercase" placeholder="19ABCDE1234F1Z5"/></Field>
           <Field label="PAN"><input required minLength="10" maxLength="10" value={form.pan} onChange={(e) => change("pan", e.target.value.toUpperCase())} className="field-control mt-2 uppercase" placeholder="ABCDE1234F"/></Field>
@@ -88,7 +120,7 @@ function SellerRegister() {
 
         <section className="border-t pt-8"><h2 className="text-xl font-bold">4. Settlement bank account</h2><p className="mt-2 text-sm leading-6 text-slate-500">Use an account belonging to the registered business or proprietor. Details are encrypted at rest.</p><div className="mt-5 grid gap-5 md:grid-cols-2">
           <Field label="Account holder name" wide><input required maxLength="120" value={form.bankAccountHolder} onChange={(e) => change("bankAccountHolder", e.target.value)} className="field-control mt-2"/></Field>
-          <Field label="Account type"><select required value={form.bankAccountType} onChange={(e) => change("bankAccountType", e.target.value)} className="field-control mt-2"><option value="current">Current</option><option value="savings">Savings</option></select></Field>
+          <Field label="Account type"><select aria-label="Account type" required value={form.bankAccountType} onChange={(e) => change("bankAccountType", e.target.value)} className="field-control mt-2"><option value="current">Current</option><option value="savings">Savings</option></select></Field>
           <Field label="IFSC code"><input required minLength="11" maxLength="11" value={form.ifsc} onChange={(e) => change("ifsc", e.target.value.toUpperCase())} className="field-control mt-2 uppercase" placeholder="ABCD0123456"/></Field>
           <Field label="Account number"><input required inputMode="numeric" minLength="6" maxLength="20" autoComplete="off" value={form.bankAccountNumber} onChange={(e) => change("bankAccountNumber", e.target.value.replace(/\D/g, ""))} className="field-control mt-2"/></Field>
           <Field label="Confirm account number"><input required inputMode="numeric" minLength="6" maxLength="20" autoComplete="off" value={form.confirmBankAccountNumber} onChange={(e) => change("confirmBankAccountNumber", e.target.value.replace(/\D/g, ""))} className="field-control mt-2"/></Field>

@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const schema = new mongoose.Schema({
   key: { type: String, required: true, unique: true },
-  purpose: { type: String, enum: ["register", "login", "delete"], required: true },
+  purpose: { type: String, enum: ["register", "login", "delete", "link-email"], required: true },
   channel: { type: String, enum: ["email", "phone"], required: true },
   contact: { type: String, required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },

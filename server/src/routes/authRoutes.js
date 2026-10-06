@@ -8,7 +8,7 @@ import SellerProfile from "../models/SellerProfile.js";
 import SellerSettlement from "../models/SellerSettlement.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
-import { admin, protect, seller, sellerApplicant } from "../middleware/authMiddleware.js";
+import { admin, protect, optionalProtect, seller, sellerApplicant } from "../middleware/authMiddleware.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { emailVerificationTemplate, passwordResetEmailTemplate, sellerInvitationEmailTemplate, sellerVerificationEmailTemplate, twoFactorCodeEmailTemplate } from "../utils/emailTemplates.js";
 import { verifyShiprocketDeliveryPostcode } from "../services/shiprocketService.js";
@@ -23,6 +23,7 @@ import { checkPhoneVerification, phoneVerificationConfigured, sendPhoneVerificat
 import { isValidEmailAddress } from "../utils/inputSecurity.js";
 import { phoneLoginHandlers } from "../services/phoneLoginService.js";
 import { customerOtpHandlers } from "../services/customerOtpService.js";
+import { submitSellerApplication } from "../services/sellerApplicationService.js";
 
 const router = express.Router();
 
@@ -41,6 +42,8 @@ router.post("/customer-otp/send", customerOtpOnly, customerOtp.send);
 router.post("/customer-otp/check", (req, res, next) => { req.otpPurpose = req.body.purpose; if (!["register", "login"].includes(req.otpPurpose)) return res.status(400).json({ message: "Choose signup or sign-in" }); next(); }, customerOtp.check);
 router.post("/delete-otp/send", protect, (req, _res, next) => { req.otpPurpose = "delete"; next(); }, customerOtp.send);
 router.post("/delete-otp/check", protect, (req, _res, next) => { req.otpPurpose = "delete"; next(); }, customerOtp.check);
+router.post("/seller-application/email/send", protect, (req, _res, next) => { req.otpPurpose = "link-email"; next(); }, customerOtp.send);
+router.post("/seller-application/email/check", protect, (req, _res, next) => { req.otpPurpose = "link-email"; next(); }, customerOtp.check);
 
 const sendVerificationEmail = async (user) => {
     const verification = createEmailVerification();
@@ -294,7 +297,8 @@ router.post("/seller-invitations", protect, admin, ownerOnly, async (req, res) =
     try {
         const email = String(req.body.email || "").trim().toLowerCase();
         if (!isValidEmailAddress(email)) return res.status(400).json({ message: "Enter a valid seller email address" });
-        if (await User.exists({ email })) return res.status(409).json({ message: "An account already exists for this email" });
+        const existing = await User.findOne({ email });
+        if (existing && (accountTypeFor(existing) !== "customer" || existing.isAdmin || existing.sellerRole)) return res.status(409).json({ message: "This email already has Seller Centre access" });
         await SellerInvitation.deleteMany({ email, acceptedAt: null });
         const token = crypto.randomBytes(32).toString("hex");
         const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -317,35 +321,28 @@ router.get("/seller-invitations/:token", async (req, res) => {
         const tokenHash = crypto.createHash("sha256").update(String(req.params.token || "")).digest("hex");
         const invitation = await SellerInvitation.findOne({ tokenHash, acceptedAt: null, expiresAt: { $gt: new Date() } }).select("email expiresAt").lean();
         if (!invitation) return res.status(404).json({ message: "This seller invitation is invalid or has expired" });
-        return res.json({ email: invitation.email, expiresAt: invitation.expiresAt });
+        return res.json({ email: invitation.email, expiresAt: invitation.expiresAt, existingAccount: Boolean(await User.exists({ email: invitation.email })) });
     } catch (error) {
         return res.status(500).json({ message: "Seller invitation could not be checked" });
     }
 });
 
-router.post("/seller-invitations/:token/accept", async (req, res) => {
-    let createdUser;
-    try {
-        const tokenHash = crypto.createHash("sha256").update(String(req.params.token || "")).digest("hex");
-        const invitation = await SellerInvitation.findOne({ tokenHash, acceptedAt: null, expiresAt: { $gt: new Date() } });
-        if (!invitation) return res.status(404).json({ message: "This seller invitation is invalid or has expired" });
-        if (await User.exists({ email: invitation.email })) return res.status(409).json({ message: "An account already exists for this email" });
-        const name = String(req.body.name || "").trim();
-        const password = String(req.body.password || "");
-        const passwordError = passwordPolicyError(password);
-        if (name.length < 2 || name.length > 80 || passwordError) return res.status(400).json({ message: passwordError || "Enter your full name" });
-        const details = normalizeSellerDetails(req.body);
-        const securedProfile = encryptedSellerProfile(details);
-        createdUser = await User.create({ name, email: invitation.email, password: await bcrypt.hash(password, 10), isAdmin: false, accountType: "seller", sellerRole: "member", sellerAccessStatus: "pending", emailVerifiedAt: new Date() });
-        await SellerProfile.create({ userId: createdUser._id, ...securedProfile });
-        invitation.acceptedAt = new Date();
-        await invitation.save();
-        return res.status(201).json({ message: "Seller details submitted for owner verification" });
-    } catch (error) {
-        if (createdUser?._id) await Promise.allSettled([User.deleteOne({ _id: createdUser._id }), SellerProfile.deleteOne({ userId: createdUser._id })]);
-        return res.status(error.status || (error?.code === 11000 ? 409 : 500)).json({ message: error.status ? error.message : error?.code === 11000 ? "A seller account already exists for this email" : process.env.NODE_ENV === "production" ? "Seller account could not be created" : error.message });
-    }
+router.get("/seller-application/account", protect, (req, res) => {
+    res.set("Cache-Control", "no-store");
+    return res.json({ ...publicAccount(req.user), emailVerified: Boolean(req.user.emailVerifiedAt) });
 });
+
+const acceptSellerApplication = async (req, res) => {
+    try {
+        const result = await submitSellerApplication({ authenticatedId: req.user?._id, invitationToken: req.params.token, body: req.body });
+        await recordAudit({ user: req.user, action: "seller.applied", entityType: "seller", entityId: result.userId, summary: "Seller application submitted for administrator approval", metadata: { source: req.params.token ? "invitation" : "public", reusedCustomer: result.reusedCustomer } });
+        return res.status(201).json({ message: "Seller application submitted for administrator approval. Sign in through Seller Centre to track your application" });
+    } catch (error) {
+        return res.status(error.status || (error?.code === 11000 ? 409 : 500)).json({ message: error.status ? error.message : error?.code === 11000 ? "An application already exists. Sign in to Seller Centre to manage it" : "Seller application could not be submitted. Please try again" });
+    }
+};
+router.post("/seller-applications", protect, acceptSellerApplication);
+router.post("/seller-invitations/:token/accept", optionalProtect, acceptSellerApplication);
 
 router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
     try {

@@ -1,8 +1,17 @@
 # Seller onboarding and verification
 
-Seller accounts are invitation-only. A store owner creates an invitation in
-**Seller Centre → Seller team**. The invitation expires after 48 hours and can
-be used once.
+Seller applications are public at `/seller/register`, linked from the storefront
+footer and Seller Centre sign-in. Applicants verify an email through customer
+sign-in/signup first. Mobile-only customers can add a verified email on the
+application page. An administrator may also send an optional invitation from
+**Seller Centre → Seller team**, valid for 48 hours and usable once.
+
+Existing customers retain their account ID and purchase history when applying.
+Password accounts confirm their existing password; passwordless customers choose
+a Seller Centre password. Submission revokes customer sessions and switches the
+account to a pending seller. Subsequent sign-in uses Seller Centre password and
+email security code. Application, account changes and invitation acceptance are
+atomic, so failures do not partially convert or delete customer accounts.
 
 ## Required production setting
 
@@ -29,7 +38,7 @@ PAN and bank details unreadable. Never add it to Git.
 
 ## Verification workflow
 
-1. The owner sends an invitation to the seller's email address.
+1. The applicant opens the public application page or an emailed invitation.
 2. The seller creates credentials and submits the legal business name, GSTIN,
    PAN, account-holder name, bank-account number and IFSC.
 3. The server validates GSTIN/PAN consistency and identifier formats, then
@@ -38,7 +47,7 @@ PAN and bank details unreadable. Never add it to Git.
 5. The owner opens **Seller team**, compares the GSTIN with the official GST
    taxpayer search, and compares the settlement details with bank proof.
 6. The owner approves or rejects the seller with a review note. The seller is
-   emailed the result; only approved sellers can sign in.
+   emailed the result; pending applicants can view their business profile, while only approved sellers can list products and manage sales.
 
 Format validation is not government or bank verification. Do not approve an
 account solely because the form accepted its identifiers. Automated GST lookup
