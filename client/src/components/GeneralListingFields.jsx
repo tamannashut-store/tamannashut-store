@@ -1,7 +1,7 @@
 const departments = ["Girls", "Boys", "Clothing", "Footwear", "Bags & Accessories", "Beauty & Personal Care", "Home & Kitchen", "Electronics", "Mobile Accessories", "Toys & Games", "Baby Essentials", "Sports & Outdoors", "Books & Stationery", "Grocery", "Health & Wellness", "Pet Supplies", "Automotive", "Tools & Garden"];
 
 export function CategoryField({ value, onChange }) {
-  return <label><span className="field-label">Category *</span><input required list="catalogue-departments" name="category" value={value} onChange={onChange} placeholder="Choose or enter a category" className="field-control"/><datalist id="catalogue-departments">{departments.map((label) => <option key={label} value={label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}>{label}</option>)}</datalist><span className="mt-1 block text-xs text-slate-500">Custom categories are supported. Use the same category name for related products.</span></label>;
+  return <label><span className="field-label">Category *</span><input required aria-label="Category *" aria-describedby="listing-category-hint" list="catalogue-departments" name="category" value={value} onChange={onChange} placeholder="Choose or enter a category" className="field-control"/><datalist id="catalogue-departments">{departments.map((label) => <option key={label} value={label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}>{label}</option>)}</datalist><span id="listing-category-hint" className="mt-1 block text-xs text-slate-500">Custom categories are supported. Use the same category name for related products.</span></label>;
 }
 
 export default function GeneralListingFields({ form, onChange }) {

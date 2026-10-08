@@ -947,3 +947,30 @@ test('admin orders retry failed loads and show collected COD payment accurately'
   await expect(page.getByText('Cash collected on delivery', { exact: true })).toBeVisible();
   await expect(page.getByRole('alert')).toHaveCount(0);
 });
+
+test('listing basics adapt to the category and mobile review counts only active stock', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-token', user: { id: 'admin-test', isAdmin: true } })));
+  await page.goto('/admin');
+  await page.getByRole('button', { name: '+ Add product' }).click();
+  await expect(page.getByRole('heading', { name: 'Product identity', exact: true })).toBeVisible();
+  await page.getByLabel('Category *', { exact: true }).fill('electronics');
+  await expect(page.getByLabel('Fabric', { exact: true })).toHaveCount(0);
+  await page.getByLabel('Category *', { exact: true }).fill('clothing');
+  await expect(page.getByLabel('Fabric', { exact: true })).toBeVisible();
+  const bottle = { ...product, name: 'Steel bottle', baseSku: 'BOTTLE', category: 'home-kitchen', productType: 'variable', optionLabel: 'Capacity', brand: 'Example', price: 299, mrp: 399, gstMode: 'custom', gstRate: 18, hsnCode: '7323', specifications: 'Capacity: 1 litre', description: 'Stainless steel bottle for everyday use.', weightKg: 0.4, lengthCm: 12, widthCm: 8, heightCm: 24, status: 'active', variants: [{ sku: 'BOTTLE-1', size: '1 litre', color: '', price: 299, stock: 3, active: true }, { sku: 'BOTTLE-2', size: '2 litre', color: '', price: 399, stock: 20, active: false }] };
+  await page.route(`**/api/products/admin/item/${product._id}`, route => route.fulfill({ json: bottle }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/admin/edit/${product._id}`);
+  await page.getByRole('button', { name: /4 Review & publish/ }).click();
+  const review = page.getByRole('region', { name: 'Listing review' });
+  await expect(review.getByRole('heading', { name: 'Steel bottle', exact: true })).toBeVisible();
+  await expect(review.getByText('Available units', { exact: true }).locator('..')).toHaveText('Available units3');
+  await expect(review.getByText('12 × 8 × 24 cm', { exact: true })).toBeVisible();
+  await expect(review.getByText('BOTTLE-2', { exact: false })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+  await page.screenshot({ path: 'output/release/listing-mobile-review.png', fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({ path: 'output/release/listing-desktop-review.png', fullPage: true });
+  await review.getByRole('button', { name: 'Edit product details', exact: true }).click();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Steel bottle');
+});
