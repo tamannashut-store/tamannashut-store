@@ -17,6 +17,9 @@ function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
   const previewUrls = useRef([]);
+  const savePending = useRef(false);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [form, setForm] = useState({ ...generalListingDefaults, name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
   const [variants, setVariants] = useState([]);
   const [images, setImages] = useState([]);
@@ -36,8 +39,10 @@ function EditProduct() {
 
   useEffect(() => {
     const urls = previewUrls.current;
+    let active = true;
     axios.get(`${import.meta.env.VITE_API_URL}/api/products/admin/item/${id}`)
       .then(({ data }) => {
+        if (!active) return;
         setForm({
           ...generalListingDefaults,
           ...Object.fromEntries(Object.keys(generalListingDefaults).map((key) => [key, data[key] ?? generalListingDefaults[key]])),
@@ -49,10 +54,10 @@ function EditProduct() {
         setVariants(data.variants?.length ? data.variants : (data.sizeStock || []).map((item) => ({ sku: `${data.baseSku || data._id}-${item.size}`.toUpperCase(), size: item.size, color: data.color || "", stock: item.stock, price: data.price, active: true })));
         setImages((data.images || []).map((image) => ({ id: image.public_id, type: "existing", public_id: image.public_id, url: image.url, color: image.color || "", size: image.size || "" })));
       })
-      .catch(() => toast.error("Could not load this product"))
-      .finally(() => setLoading(false));
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, [id]);
+      .catch(() => { if (active) setLoadError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; urls.forEach((url) => URL.revokeObjectURL(url)); };
+  }, [id, loadAttempt]);
 
   const changeForm = (event) => setForm((current) => ({ ...current, [event.target.name]: event.target.value, ...(event.target.name === "category" ? { gstMode: "", gstRate: "" } : {}) }));
   const variantColors = [...new Set(variants.map((variant) => variant.color).filter(Boolean))];
@@ -67,11 +72,13 @@ function EditProduct() {
 
   const submit = async (event, saveDraft = false) => {
     event.preventDefault();
+    if (savePending.current || loading || loadError) return;
     if (!saveDraft && editStep < 3) return nextEditStep();
     if (!saveDraft && !checkListing()) return;
     if (!saveDraft && (!images.length || !variants.length)) return toast.error("Keep at least one image and inventory option");
     if (variants.some((variant) => !variant.size?.trim() || !variant.sku?.trim())) return toast.error("Every variant needs an option and SKU");
     try {
+      savePending.current = true;
       setSaving(true);
       const data = new FormData();
       Object.entries(form).forEach(([key, value]) => data.append(key, key === "tags" ? JSON.stringify(String(value).split(",").map((tag) => tag.trim()).filter(Boolean)) : value));
@@ -92,7 +99,7 @@ function EditProduct() {
       const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
       navigate(sellerAccount ? "/seller/products" : "/admin");
     } catch (error) { toast.error(error.response?.data?.message || "Update failed"); }
-    finally { setSaving(false); }
+    finally { savePending.current = false; setSaving(false); }
   };
 
   const nextEditStep = () => {
@@ -103,6 +110,7 @@ function EditProduct() {
   if (loading) return <PageLoader title="Loading product details" message="We’re preparing the listing and its variants." />;
 
   const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
+  if (loadError) return <div className="p-5 md:p-8"><section role="alert" className="surface-card mx-auto max-w-2xl p-6"><h1 className="text-xl font-semibold">Could not load this listing</h1><p className="mt-2 text-sm text-slate-600">Load the saved product details before making changes.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" className="btn-primary" onClick={() => { setLoading(true); setLoadError(false); setLoadAttempt((attempt) => attempt + 1); }}>Retry listing</button><button type="button" className="btn-secondary" onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")}>Back to products</button></div></section></div>;
   return (
     <div className="p-5 md:p-8 xl:p-10">
       <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1><p className="mt-2 text-sm text-slate-500">Update product information, inventory and photos, then review your changes.</p></div><button onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")} className="btn-secondary">Back to products</button></header>

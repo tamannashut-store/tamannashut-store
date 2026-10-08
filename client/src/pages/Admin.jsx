@@ -21,6 +21,7 @@ function Admin() {
   const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
   const productsBasePath = sellerAccount ? "/seller/products" : "/admin";
   const previewUrls = useRef([]);
+  const savePending = useRef(false);
   const [products, setProducts] = useState([]);
   const [meta, setMeta] = useState({ page: 1, totalPages: 1, totalProducts: 0 });
   const [search, setSearch] = useState("");
@@ -115,6 +116,7 @@ function Admin() {
 
   const createProduct = async (event, saveDraft = false) => {
     event.preventDefault();
+    if (savePending.current) return;
     if (!saveDraft && createStep < 3) return nextCreateStep();
     if (!saveDraft && !checkListing()) return;
     if (!saveDraft && !images.length) return toast.error("Add at least one product image");
@@ -122,6 +124,7 @@ function Admin() {
     if (variants.some((variant) => !variant.size?.trim())) return toast.error("Every SKU needs an option");
     if (variants.some((variant) => !variant.sku)) return toast.error("Generate or enter every variant SKU");
     try {
+      savePending.current = true;
       setLoading(true);
       const data = new FormData();
       Object.entries(form).forEach(([key, value]) => {
@@ -142,6 +145,7 @@ function Admin() {
     } catch (error) {
       toast.error(error.response?.data?.message || "Product could not be created");
     } finally {
+      savePending.current = false;
       setLoading(false);
     }
   };
