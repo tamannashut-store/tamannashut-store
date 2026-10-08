@@ -111,7 +111,7 @@ test("recently viewed refreshes live cards and removes deleted listings", async 
   await page.goto(`/product/${product.slug}`);
   const recent = page.locator("section").filter({ has: page.getByRole("heading", { name: "Recently viewed", exact: true }) });
   await expect(recent.getByRole("heading", { name: "Current listing" })).toBeVisible();
-  await expect(recent.getByText("₹349", { exact: true })).toBeVisible();
+  await expect(recent.getByText("₹349", { exact: true }).filter({ visible: true })).toBeVisible();
   await expect(page.getByText("Removed listing", { exact: true })).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("recently_viewed_products")).map(item => item._id))).not.toContain(removed._id);
 });
