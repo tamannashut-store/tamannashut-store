@@ -293,7 +293,7 @@ test("owner can save a private name-only product draft", async ({ page }) => {
 });
 
 test("single SKU listing preserves generic details, tax and images through editing", async ({ page }) => {
-  const bottle = { ...product, name: "Steel bottle", category: "home-kitchen", productType: "simple", gstMode: "custom", gstRate: 18, hsnCode: "7323", brand: "Example", specifications: "Capacity: 1 litre", weightKg: 0.4, variants: [{ sku: "BOTTLE-1", size: "Standard", color: "", price: 299, stock: 3 }], status: "active" };
+  const bottle = { ...product, name: "Steel bottle", baseSku: "BOTTLE", description: "Stainless steel bottle", category: "home-kitchen", productType: "simple", gstMode: "custom", gstRate: 18, hsnCode: "7323", brand: "Example", specifications: "Capacity: 1 litre", weightKg: 0.4, variants: [{ sku: "BOTTLE-1", size: "Standard", color: "", price: 299, stock: 3 }], status: "active" };
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", isAdmin: true } })));
   await page.route(`**/api/products/admin/item/${product._id}`, (route) => route.fulfill({ json: bottle }));
   let updated = false;
@@ -973,4 +973,34 @@ test('listing basics adapt to the category and mobile review counts only active 
   await page.screenshot({ path: 'output/release/listing-desktop-review.png', fullPage: true });
   await review.getByRole('button', { name: 'Edit product details', exact: true }).click();
   await expect(page.getByLabel('Name', { exact: true })).toHaveValue('Steel bottle');
+});
+
+test('listing publication returns to actionable field errors without sending invalid data', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-token', user: { id: 'admin-test', isAdmin: true } })));
+  let published = 0;
+  await page.route('**/api/products', route => {
+    if (route.request().method() === 'POST') published++;
+    return route.fulfill({ json: { products: [] } });
+  });
+  await page.goto('/admin');
+  await page.getByRole('button', { name: '+ Add product' }).click();
+  await page.getByLabel('Product name', { exact: true }).fill('Cotton shirt');
+  await page.getByLabel('Category *', { exact: true }).fill('clothing');
+  await page.getByLabel('Base SKU', { exact: true }).fill('SHIRT-1');
+  await page.getByLabel('Selling price (₹)', { exact: true }).fill('100');
+  await page.getByLabel('MRP (₹)', { exact: true }).fill('50');
+  await page.getByLabel('HSN code *', { exact: true }).fill('6209');
+  await page.getByLabel('Description', { exact: true }).fill('Cotton shirt for everyday wear');
+  await page.getByRole('button', { name: /4 Review & publish/ }).click();
+  await page.getByRole('button', { name: 'Create listing', exact: true }).click();
+  await expect(page.getByLabel('MRP (₹)', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByRole('alert')).toContainText('MRP must be equal to or greater than the selling price.');
+  await expect(page.getByLabel('Product name', { exact: true })).toHaveValue('Cotton shirt');
+  await page.getByLabel('MRP (₹)', { exact: true }).fill('120');
+  await expect(page.getByLabel('MRP (₹)', { exact: true })).toHaveAttribute('aria-invalid', 'false');
+  await page.getByRole('button', { name: /4 Review & publish/ }).click();
+  await page.getByRole('button', { name: 'Create listing', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('Add at least one active inventory option.');
+  await expect(page.getByRole('heading', { name: 'Product options and inventory', exact: true })).toBeVisible();
+  expect(published).toBe(0);
 });

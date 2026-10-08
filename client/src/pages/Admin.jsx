@@ -1,3 +1,5 @@
+import { validateListing } from "../utils/listingValidation";
+import ListingValidation from "../components/ListingValidation";
 import { generalListingDefaults } from "../utils/listingDefaults";
 import GeneralListingFields from "../components/GeneralListingFields";
 import ListingBasics from "../components/ListingBasics";
@@ -35,6 +37,16 @@ function Admin() {
   const [imageColors, setImageColors] = useState([]);
   const [imageSizes, setImageSizes] = useState([]);
   const [createStep, setCreateStep] = useState(0);
+  const [showValidation, setShowValidation] = useState(false);
+  const validation = validateListing(form, variants, images.length);
+  const checkListing = (step = null) => {
+    setShowValidation(true);
+    const groups = [Object.values(validation.fields), validation.inventory, validation.photos];
+    const invalidStep = step === null ? groups.findIndex((messages) => messages.length) : groups[step].length ? step : -1;
+    if (invalidStep < 0) return true;
+    setCreateStep(invalidStep);
+    return false;
+  };
 
   const fetchProducts = useCallback(async (page = 1) => {
     try {
@@ -98,11 +110,13 @@ function Admin() {
     setImageColors([]);
     setImageSizes([]);
     setCreateStep(0);
+    setShowValidation(false);
   };
 
   const createProduct = async (event, saveDraft = false) => {
     event.preventDefault();
     if (!saveDraft && createStep < 3) return nextCreateStep();
+    if (!saveDraft && !checkListing()) return;
     if (!saveDraft && !images.length) return toast.error("Add at least one product image");
     if (!saveDraft && !variants.length) return toast.error("Add at least one colour style");
     if (variants.some((variant) => !variant.size?.trim())) return toast.error("Every SKU needs an option");
@@ -150,9 +164,7 @@ function Admin() {
     } catch (error) { toast.error(error.response?.data?.message || "Bulk update failed"); }
   };
   const nextCreateStep = () => {
-    if (createStep === 0 && (!form.name.trim() || !form.price || !form.mrp || !form.baseSku.trim() || !/^\d{4,8}$/.test(form.hsnCode) || !form.category || !form.description.trim())) return toast.error("Complete the required product information, including the correct HSN code");
-    if (createStep === 1 && (!variants.length || variants.some((variant) => !variant.size?.trim()))) return toast.error("Add at least one complete inventory row");
-    if (createStep === 2 && !images.length) return toast.error("Upload at least one product photo");
+    if (!checkListing(createStep)) return;
     setCreateStep((step) => Math.min(step + 1, 3));
   };
 
@@ -164,11 +176,12 @@ function Admin() {
       </header>
 
       {showCreate && (
-        <form onSubmit={createProduct} className="mt-8">
+        <form noValidate onSubmit={createProduct} className="mt-8">
           <ListingWizardNav current={createStep} onChange={setCreateStep} />
+          <ListingValidation messages={showValidation ? createStep === 0 ? Object.values(validation.fields) : createStep === 1 ? validation.inventory : createStep === 2 ? validation.photos : [] : []} />
           {createStep === 0 && <div className="mx-auto max-w-4xl">
-          <ListingBasics form={form} onChange={changeForm} />
-          <GeneralListingFields form={form} onChange={changeForm} />
+          <ListingBasics errors={showValidation ? validation.fields : {}} form={form} onChange={changeForm} />
+          <GeneralListingFields errors={showValidation ? validation.fields : {}} form={form} onChange={changeForm} />
           </div>}
 
           {createStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor productType={form.productType} optionLabel={form.optionLabel} variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} lowStockThreshold={form.lowStockThreshold} onRenameColor={(oldColor, nextColor) => setImageColors((current) => current.map((color) => color === oldColor ? nextColor : color))} /></div>}

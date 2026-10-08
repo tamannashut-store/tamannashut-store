@@ -1,3 +1,5 @@
+import { validateListing } from "../utils/listingValidation";
+import ListingValidation from "../components/ListingValidation";
 import { generalListingDefaults } from "../utils/listingDefaults";
 import GeneralListingFields from "../components/GeneralListingFields";
 import ListingBasics from "../components/ListingBasics";
@@ -21,6 +23,16 @@ function EditProduct() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editStep, setEditStep] = useState(0);
+  const [showValidation, setShowValidation] = useState(false);
+  const validation = validateListing(form, variants, images.length);
+  const checkListing = (step = null) => {
+    setShowValidation(true);
+    const groups = [Object.values(validation.fields), validation.inventory, validation.photos];
+    const invalidStep = step === null ? groups.findIndex((messages) => messages.length) : groups[step].length ? step : -1;
+    if (invalidStep < 0) return true;
+    setEditStep(invalidStep);
+    return false;
+  };
 
   useEffect(() => {
     const urls = previewUrls.current;
@@ -56,6 +68,7 @@ function EditProduct() {
   const submit = async (event, saveDraft = false) => {
     event.preventDefault();
     if (!saveDraft && editStep < 3) return nextEditStep();
+    if (!saveDraft && !checkListing()) return;
     if (!saveDraft && (!images.length || !variants.length)) return toast.error("Keep at least one image and inventory option");
     if (variants.some((variant) => !variant.size?.trim() || !variant.sku?.trim())) return toast.error("Every variant needs an option and SKU");
     try {
@@ -83,9 +96,7 @@ function EditProduct() {
   };
 
   const nextEditStep = () => {
-    if (editStep === 0 && (!form.name.trim() || !form.price || !form.mrp || !form.baseSku.trim() || !/^\d{4,8}$/.test(form.hsnCode) || !form.category || !form.description.trim())) return toast.error("Complete the required product information, including the correct HSN code");
-    if (editStep === 1 && (!variants.length || variants.some((variant) => !variant.size?.trim() || !variant.sku?.trim()))) return toast.error("Complete every option and SKU");
-    if (editStep === 2 && !images.length) return toast.error("Keep at least one product photo");
+    if (!checkListing(editStep)) return;
     setEditStep((step) => Math.min(step + 1, 3));
   };
 
@@ -95,11 +106,12 @@ function EditProduct() {
   return (
     <div className="p-5 md:p-8 xl:p-10">
       <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1><p className="mt-2 text-sm text-slate-500">Update product information, inventory and photos, then review your changes.</p></div><button onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")} className="btn-secondary">Back to products</button></header>
-      <form onSubmit={submit} className="mt-8">
+      <form noValidate onSubmit={submit} className="mt-8">
         <ListingWizardNav current={editStep} onChange={setEditStep} />
+          <ListingValidation messages={showValidation ? editStep === 0 ? Object.values(validation.fields) : editStep === 1 ? validation.inventory : editStep === 2 ? validation.photos : [] : []} />
         {editStep === 0 && <div className="mx-auto max-w-4xl">
-          <ListingBasics form={form} onChange={changeForm} editing />
-          <GeneralListingFields form={form} onChange={changeForm} />
+          <ListingBasics errors={showValidation ? validation.fields : {}} form={form} onChange={changeForm} editing />
+          <GeneralListingFields errors={showValidation ? validation.fields : {}} form={form} onChange={changeForm} />
         </div>}
         {editStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor productType={form.productType} optionLabel={form.optionLabel} variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} lowStockThreshold={form.lowStockThreshold} onRenameColor={(oldColor, nextColor) => setImages((current) => current.map((image) => image.color === oldColor ? { ...image, color: nextColor } : image))} /></div>}
         {editStep === 2 && <div className="mx-auto max-w-5xl space-y-6">
