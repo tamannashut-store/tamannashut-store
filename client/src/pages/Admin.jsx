@@ -1,5 +1,7 @@
 import { generalListingDefaults } from "../utils/listingDefaults";
-import GeneralListingFields, { CategoryField } from "../components/GeneralListingFields";
+import GeneralListingFields from "../components/GeneralListingFields";
+import ListingBasics from "../components/ListingBasics";
+import ListingReview from "../components/ListingReview";
 import { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -165,20 +167,8 @@ function Admin() {
         <form onSubmit={createProduct} className="mt-8">
           <ListingWizardNav current={createStep} onChange={setCreateStep} />
           {createStep === 0 && <div className="mx-auto max-w-4xl">
-            <section className="surface-card p-6"><h2 className="text-xl font-semibold">Listing information</h2><div className="mt-5 grid gap-4 md:grid-cols-2">
-              <label className="md:col-span-2"><span className="field-label">Product name</span><input required name="name" value={form.name} onChange={changeForm} className="field-control" /></label>
-              <label><span className="field-label">Selling price (₹)</span><input required min="0" type="number" name="price" value={form.price} onChange={changeForm} className="field-control" /></label>
-              <label><span className="field-label">MRP (₹)</span><input required min="0" type="number" name="mrp" value={form.mrp} onChange={changeForm} className="field-control" /></label>
-              <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} placeholder="TH-PRODUCT-001" className="field-control uppercase" /></label>
-              <label><span className="field-label">HSN code *</span><input required inputMode="numeric" pattern="[0-9]{4,8}" name="hsnCode" value={form.hsnCode} onChange={changeForm} placeholder="Confirm with your tax adviser" className="field-control" /><span className="mt-1 block text-xs text-slate-500">Use the exact HSN classification for this product.</span></label>
-              <CategoryField value={form.category} onChange={changeForm} />
-              <label><span className="field-label">Fabric</span><input name="fabric" value={form.fabric} onChange={changeForm} className="field-control" /></label>
-              <label><span className="field-label">Age group</span><input name="ageGroup" value={form.ageGroup} onChange={changeForm} placeholder="0–12 months" className="field-control" /></label>
-              <label><span className="field-label">Tags</span><input name="tags" value={form.tags} onChange={changeForm} placeholder="party, cotton, summer" className="field-control" /></label>
-              <label className="md:col-span-2"><span className="field-label">Description</span><textarea required rows="5" name="description" value={form.description} onChange={changeForm} className="field-control" /></label>
-            </div></section>
-
-            <GeneralListingFields form={form} onChange={changeForm} />
+          <ListingBasics form={form} onChange={changeForm} />
+          <GeneralListingFields form={form} onChange={changeForm} />
           </div>}
 
           {createStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor productType={form.productType} optionLabel={form.optionLabel} variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} lowStockThreshold={form.lowStockThreshold} onRenameColor={(oldColor, nextColor) => setImageColors((current) => current.map((color) => color === oldColor ? nextColor : color))} /></div>}
@@ -187,10 +177,10 @@ function Admin() {
             <ColorImageManager colors={variantColors} variants={variants} images={previews.map((url, index) => ({ id: url, url, color: imageColors[index] || "", size: imageSizes[index] || "" }))} onUpload={selectImages} onAssign={(index, assignment) => { setImageColors((current) => current.map((value, itemIndex) => itemIndex === index ? assignment.color : value)); setImageSizes((current) => current.map((value, itemIndex) => itemIndex === index ? assignment.size : value)); }} onMove={moveImage} onRemove={removeImage} />
           </div>}
           {createStep === 3 && <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[1fr_340px]">
-            <section className="surface-card p-6"><p className="eyebrow">Ready to publish</p><h2 className="mt-2 text-2xl font-semibold">Review your listing</h2><div className="mt-6 flex gap-5">{previews[0] && <img src={previews[0]} alt="" className="h-32 w-28 rounded-xl object-cover" />}<div><h3 className="text-lg font-semibold">{form.name}</h3><p className="mt-1 text-slate-500">{form.category} · {variantColors.length} colours · {variants.length} SKUs</p><p className="mt-3 text-xl font-bold text-brand-primary">₹{Number(form.price || 0).toLocaleString("en-IN")}</p></div></div><div className="mt-6 grid grid-cols-3 gap-3 text-center"><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{variants.length}</strong><span className="text-xs text-slate-500">SKUs</span></div><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{images.length}</strong><span className="text-xs text-slate-500">Photos</span></div><div className="rounded-xl bg-slate-50 p-3"><strong className="block text-lg">{variants.reduce((sum, item) => sum + Number(item.stock || 0), 0)}</strong><span className="text-xs text-slate-500">Units</span></div></div></section>
+            <ListingReview form={form} variants={variants} images={previews.map((url, index) => ({ url, color: imageColors[index] || "", size: imageSizes[index] || "" }))} onEdit={setCreateStep} />
             <section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Listing status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert at</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label><p className="mt-4 text-xs leading-5 text-slate-500">Drafts remain private. Seller listings require platform approval; platform listings become visible when active.</p></section>
           </div>}
-          <WizardActions onSaveDraft={(event) => createProduct(event, true)} current={createStep} onBack={() => setCreateStep((step) => Math.max(0, step - 1))} onNext={nextCreateStep} busy={loading} submitLabel="Create listing" />
+          <WizardActions onSaveDraft={(event) => createProduct(event, true)} current={createStep} onBack={() => setCreateStep((step) => Math.max(0, step - 1))} onNext={nextCreateStep} busy={loading} submitLabel={sellerAccount ? "Submit for approval" : form.status === "draft" ? "Save private draft" : "Create listing"} />
         </form>
       )}
 

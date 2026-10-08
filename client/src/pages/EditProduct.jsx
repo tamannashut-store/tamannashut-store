@@ -1,5 +1,7 @@
 import { generalListingDefaults } from "../utils/listingDefaults";
-import GeneralListingFields, { CategoryField } from "../components/GeneralListingFields";
+import GeneralListingFields from "../components/GeneralListingFields";
+import ListingBasics from "../components/ListingBasics";
+import ListingReview from "../components/ListingReview";
 import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate, useParams } from "react-router-dom";
@@ -54,7 +56,7 @@ function EditProduct() {
   const submit = async (event, saveDraft = false) => {
     event.preventDefault();
     if (!saveDraft && editStep < 3) return nextEditStep();
-    if (!saveDraft && (!images.length || !variants.length)) return toast.error("Keep at least one image and colour style");
+    if (!saveDraft && (!images.length || !variants.length)) return toast.error("Keep at least one image and inventory option");
     if (variants.some((variant) => !variant.size?.trim() || !variant.sku?.trim())) return toast.error("Every variant needs an option and SKU");
     try {
       setSaving(true);
@@ -92,29 +94,18 @@ function EditProduct() {
   const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
   return (
     <div className="p-5 md:p-8 xl:p-10">
-      <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1></div><button onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")} className="btn-secondary">Back to products</button></header>
+      <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1><p className="mt-2 text-sm text-slate-500">Update product information, inventory and photos, then review your changes.</p></div><button onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")} className="btn-secondary">Back to products</button></header>
       <form onSubmit={submit} className="mt-8">
         <ListingWizardNav current={editStep} onChange={setEditStep} />
         {editStep === 0 && <div className="mx-auto max-w-4xl">
-          <section className="surface-card p-6"><h2 className="text-xl font-semibold">Product information</h2><div className="mt-5 grid gap-4 md:grid-cols-2">
-            <label className="md:col-span-2"><span className="field-label">Name</span><input required name="name" value={form.name} onChange={changeForm} className="field-control" /></label>
-            <label><span className="field-label">Selling price (₹)</span><input required type="number" min="0" name="price" value={form.price} onChange={changeForm} className="field-control" /></label>
-            <label><span className="field-label">MRP (₹)</span><input required type="number" min={form.price || 0} name="mrp" value={form.mrp} onChange={changeForm} className="field-control" /></label>
-            <label><span className="field-label">Base SKU</span><input required name="baseSku" value={form.baseSku} onChange={changeForm} className="field-control uppercase" /></label>
-            <label><span className="field-label">HSN code *</span><input required inputMode="numeric" pattern="[0-9]{4,8}" name="hsnCode" value={form.hsnCode} onChange={changeForm} placeholder="Confirm with your tax adviser" className="field-control" /><span className="mt-1 block text-xs text-slate-500">Use the exact HSN classification for this product.</span></label>
-            <CategoryField value={form.category} onChange={changeForm} />
-            <label><span className="field-label">Fabric</span><input name="fabric" value={form.fabric} onChange={changeForm} className="field-control" /></label>
-            <label><span className="field-label">Age group</span><input name="ageGroup" value={form.ageGroup} onChange={changeForm} className="field-control" /></label>
-            <label><span className="field-label">Tags</span><input name="tags" value={form.tags} onChange={changeForm} className="field-control" /></label>
-            <label className="md:col-span-2"><span className="field-label">Description</span><textarea required rows="6" name="description" value={form.description} onChange={changeForm} className="field-control" /></label>
-          </div></section>
-            <GeneralListingFields form={form} onChange={changeForm} />
+          <ListingBasics form={form} onChange={changeForm} editing />
+          <GeneralListingFields form={form} onChange={changeForm} />
         </div>}
         {editStep === 1 && <div className="mx-auto max-w-5xl"><ColorVariantEditor productType={form.productType} optionLabel={form.optionLabel} variants={variants} setVariants={setVariants} baseSku={form.baseSku || form.name} basePrice={form.price} lowStockThreshold={form.lowStockThreshold} onRenameColor={(oldColor, nextColor) => setImages((current) => current.map((image) => image.color === oldColor ? { ...image, color: nextColor } : image))} /></div>}
-        {editStep >= 2 && <div className="mx-auto max-w-5xl space-y-6">
+        {editStep === 2 && <div className="mx-auto max-w-5xl space-y-6">
           <ColorImageManager colors={variantColors} variants={variants} images={images} onUpload={addImages} onAssign={(index, assignment) => setImages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...assignment } : item))} onMove={moveImage} onRemove={(index) => setImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
         </div>}
-        {editStep === 3 && <aside className="mx-auto max-w-5xl"><section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label></section></aside>}
+        {editStep === 3 && <aside className="mx-auto grid max-w-5xl items-start gap-6 lg:grid-cols-[1fr_340px]"><ListingReview form={form} variants={variants} images={images} onEdit={setEditStep} /><section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label></section></aside>}
         <WizardActions onSaveDraft={(event) => submit(event, true)} current={editStep} onBack={() => setEditStep((step) => Math.max(0, step - 1))} onNext={nextEditStep} busy={saving} submitLabel="Save listing" />
       </form>
     </div>
