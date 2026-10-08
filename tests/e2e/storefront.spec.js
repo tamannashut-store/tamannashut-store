@@ -1065,3 +1065,33 @@ test('returned seller listing shows correction notes and separates resubmission 
   await expect(page).toHaveURL(/\/seller\/products$/);
   expect(statuses).toEqual(['active', 'draft']);
 });
+
+test('approval queue distinguishes failed loads and protects a pending review from duplicate clicks', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-token', user: { id: 'admin-test', isAdmin: true } })));
+  let failed = true;
+  let writes = 0;
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  let reviewed = false;
+  await page.route('**/api/products/admin/list?**', route => route.fulfill(failed ? { status: 503, json: { message: 'Unavailable' } } : { json: { products: reviewed ? [] : [{ ...product, approvalStatus: 'pending' }] } }));
+  await page.route(`**/api/products/admin/${product._id}/approval`, async route => {
+    writes++;
+    await pending;
+    reviewed = true;
+    return route.fulfill({ json: { message: 'Seller listing approved' } });
+  });
+  await page.goto('/admin/listing-approvals');
+  await expect(page.getByRole('alert')).toContainText('Could not load listing approvals');
+  await expect(page.getByText('No listings awaiting approval', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Approve', exact: true })).toHaveCount(0);
+  failed = false;
+  await page.getByRole('button', { name: 'Retry approvals', exact: true }).click();
+  await expect(page.getByRole('heading', { name: product.name, exact: true })).toBeVisible();
+  page.on('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: 'Approve', exact: true }).evaluate(button => { button.click(); button.click(); });
+  await expect(page.getByRole('button', { name: 'Saving…', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Return', exact: true })).toBeDisabled();
+  expect(writes).toBe(1);
+  release();
+  await expect(page.getByText('No listings awaiting approval', { exact: true })).toBeVisible();
+});
