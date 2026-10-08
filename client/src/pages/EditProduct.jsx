@@ -16,6 +16,8 @@ import PageLoader from "../components/PageLoader";
 function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
+  const [approval, setApproval] = useState({ status: "", note: "" });
   const previewUrls = useRef([]);
   const savePending = useRef(false);
   const [loadError, setLoadError] = useState(false);
@@ -27,7 +29,7 @@ function EditProduct() {
   const [saving, setSaving] = useState(false);
   const [editStep, setEditStep] = useState(0);
   const [showValidation, setShowValidation] = useState(false);
-  const validation = validateListing(form, variants, images.length);
+  const validation = validateListing(sellerAccount ? { ...form, status: "active" } : form, variants, images.length);
   const checkListing = (step = null) => {
     setShowValidation(true);
     const groups = [Object.values(validation.fields), validation.inventory, validation.photos];
@@ -43,6 +45,7 @@ function EditProduct() {
     axios.get(`${import.meta.env.VITE_API_URL}/api/products/admin/item/${id}`)
       .then(({ data }) => {
         if (!active) return;
+        setApproval({ status: data.approvalStatus || "", note: data.approvalNote || "" });
         setForm({
           ...generalListingDefaults,
           ...Object.fromEntries(Object.keys(generalListingDefaults).map((key) => [key, data[key] ?? generalListingDefaults[key]])),
@@ -83,6 +86,7 @@ function EditProduct() {
       const data = new FormData();
       Object.entries(form).forEach(([key, value]) => data.append(key, key === "tags" ? JSON.stringify(String(value).split(",").map((tag) => tag.trim()).filter(Boolean)) : value));
       if (saveDraft) data.set("status", "draft");
+      else if (sellerAccount) data.set("status", "active");
       data.append("variants", JSON.stringify(variants));
       data.append("sizeStock", JSON.stringify(variants.map(({ size, stock }) => ({ size, stock }))));
       const existing = images.filter((image) => image.type === "existing");
@@ -95,9 +99,8 @@ function EditProduct() {
       data.append("inventoryReason", "Seller listing updated");
       newImages.forEach((image) => data.append("images", image.file));
       await axios.put(`${import.meta.env.VITE_API_URL}/api/products/${id}`, data);
-      toast.success(saveDraft ? "Private draft saved" : "Product updated");
-      const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
-      navigate(sellerAccount ? "/seller/products" : "/admin");
+      toast.success(saveDraft ? "Private draft saved" : sellerAccount ? "Listing submitted for platform approval" : "Product updated");
+          navigate(sellerAccount ? "/seller/products" : "/admin");
     } catch (error) { toast.error(error.response?.data?.message || "Update failed"); }
     finally { savePending.current = false; setSaving(false); }
   };
@@ -109,11 +112,11 @@ function EditProduct() {
 
   if (loading) return <PageLoader title="Loading product details" message="We’re preparing the listing and its variants." />;
 
-  const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
   if (loadError) return <div className="p-5 md:p-8"><section role="alert" className="surface-card mx-auto max-w-2xl p-6"><h1 className="text-xl font-semibold">Could not load this listing</h1><p className="mt-2 text-sm text-slate-600">Load the saved product details before making changes.</p><div className="mt-5 flex flex-wrap gap-3"><button type="button" className="btn-primary" onClick={() => { setLoading(true); setLoadError(false); setLoadAttempt((attempt) => attempt + 1); }}>Retry listing</button><button type="button" className="btn-secondary" onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")}>Back to products</button></div></section></div>;
   return (
     <div className="p-5 md:p-8 xl:p-10">
       <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1><p className="mt-2 text-sm text-slate-500">Update product information, inventory and photos, then review your changes.</p></div><button onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")} className="btn-secondary">Back to products</button></header>
+      {sellerAccount && approval.status === "rejected" && <section role="status" className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-semibold">Changes requested by the administrator</h2><p className="mt-2 whitespace-pre-line break-words text-sm">{approval.note || "Review the listing details before submitting again."}</p><p className="mt-2 text-sm text-slate-600">Correct these details, then submit for approval. Save draft keeps your changes private.</p></section>}
       <form noValidate onSubmit={submit} className="mt-8">
         <ListingWizardNav current={editStep} onChange={setEditStep} />
           <ListingValidation messages={showValidation ? editStep === 0 ? Object.values(validation.fields) : editStep === 1 ? validation.inventory : editStep === 2 ? validation.photos : [] : []} />
@@ -125,8 +128,8 @@ function EditProduct() {
         {editStep === 2 && <div className="mx-auto max-w-5xl space-y-6">
           <ColorImageManager colors={variantColors} variants={variants} images={images} onUpload={addImages} onAssign={(index, assignment) => setImages((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...assignment } : item))} onMove={moveImage} onRemove={(index) => setImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} />
         </div>}
-        {editStep === 3 && <aside className="mx-auto grid max-w-5xl items-start gap-6 lg:grid-cols-[1fr_340px]"><ListingReview form={form} variants={variants} images={images} onEdit={setEditStep} /><section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2><label className="mt-4 block"><span className="field-label">Status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label><label className="mt-4 block"><span className="field-label">Low-stock alert</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label></section></aside>}
-        <WizardActions onSaveDraft={(event) => submit(event, true)} current={editStep} onBack={() => setEditStep((step) => Math.max(0, step - 1))} onNext={nextEditStep} busy={saving} submitLabel="Save listing" />
+        {editStep === 3 && <aside className="mx-auto grid max-w-5xl items-start gap-6 lg:grid-cols-[1fr_340px]"><ListingReview form={form} variants={variants} images={images} onEdit={setEditStep} /><section className="surface-card p-6"><h2 className="text-xl font-semibold">Publishing</h2>{!sellerAccount && <label className="mt-4 block"><span className="field-label">Status</span><select name="status" value={form.status} onChange={changeForm} className="field-control"><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label>}{sellerAccount && <p className="mt-4 text-sm text-slate-600">Submitting sends this listing for administrator review. It becomes available to customers after approval. Save draft keeps it private.</p>}<label className="mt-4 block"><span className="field-label">Low-stock alert</span><input type="number" min="0" name="lowStockThreshold" value={form.lowStockThreshold} onChange={changeForm} className="field-control" /></label></section></aside>}
+        <WizardActions onSaveDraft={(event) => submit(event, true)} current={editStep} onBack={() => setEditStep((step) => Math.max(0, step - 1))} onNext={nextEditStep} busy={saving} submitLabel={sellerAccount ? "Submit for approval" : "Save listing"} />
       </form>
     </div>
   );
