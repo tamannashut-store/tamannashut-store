@@ -78,6 +78,7 @@ function ProductDetails() {
     setProduct(null);
     setLoadError("");
     setRelatedProducts([]);
+    setRecentlyViewed([]);
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${id}`, { signal });
       if (signal?.aborted) return;
@@ -94,10 +95,20 @@ function ProductDetails() {
       setSelectedImageIndex(0);
       try {
         const stored = JSON.parse(localStorage.getItem("recently_viewed_products") || "[]");
-        const previous = Array.isArray(stored) ? stored.filter((item) => item?._id && item._id !== data._id) : [];
-        setRecentlyViewed(previous.slice(0, 8));
+        const previous = Array.isArray(stored) ? stored.filter((item) => /^[a-f0-9]{24}$/i.test(item?._id || "") && item._id !== data._id).slice(0, 8) : [];
+        // Cached cards are history, not evidence that a listing is still public.
+        const checked = await Promise.all(previous.map(async (item) => {
+          try {
+            const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${item._id}`, { signal });
+            return { product: response.data?._id === item._id && response.data?.name ? response.data : null, cached: item };
+          } catch (error) {
+            return { product: null, cached: error.response?.status === 404 ? null : item };
+          }
+        }));
+        if (signal?.aborted) return;
+        setRecentlyViewed(checked.map((item) => item.product).filter(Boolean));
         const compactProduct = { _id: data._id, slug: data.slug, name: data.name, price: data.price, mrp: data.mrp, category: data.category, averageRating: data.averageRating, approvedReviewCount: data.approvedReviewCount, images: data.images?.slice(0, 1) || [] };
-        localStorage.setItem("recently_viewed_products", JSON.stringify([compactProduct, ...previous].slice(0, 8)));
+        localStorage.setItem("recently_viewed_products", JSON.stringify([compactProduct, ...checked.map((item) => item.cached).filter(Boolean)].slice(0, 8)));
       } catch {
         setRecentlyViewed([]);
       }
