@@ -905,3 +905,31 @@ test("mobile-only customer verifies an email before seeing the business applicat
   await page.getByRole("button", { name: "Verify email", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Apply to become a seller" })).toBeVisible();
 });
+
+test('refund records require receipt references and saved notes clear safely', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-session', user: { id: 'admin-test', isAdmin: true, email: 'admin@example.com' } })));
+  const order = { ...codOrder, status: 'Refund Pending', paymentStatus: 'Paid', internalNotes: [] };
+  let writes = 0;
+  await page.route('**/api/orders', route => route.fulfill({ json: [order] }));
+  await page.route(`**/api/orders/${order._id}`, async route => {
+    writes++;
+    order.internalNotes.push({ note: route.request().postDataJSON().internalNote, createdBy: 'admin@example.com' });
+    await route.fulfill({ json: order });
+  });
+  await page.goto('/admin/orders');
+  await page.getByRole('button', { name: /Test Customer/ }).click();
+  await expect(page.getByText('This button does not send money.', { exact: false })).toBeVisible();
+  await page.getByLabel('Paid via').selectOption('UPI');
+  await page.getByLabel('Refund transaction ID or UTR').fill('Refunded');
+  await page.getByRole('button', { name: 'Record COD refund', exact: true }).click();
+  await expect(page.getByText('Enter the actual transaction ID or UTR from your payment receipt')).toBeVisible();
+  const note = page.getByPlaceholder('Visible only to staff');
+  const save = page.getByRole('button', { name: 'Add note', exact: true });
+  await expect(save).toBeDisabled();
+  await note.fill('Receipt retained for reconciliation');
+  await save.click();
+  await expect(note).toHaveValue('');
+  await expect(save).toBeDisabled();
+  await expect(page.getByText('Receipt retained for reconciliation', { exact: false })).toBeVisible();
+  expect(writes).toBe(1);
+});
