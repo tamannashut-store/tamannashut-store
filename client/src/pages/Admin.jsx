@@ -23,6 +23,9 @@ function Admin() {
   const previewUrls = useRef([]);
   const savePending = useRef(false);
   const [products, setProducts] = useState([]);
+  const [catalogueLoading, setCatalogueLoading] = useState(true);
+  const [catalogueError, setCatalogueError] = useState(false);
+  const catalogueRequest = useRef(0);
   const [meta, setMeta] = useState({ page: 1, totalPages: 1, totalProducts: 0 });
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -50,22 +53,30 @@ function Admin() {
   };
 
   const fetchProducts = useCallback(async (page = 1) => {
+    const request = ++catalogueRequest.current;
+    setCatalogueLoading(true);
+    setCatalogueError(false);
+    setSelected([]);
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/admin/list`, {
         params: { page, limit: 20, search: search || undefined, status: statusFilter || undefined, inventory: inventoryFilter || undefined, approval: approvalFilter || undefined },
       });
+      if (request !== catalogueRequest.current) return;
       setProducts(data.products || []);
       setMeta({ page: data.currentPage, totalPages: data.totalPages, totalProducts: data.totalProducts });
       setSelected([]);
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Could not load products");
+    } catch {
+      if (request === catalogueRequest.current) setCatalogueError(true);
+    } finally {
+      if (request === catalogueRequest.current) setCatalogueLoading(false);
     }
   }, [search, statusFilter, inventoryFilter, approvalFilter]);
 
+  const invalidateCatalogueRequest = useCallback(() => { catalogueRequest.current++; }, []);
   useEffect(() => {
     const timer = setTimeout(() => fetchProducts(1), 250);
-    return () => clearTimeout(timer);
-  }, [fetchProducts]);
+    return () => { clearTimeout(timer); invalidateCatalogueRequest(); };
+  }, [fetchProducts, invalidateCatalogueRequest]);
 
   useEffect(() => () => previewUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
 
@@ -175,7 +186,7 @@ function Admin() {
   return (
     <div className="p-5 md:p-8 xl:p-10">
       <header className="flex flex-wrap items-end justify-between gap-5">
-        <div><p className="eyebrow">Catalogue</p><h1 className="mt-2 text-3xl font-bold md:text-4xl">Product listings</h1><p className="mt-2 text-sm text-slate-500">{meta.totalProducts} products across all listing states</p></div>
+        <div><p className="eyebrow">Catalogue</p><h1 className="mt-2 text-3xl font-bold md:text-4xl">Product listings</h1><p className="mt-2 text-sm text-slate-500">{catalogueLoading ? "Loading catalogue…" : catalogueError ? "Catalogue unavailable" : `${meta.totalProducts} products across all listing states`}</p></div>
         <button onClick={() => setShowCreate((value) => !value)} className="btn-primary">{showCreate ? "Close form" : "+ Add product"}</button>
       </header>
 
@@ -202,7 +213,8 @@ function Admin() {
       )}
 
       <section className="admin-product-list surface-card mt-8 overflow-hidden">
-        <div className="grid gap-3 border-b p-4 sm:grid-cols-2 xl:flex"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or SKU" className="field-control xl:max-w-sm" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="field-control xl:max-w-44"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select>{!sellerAccount && <select value={approvalFilter} onChange={(event) => setApprovalFilter(event.target.value)} className="field-control xl:max-w-52"><option value="">All review states</option><option value="pending">Pending approval</option><option value="approved">Approved seller listings</option><option value="rejected">Changes required</option><option value="not_required">Platform listings</option></select>}<select value={inventoryFilter} onChange={(event) => setInventoryFilter(event.target.value)} className="field-control xl:max-w-56"><option value="">All inventory</option><option value="low">Low/out-of-stock variants</option></select>{selected.length > 0 && <>{sellerAccount ? <button onClick={() => bulkStatus("draft")} className="btn-secondary text-sm">Submit for approval</button> : <button onClick={() => bulkStatus("active")} className="btn-secondary text-sm">Activate</button>}<button onClick={() => bulkStatus("archived")} className="btn-secondary text-sm">Archive</button></>}</div>
+        <div className="grid gap-3 border-b p-4 sm:grid-cols-2 xl:flex"><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name or SKU" className="field-control xl:max-w-sm" /><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="field-control xl:max-w-44"><option value="">All statuses</option><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select>{!sellerAccount && <select value={approvalFilter} onChange={(event) => setApprovalFilter(event.target.value)} className="field-control xl:max-w-52"><option value="">All review states</option><option value="pending">Pending approval</option><option value="approved">Approved seller listings</option><option value="rejected">Changes required</option><option value="not_required">Platform listings</option></select>}<select value={inventoryFilter} onChange={(event) => setInventoryFilter(event.target.value)} className="field-control xl:max-w-56"><option value="">All inventory</option><option value="low">Low/out-of-stock variants</option></select>{!catalogueLoading && !catalogueError && selected.length > 0 && <>{sellerAccount ? <button onClick={() => bulkStatus("draft")} className="btn-secondary text-sm">Submit for approval</button> : <button onClick={() => bulkStatus("active")} className="btn-secondary text-sm">Activate</button>}<button onClick={() => bulkStatus("archived")} className="btn-secondary text-sm">Archive</button></>}</div>
+        {catalogueLoading ? <p role="status" className="p-6 text-slate-600">Loading product listings…</p> : catalogueError ? <section role="alert" className="p-6"><h2 className="font-semibold">Could not load the catalogue</h2><p className="mt-2 text-sm text-slate-600">Retry to see products matching your current filters before making changes.</p><button type="button" onClick={() => fetchProducts(1)} className="btn-secondary mt-4">Retry catalogue</button></section> : <>
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-sm"><thead className="bg-slate-50 text-left text-xs uppercase tracking-wider text-slate-500"><tr><th className="p-4"><input type="checkbox" checked={products.length > 0 && selected.length === products.length} onChange={(event) => setSelected(event.target.checked ? products.map((product) => product._id) : [])} /></th><th>Product</th><th>Status</th><th>Price</th><th>Inventory</th><th>Updated</th><th className="pr-5 text-right">Actions</th></tr></thead><tbody>{products.map((product) => {
           const stock = totalInventory(product);
           const lowVariants = lowStockVariants(product);
@@ -211,6 +223,7 @@ function Admin() {
         <div className="admin-product-cards divide-y md:hidden">{products.map((product) => { const stock = totalInventory(product); const lowVariants = lowStockVariants(product); return <article key={product._id} className="p-4"><div className="flex gap-3"><input type="checkbox" aria-label={`Select ${product.name}`} checked={selected.includes(product._id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, product._id] : current.filter((id) => id !== product._id))}/><img src={product.images?.[0]?.url || "/placeholder.png"} alt="" className="h-20 w-16 rounded-xl object-cover"/><div className="min-w-0 flex-1"><p className="font-semibold leading-5">{product.name}</p><p className="mt-1 truncate font-mono text-xs text-slate-500">{product.baseSku || "No base SKU"}</p><div className="mt-2 flex flex-wrap items-center gap-2"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs capitalize">{product.approvalStatus === "pending" ? "pending approval" : product.approvalStatus === "rejected" ? "changes required" : product.status || "active"}</span><strong className={lowVariants.length ? "text-sm text-red-600" : "text-sm text-slate-700"}>{stock} total units</strong></div></div></div>{lowVariants.length > 0 && <div className="mt-3"><p className="mb-2 text-xs font-semibold uppercase tracking-wide text-red-600">{lowVariants.length} variants need attention</p><VariantStockList product={product}/></div>}<div className="mt-4 flex gap-2"><button onClick={() => navigate(`${productsBasePath}/edit/${product._id}`)} className="btn-secondary flex-1 py-2 text-sm">Edit listing</button><button onClick={() => deleteProduct(product._id)} className="rounded-xl border border-red-200 px-4 text-sm font-semibold text-red-600">Delete</button></div></article>; })}</div>
         {!products.length && <div className="p-12 text-center text-slate-500">No products match these filters.</div>}
         <div className="flex items-center justify-between border-t p-4 text-sm"><span>Page {meta.page} of {meta.totalPages}</span><div className="flex gap-2"><button disabled={meta.page <= 1} onClick={() => fetchProducts(meta.page - 1)} className="btn-secondary py-2 text-sm disabled:opacity-40">Previous</button><button disabled={meta.page >= meta.totalPages} onClick={() => fetchProducts(meta.page + 1)} className="btn-secondary py-2 text-sm disabled:opacity-40">Next</button></div></div>
+        </>}
       </section>
     </div>
   );

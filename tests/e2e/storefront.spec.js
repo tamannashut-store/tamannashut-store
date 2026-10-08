@@ -1095,3 +1095,48 @@ test('approval queue distinguishes failed loads and protects a pending review fr
   release();
   await expect(page.getByText('No listings awaiting approval', { exact: true })).toBeVisible();
 });
+
+test('catalogue load failures hide stale products and bulk selections until retry', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-token', user: { id: 'admin-test', isAdmin: true } })));
+  let failed = false;
+  await page.route('**/api/products/admin/list?**', route => route.fulfill(failed ? { status: 503, json: { message: 'Unavailable' } } : { json: { products: [product], currentPage: 1, totalPages: 1, totalProducts: 1 } }));
+  await page.goto('/admin');
+  const table = page.getByRole('table');
+  await expect(table.getByText(product.name, { exact: true })).toBeVisible();
+  await table.getByRole('checkbox').first().check();
+  await expect(page.getByRole('button', { name: 'Archive', exact: true })).toBeVisible();
+  failed = true;
+  await page.getByPlaceholder('Search name or SKU').fill('bottle');
+  await expect(page.getByRole('alert')).toContainText('Could not load the catalogue');
+  await expect(page.getByRole('button', { name: 'Archive', exact: true })).toHaveCount(0);
+  await expect(page.getByText(product.name, { exact: true })).toHaveCount(0);
+  await expect(page.getByText('No products match these filters.', { exact: true })).toHaveCount(0);
+  failed = false;
+  await page.getByRole('button', { name: 'Retry catalogue', exact: true }).click();
+  await expect(table.getByText(product.name, { exact: true })).toBeVisible();
+  await expect(table.getByRole('checkbox').first()).not.toBeChecked();
+});
+
+test('catalogue keeps the newest search result when an earlier response arrives late', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-token', user: { id: 'admin-test', isAdmin: true } })));
+  let release;
+  const earlier = new Promise(resolve => { release = resolve; });
+  let oldStarted;
+  const started = new Promise(resolve => { oldStarted = resolve; });
+  await page.route('**/api/products/admin/list?**', async route => {
+    const term = new URL(route.request().url()).searchParams.get('search');
+    if (term === 'old') { oldStarted(); await earlier; }
+    return route.fulfill({ json: { products: [{ ...product, name: term === 'old' ? 'Old result' : term === 'new' ? 'New result' : product.name }], currentPage: 1, totalPages: 1, totalProducts: 1 } });
+  });
+  await page.goto('/admin');
+  const search = page.getByPlaceholder('Search name or SKU');
+  await search.fill('old');
+  await started;
+  await search.fill('new');
+  await expect(page.getByRole('table').getByText('New result', { exact: true })).toBeVisible();
+  const oldResponse = page.waitForResponse(response => response.url().includes('search=old'));
+  release();
+  await oldResponse;
+  await expect(page.getByRole('table').getByText('New result', { exact: true })).toBeVisible();
+  await expect(page.getByText('Old result', { exact: true })).toHaveCount(0);
+});
