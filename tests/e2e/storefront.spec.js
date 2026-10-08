@@ -1043,3 +1043,25 @@ test('a pending private draft save sends only one request', async ({ page }) => 
   release();
   await expect(page.getByText('Private draft saved', { exact: true })).toBeVisible();
 });
+
+test('returned seller listing shows correction notes and separates resubmission from private draft', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-seller-token', user: { id: 'seller-test', accountType: 'seller', sellerAccessStatus: 'active' } })));
+  const listing = { ...product, status: 'draft', approvalStatus: 'rejected', approvalNote: 'Please correct the product description.', baseSku: 'TEST', hsnCode: '6209', description: 'Cotton outfit for everyday wear.' };
+  const statuses = [];
+  await page.route(`**/api/products/admin/item/${product._id}`, route => route.fulfill({ json: listing }));
+  await page.route(`**/api/products/${product._id}`, route => {
+    statuses.push(route.request().postData().match(/name="status"\r\n\r\n([^\r]+)/)?.[1]);
+    return route.fulfill({ json: listing });
+  });
+  await page.goto(`/seller/products/edit/${product._id}`);
+  await expect(page.getByRole('status')).toContainText(listing.approvalNote);
+  await page.getByRole('button', { name: /4 Review & publish/ }).click();
+  await expect(page.getByLabel('Status', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Submit for approval', exact: true }).click();
+  await expect(page).toHaveURL(/\/seller\/products$/);
+  expect(statuses).toEqual(['active']);
+  await page.goto(`/seller/products/edit/${product._id}`);
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+  await expect(page).toHaveURL(/\/seller\/products$/);
+  expect(statuses).toEqual(['active', 'draft']);
+});
