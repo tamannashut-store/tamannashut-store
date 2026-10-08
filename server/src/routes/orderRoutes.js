@@ -2,7 +2,7 @@ import express from "express";
 import Order from "../models/Order.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { orderStatusEmailTemplate } from "../utils/emailTemplates.js";
-import { invoiceTemplate } from "../utils/invoiceTemplate.js";
+import { sendInvoiceEmail } from "../services/invoiceEmailService.js";
 import { generateInvoice } from "../utils/generateInvoice.js";
 import { generatePackingSlip } from "../utils/generatePackingSlip.js";
 import { ORDER_STATUSES, canTransitionOrder, getNextOrderStatuses, restoresStockAt, syncCodPaymentStatus } from "../utils/orderLifecycle.js";
@@ -87,10 +87,9 @@ router.post("/resend-invoice/:id", protect, admin, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
-    await sendEmail(order.email, `Invoice ${String(order._id).slice(-8).toUpperCase()} - Tamanna's Hut`, invoiceTemplate(order));
-    return res.json({ success: true, message: "Invoice sent" });
+    return res.json(await sendInvoiceEmail(order));
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(error.status || 500).json({ message: error.message });
   }
 });
 

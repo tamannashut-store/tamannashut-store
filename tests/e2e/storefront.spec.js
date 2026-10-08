@@ -703,7 +703,7 @@ test("seller orders distinguish COD collection from online payment", async ({ pa
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-admin-token", user: { id: "admin-test", email: "admin@example.com", isAdmin: true } })));
   await page.goto("/admin/orders");
   await expect(page.getByText("Cash on delivery", { exact: true })).toBeVisible();
-  await expect(page.getByText("Collect on delivery")).toBeVisible();
+  await expect(page.getByText("Cash on delivery · Payment pending")).toBeVisible();
   await expect(page.getByText("Online payment")).toHaveCount(0);
 });
 
@@ -932,4 +932,18 @@ test('refund records require receipt references and saved notes clear safely', a
   await expect(save).toBeDisabled();
   await expect(page.getByText('Receipt retained for reconciliation', { exact: false })).toBeVisible();
   expect(writes).toBe(1);
+});
+
+
+test('admin orders retry failed loads and show collected COD payment accurately', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-token', user: { id: 'admin-test', isAdmin: true, email: 'admin@example.com' } })));
+  let failed = true;
+  await page.route('**/api/orders', route => route.fulfill(failed ? { status: 503, json: { message: 'Temporarily unavailable' } } : { json: [{ ...codOrder, status: 'Delivered', paymentStatus: 'Paid' }] }));
+  await page.goto('/admin/orders');
+  await expect(page.getByRole('alert')).toContainText('We could not load the orders.');
+  await expect(page.getByText('No matching orders', { exact: true })).toHaveCount(0);
+  failed = false;
+  await page.getByRole('button', { name: 'Retry orders', exact: true }).click();
+  await expect(page.getByText('Cash collected on delivery', { exact: true })).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });
