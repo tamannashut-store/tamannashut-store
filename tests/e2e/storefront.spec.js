@@ -1004,3 +1004,42 @@ test('listing publication returns to actionable field errors without sending inv
   await expect(page.getByRole('heading', { name: 'Product options and inventory', exact: true })).toBeVisible();
   expect(published).toBe(0);
 });
+
+test('listing editor blocks changes after a failed load and recovers saved details on retry', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-token', user: { id: 'admin-test', isAdmin: true } })));
+  let failed = true;
+  let writes = 0;
+  await page.route(`**/api/products/admin/item/${product._id}`, route => route.fulfill(failed ? { status: 503, json: { message: 'Unavailable' } } : { json: product }));
+  await page.route(`**/api/products/${product._id}`, route => { writes++; return route.fulfill({ json: product }); });
+  await page.goto(`/admin/edit/${product._id}`);
+  await expect(page.getByRole('alert')).toContainText('Could not load this listing');
+  await expect(page.getByRole('button', { name: 'Save draft', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save listing', exact: true })).toHaveCount(0);
+  failed = false;
+  await page.getByRole('button', { name: 'Retry listing', exact: true }).click();
+  await expect(page.getByLabel('Name', { exact: true })).toHaveValue(product.name);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  expect(writes).toBe(0);
+});
+
+test('a pending private draft save sends only one request', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('user', JSON.stringify({ token: 'safe-admin-token', user: { id: 'admin-test', isAdmin: true } })));
+  let writes = 0;
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  await page.route('**/api/products', async route => {
+    if (route.request().method() !== 'POST') return route.fulfill({ json: { products: [] } });
+    writes++;
+    await pending;
+    return route.fulfill({ json: { ...product, status: 'draft' } });
+  });
+  await page.goto('/admin');
+  await page.getByRole('button', { name: '+ Add product' }).click();
+  await page.getByLabel('Product name', { exact: true }).fill('Private notebook draft');
+  const save = page.getByRole('button', { name: 'Save draft', exact: true });
+  await save.evaluate(button => { button.click(); button.click(); });
+  await expect(save).toBeDisabled();
+  expect(writes).toBe(1);
+  release();
+  await expect(page.getByText('Private draft saved', { exact: true })).toBeVisible();
+});
