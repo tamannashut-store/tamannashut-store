@@ -3,14 +3,13 @@ import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { FiArrowRight, FiExternalLink, FiHeart, FiRefreshCw, FiShield, FiTruck, FiSearch, FiGrid, FiHome, FiMonitor, FiShoppingBag, FiBookOpen, FiActivity, FiSmile } from "react-icons/fi";
 import { FaInstagram } from "react-icons/fa";
-import marketplaceHero from "../assets/marketplace-hero.jpg";
 import { getProducts } from "../api/productApi";
 import WishlistContext from "../context/wishlistState";
 import ProductRating from "../components/ProductRating";
 import ProductImageSlider from "../components/ProductImageSlider";
 import SkeletonProduct from "../components/SkeletonProduct";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination } from "swiper/modules";
+import { A11y, Keyboard, Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -104,6 +103,7 @@ function Home() {
 
   const categoryCards = useMemo(() => departments.length ? departments : [...new Set(products.map((product) => product.category).filter(Boolean))].map((key) => ({ key, label: key.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()), image: products.find((product) => product.category === key)?.images?.[0]?.url || null })), [products, departments]);
   const heroProducts = products.slice(0, 6);
+  const spotlightProducts = [...products].filter((item) => !item.status || item.status === "active").sort((a, b) => Number(b.approvedReviewCount || 0) - Number(a.approvedReviewCount || 0)).slice(0, 6);
   const valueProduct = products.filter((product) => Number(product.mrp) > Number(product.price)).sort((a, b) => (1 - Number(b.price) / Number(b.mrp)) - (1 - Number(a.price) / Number(a.mrp)))[0];
 
   return (
@@ -125,7 +125,23 @@ function Home() {
                 <div className="mt-7 flex flex-wrap items-center gap-4"><Link to="/shop" className="btn-primary gap-2 px-6 py-3.5">Explore the store <FiArrowRight/></Link><a href="#departments" className="text-sm font-semibold text-brand-primary underline decoration-brand-primary/30 underline-offset-4">Browse departments</a></div>
                 <form role="search" aria-label="Find products" onSubmit={(event) => { event.preventDefault(); navigate(homeSearch.trim() ? "/shop?search=" + encodeURIComponent(homeSearch.trim()) : "/shop"); }} className="mt-8 flex max-w-xl items-center gap-1 rounded-xl border border-[#d9dfd4] bg-white p-1.5 shadow-sm"><FiSearch className="ml-2 shrink-0 text-lg text-slate-400"/><input aria-label="Search products, brands and categories" placeholder="What are you looking for?" value={homeSearch} onChange={(event) => setHomeSearch(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2.5 text-sm outline-none"/><button type="submit" className="rounded-lg bg-brand-primary px-3 py-2.5 text-sm font-semibold text-white sm:px-4">Search</button></form>
               </div>
-              <div className="relative min-h-72 sm:min-h-96 lg:min-h-[510px]"><img src={marketplaceHero} alt="" width="1536" height="1024" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover"/><div className="absolute bottom-5 left-5 right-5 w-fit max-w-[calc(100%-2.5rem)] rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-[#183d2b] backdrop-blur-sm">Everyday possibilities · Our catalogue is growing</div></div>
+              <section aria-label="Product spotlight" className="min-w-0 bg-[#eae9df]">
+                {spotlightProducts.length > 0 ? <Swiper modules={[A11y, Keyboard, Navigation, Pagination]} keyboard={{ enabled: true, onlyInViewport: true }} navigation={spotlightProducts.length > 1} pagination={spotlightProducts.length > 1 ? { clickable: true } : false} slidesPerView={1} className="commerce-slider">
+                  {spotlightProducts.map((item, index) => <SwiperSlide key={item._id}>
+                    <article className="flex h-full flex-col">
+                      <Link to={productPath(item)} aria-label={`Explore ${item.name}`} className="block h-80 bg-[#eeede6] sm:h-96 lg:h-[410px]">
+                        <img src={item.images?.find((photo) => photo.isCover)?.url || item.images?.[0]?.url || "/placeholder.png"} alt={item.name} fetchPriority={index === 0 ? "high" : "auto"} loading={index === 0 ? "eager" : "lazy"} className="h-full w-full object-contain" />
+                      </Link>
+                      <div className="bg-white px-6 pb-10 pt-5 sm:px-8">
+                        <p className="text-xs font-bold uppercase tracking-widest text-brand-primary">Available now</p>
+                        <h2 className="mt-2 text-xl font-semibold leading-7"><Link to={productPath(item)}>{item.name}</Link></h2>
+                        <ProductRating product={item} className="mt-2" />
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-xl font-bold text-brand-primary">₹{Number(item.price).toLocaleString("en-IN")}</span>{Number(item.mrp) > Number(item.price) && <span className="text-sm text-slate-500 line-through">₹{Number(item.mrp).toLocaleString("en-IN")}</span>}</div><Link to={productPath(item)} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">View product <FiArrowRight /></Link></div>
+                      </div>
+                    </article>
+                  </SwiperSlide>)}
+                </Swiper> : <div className="flex min-h-96 items-center justify-center px-8 py-14 text-center lg:min-h-[510px]">{loading ? <span role="status">Loading products…</span> : <div><FiShoppingBag className="mx-auto text-4xl text-brand-primary"/><p className="mt-4 font-semibold">{loadError ? "Products will appear when the catalogue reconnects." : "Discover our latest products as they arrive."}</p><Link to="/shop" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">Browse the store <FiArrowRight /></Link></div>}</div>}
+              </section>
             </div>
             <div className="grid grid-cols-1 divide-y divide-[#e6e2d7] border-t border-[#e6e2d7] bg-white/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">{[[FiShield,"Secure checkout","Online payment & cash on delivery"],[FiTruck,"Delivery to your doorstep","Track updates in your account"],[FiRefreshCw,"Support when you need it","Help with orders, returns & refunds"]].map(([Icon,title,copy]) => <div key={title} className="flex items-center gap-3 px-6 py-5 lg:px-8"><Icon className="shrink-0 text-2xl text-brand-primary"/><div><p className="text-sm font-semibold text-slate-900">{title}</p><p className="mt-1 text-xs text-slate-500">{copy}</p></div></div>)}</div>
           </div>

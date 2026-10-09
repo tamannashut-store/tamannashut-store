@@ -100,6 +100,23 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
+test("home spotlight slides through active products with prices and links", async ({ page }) => {
+  const second = { ...product, _id: "66aa11bb22cc33dd44ee55ad", slug: "second-live-product", name: "Second Live Product", price: 349, status: "active" };
+  const archived = { ...second, _id: "66aa11bb22cc33dd44ee55ae", name: "Archived product", status: "archived" };
+  await page.route(/\/api\/products(?:\?.*)?$/, route => route.fulfill({ json: { products: [product, second, archived] } }));
+  await page.goto("/");
+  const hero = page.getByRole("region", { name: "Product spotlight" });
+  await expect(hero.getByRole("heading", { name: product.name, exact: true })).toBeVisible();
+  await expect(hero.getByText("Archived product", { exact: true })).toHaveCount(0);
+  await hero.getByRole("button", { name: "Next slide", exact: true }).click();
+  await expect(hero.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  await expect(hero.getByText("₹349", { exact: true })).toBeVisible();
+  await expect(hero.getByRole("link", { name: "View product", exact: true }).nth(1)).toHaveAttribute("href", "/product/second-live-product");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(hero.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test("recently viewed refreshes live cards and removes deleted listings", async ({ page }) => {
   const removed = { ...product, _id: "66aa11bb22cc33dd44ee55aa", name: "Removed listing" };
   const cached = { ...product, _id: "66aa11bb22cc33dd44ee55ab", name: "Old cached name", price: 999 };
