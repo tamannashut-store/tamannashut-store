@@ -295,10 +295,11 @@ test("marketplace home keeps product photos fully visible and offers direct sear
   await page.goto("/");
   const photo = page.getByRole("region", { name: "Featured products" }).getByRole("img", { name: `${product.name} view 1`, exact: true }).first();
   await expect(photo).toBeVisible();
-  const framing = await photo.evaluate((element) => ({ fit: getComputedStyle(element).objectFit, padding: getComputedStyle(element).padding, height: element.getBoundingClientRect().height }));
+  const framing = await photo.evaluate((element) => ({ fit: getComputedStyle(element).objectFit, padding: getComputedStyle(element).padding, height: element.getBoundingClientRect().height, width: element.getBoundingClientRect().width }));
   expect(framing.fit).toBe("contain");
   expect(framing.padding).toBe("0px");
-  expect(framing.height).toBeLessThanOrEqual(300);
+  // Portrait media should use the card width without cropping the outfit.
+  expect(framing.height / framing.width).toBeCloseTo(1.5, 1);
   await expect(page.getByText("Home & kitchen", { exact: true })).toBeVisible();
   await page.getByRole("search", { name: "Find products" }).getByLabel("Search products, brands and categories").fill("steel bottle");
   await page.getByRole("search", { name: "Find products" }).getByRole("button", { name: "Search", exact: true }).click();
