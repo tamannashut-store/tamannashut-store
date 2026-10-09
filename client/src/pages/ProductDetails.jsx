@@ -93,13 +93,14 @@ function ProductDetails() {
       setSelectedColor(linkedVariant?.color || data.variants?.find((variant) => variant.active !== false)?.color || data.color || "");
       setSelectedSize((data.productType === "simple" || requestedSize) ? linkedVariant?.size || (data.productType === "simple" ? data.sizeStock?.[0]?.size : "") || "" : "");
       setSelectedImageIndex(0);
+      setLoading(false);
       try {
         const stored = JSON.parse(localStorage.getItem("recently_viewed_products") || "[]");
         const previous = Array.isArray(stored) ? stored.filter((item) => /^[a-f0-9]{24}$/i.test(item?._id || "") && item._id !== data._id).slice(0, 8) : [];
         // Cached cards are history, not evidence that a listing is still public.
         const checked = await Promise.all(previous.map(async (item) => {
           try {
-            const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${item._id}`, { signal });
+            const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/products/${item._id}`, { signal, timeout: 5000 });
             return { product: response.data?._id === item._id && response.data?.name ? response.data : null, cached: item };
           } catch (error) {
             return { product: null, cached: error.response?.status === 404 ? null : item };
