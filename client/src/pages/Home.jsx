@@ -1,16 +1,17 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { FiArrowRight, FiExternalLink, FiHeart, FiRefreshCw, FiShield, FiTruck, FiSearch, FiGrid, FiHome, FiMonitor, FiShoppingBag, FiBookOpen, FiActivity, FiSmile } from "react-icons/fi";
+import { FiArrowRight, FiExternalLink, FiHeart, FiRefreshCw, FiTruck, FiGrid, FiHome, FiMonitor, FiShoppingBag, FiBookOpen, FiActivity, FiSmile } from "react-icons/fi";
 import { FaInstagram } from "react-icons/fa";
 import { getProducts } from "../api/productApi";
 import WishlistContext from "../context/wishlistState";
 import ProductRating from "../components/ProductRating";
 import ProductImageSlider from "../components/ProductImageSlider";
 import ProductEditorialImages from "../components/ProductEditorialImages";
+import HomeProductHero from "../components/HomeProductHero";
 import SkeletonProduct from "../components/SkeletonProduct";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { A11y, Keyboard, Navigation, Pagination } from "swiper/modules";
+import { Navigation, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -116,36 +117,7 @@ function Home() {
       </Helmet>
 
       <main className="bg-[#f5f7fa]">
-        <section className="bg-[#f5f2eb] px-5 pb-8 pt-6 md:px-8 lg:pb-10 lg:pt-8" aria-label="Marketplace introduction">
-          <div className="mx-auto max-w-[1400px] overflow-hidden rounded-[28px] border border-[#e6e2d7] bg-[#fffdf8] shadow-sm">
-            <div className="grid lg:grid-cols-[1fr_1.05fr]">
-              <div className="flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-12 lg:py-14">
-                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-primary"><span className="h-2 w-2 rounded-full bg-brand-primary"/> Discover your everyday</p>
-                <h1 className="mt-5 max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-[#183d2b] sm:text-5xl xl:text-6xl">One store. More possibilities.</h1>
-                <p className="mt-5 max-w-lg text-base leading-7 text-slate-600 sm:text-lg">A little more choice for every part of your day. Explore our growing store and discover your next good find.</p>
-                <div className="mt-7 flex flex-wrap items-center gap-4"><Link to="/shop" className="btn-primary gap-2 px-6 py-3.5">Explore the store <FiArrowRight/></Link><a href="#departments" className="text-sm font-semibold text-brand-primary underline decoration-brand-primary/30 underline-offset-4">Browse departments</a></div>
-                <form role="search" aria-label="Find products" onSubmit={(event) => { event.preventDefault(); navigate(homeSearch.trim() ? "/shop?search=" + encodeURIComponent(homeSearch.trim()) : "/shop"); }} className="mt-8 flex max-w-xl items-center gap-1 rounded-xl border border-[#d9dfd4] bg-white p-1.5 shadow-sm"><FiSearch className="ml-2 shrink-0 text-lg text-slate-400"/><input aria-label="Search products, brands and categories" placeholder="What are you looking for?" value={homeSearch} onChange={(event) => setHomeSearch(event.target.value)} className="min-w-0 flex-1 border-0 bg-transparent px-2 py-2.5 text-sm outline-none"/><button type="submit" className="rounded-lg bg-brand-primary px-3 py-2.5 text-sm font-semibold text-white sm:px-4">Search</button></form>
-              </div>
-              <section aria-label="Product spotlight" className="min-w-0 bg-[#eae9df]">
-                {spotlightProducts.length > 0 ? <Swiper modules={[A11y, Keyboard, Navigation, Pagination]} keyboard={{ enabled: true, onlyInViewport: true }} navigation={spotlightProducts.length > 1} pagination={spotlightProducts.length > 1 ? { clickable: true } : false} slidesPerView={1} className="commerce-slider">
-                  {spotlightProducts.map((item, index) => <SwiperSlide key={item._id}>
-                    <article className="flex h-full flex-col">
-                      <ProductEditorialImages product={item} priority={index === 0} />
-                      <div className="bg-white px-6 pb-10 pt-5 sm:px-8">
-                        <p className="text-xs font-bold uppercase tracking-widest text-brand-primary">Available now</p>
-                        <h2 className="mt-2 text-xl font-semibold leading-7"><Link to={productPath(item)}>{item.name}</Link></h2>
-                        <ProductRating product={item} className="mt-2" />
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="text-xl font-bold text-brand-primary">₹{Number(item.price).toLocaleString("en-IN")}</span>{Number(item.mrp) > Number(item.price) && <span className="text-sm text-slate-500 line-through">₹{Number(item.mrp).toLocaleString("en-IN")}</span>}</div><Link to={productPath(item)} className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">View product <FiArrowRight /></Link></div>
-                      </div>
-                    </article>
-                  </SwiperSlide>)}
-                </Swiper> : <div className="flex min-h-96 items-center justify-center px-8 py-14 text-center lg:min-h-[510px]">{loading ? <span role="status">Loading products…</span> : <div><FiShoppingBag className="mx-auto text-4xl text-brand-primary"/><p className="mt-4 font-semibold">{loadError ? "Products will appear when the catalogue reconnects." : "Discover our latest products as they arrive."}</p><Link to="/shop" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">Browse the store <FiArrowRight /></Link></div>}</div>}
-              </section>
-            </div>
-            <div className="grid grid-cols-1 divide-y divide-[#e6e2d7] border-t border-[#e6e2d7] bg-white/70 sm:grid-cols-3 sm:divide-x sm:divide-y-0">{[[FiShield,"Secure checkout","Online payment & cash on delivery"],[FiTruck,"Delivery to your doorstep","Track updates in your account"],[FiRefreshCw,"Support when you need it","Help with orders, returns & refunds"]].map(([Icon,title,copy]) => <div key={title} className="flex items-center gap-3 px-6 py-5 lg:px-8"><Icon className="shrink-0 text-2xl text-brand-primary"/><div><p className="text-sm font-semibold text-slate-900">{title}</p><p className="mt-1 text-xs text-slate-500">{copy}</p></div></div>)}</div>
-          </div>
-        </section>
-
+        <HomeProductHero products={spotlightProducts} loading={loading} search={homeSearch} setSearch={setHomeSearch} onSearch={(event) => { event.preventDefault(); navigate(homeSearch.trim() ? "/shop?search=" + encodeURIComponent(homeSearch.trim()) : "/shop"); }} />
         <section id="departments" className="mx-auto max-w-[1400px] scroll-mt-24 px-5 py-12 md:px-8 lg:py-16" aria-label="Departments">
           <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-primary">A growing world of choice</p><h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Shop by department</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">Explore what&apos;s available today and see where our store is growing next.</p></div><Link to="/shop" className="hidden shrink-0 items-center gap-2 text-sm font-semibold text-brand-primary sm:inline-flex">Browse all <FiArrowRight /></Link></div>
           <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 lg:gap-4">
@@ -158,7 +130,7 @@ function Home() {
 
         <section className="border-y border-[#e5e4dc] bg-[#f1eee5]" aria-label="Shop by budget"><div className="mx-auto max-w-[1400px] px-5 py-12 md:px-8 lg:py-16"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-primary">Find your kind of value</p><h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Good finds. Within your budget.</h2></div><p className="max-w-sm text-sm leading-6 text-slate-500">Start with a price that works for you. Browse the catalogue with your budget already selected.</p></div><div className="mt-8 grid gap-4 md:grid-cols-3">{[[499,"Little everyday finds","For the small things that make your day.","#e7edde"],[999,"More room to explore","Discover more without stretching your budget.","#eee3d6"],[1499,"Something a little extra","Find a treat for yourself or someone you love.","#e5e7ef"]].map(([limit,title,copy,color]) => <Link key={limit} to={"/shop?maxPrice=" + limit} style={{backgroundColor:color}} className="group relative overflow-hidden rounded-2xl border border-white/60 p-6 transition hover:-translate-y-1 hover:shadow-lg sm:p-8"><p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-600">{title}</p><p className="mt-5 text-3xl font-bold tracking-tight text-[#183d2b]">Under ₹{Number(limit).toLocaleString("en-IN")}</p><p className="mt-3 max-w-64 text-sm leading-6 text-slate-600">{copy}</p><span className="mt-7 inline-flex items-center gap-3 text-sm font-semibold text-[#183d2b]">Explore finds <FiArrowRight className="transition group-hover:translate-x-1"/></span><FiShoppingBag aria-hidden="true" className="absolute -bottom-4 -right-3 text-[110px] text-white/35"/></Link>)}</div></div></section>
 
-        {valueProduct && <section className="mx-auto max-w-[1400px] px-5 py-12 md:px-8 lg:py-16" aria-label="Value spotlight"><div className="grid overflow-hidden rounded-3xl border border-slate-200 bg-white md:grid-cols-2"><div className="flex flex-col justify-center px-6 py-9 sm:p-10 lg:p-12"><p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-primary">A closer look</p><h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">A find worth discovering.</h2><p className="mt-5 text-lg font-semibold text-slate-700">{valueProduct.name}</p><ProductRating product={valueProduct} className="mt-3" /><div className="mt-5 flex items-baseline gap-3"><span className="text-3xl font-bold text-[#183d2b]">₹{Number(valueProduct.price).toLocaleString("en-IN")}</span><span className="text-lg text-slate-500 line-through">₹{Number(valueProduct.mrp).toLocaleString("en-IN")}</span><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">{Math.round((1-Number(valueProduct.price)/Number(valueProduct.mrp))*100)}% off</span></div><p className="mt-5 max-w-md text-sm leading-7 text-slate-500">See the full photos, check product details and choose the option that works for you before adding it to your bag.</p><Link to={productPath(valueProduct)} className="btn-primary mt-7 w-fit gap-2">Discover this product <FiArrowRight/></Link></div><div className="min-w-0 self-center"><ProductEditorialImages product={valueProduct} /></div></div></section>}
+        {products.length > 1 && valueProduct && <section className="mx-auto max-w-[1400px] px-5 py-12 md:px-8 lg:py-16" aria-label="Value spotlight"><div className="grid overflow-hidden rounded-3xl border border-slate-200 bg-white md:grid-cols-2"><div className="flex flex-col justify-center px-6 py-9 sm:p-10 lg:p-12"><p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-primary">A closer look</p><h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">A find worth discovering.</h2><p className="mt-5 text-lg font-semibold text-slate-700">{valueProduct.name}</p><ProductRating product={valueProduct} className="mt-3" /><div className="mt-5 flex items-baseline gap-3"><span className="text-3xl font-bold text-[#183d2b]">₹{Number(valueProduct.price).toLocaleString("en-IN")}</span><span className="text-lg text-slate-500 line-through">₹{Number(valueProduct.mrp).toLocaleString("en-IN")}</span><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">{Math.round((1-Number(valueProduct.price)/Number(valueProduct.mrp))*100)}% off</span></div><p className="mt-5 max-w-md text-sm leading-7 text-slate-500">See the full photos, check product details and choose the option that works for you before adding it to your bag.</p><Link to={productPath(valueProduct)} className="btn-primary mt-7 w-fit gap-2">Discover this product <FiArrowRight/></Link></div><div className="min-w-0 self-center"><ProductEditorialImages product={valueProduct} /></div></div></section>}
 
         {sponsored.length > 0 && <section className="border-y border-slate-200 bg-white"><div className="mx-auto max-w-[1400px] px-5 py-14 md:px-8"><div className="flex items-end justify-between gap-5"><div><p className="eyebrow">Sponsored</p><h2 className="mt-2 text-2xl font-bold text-slate-950 md:text-3xl">Promoted by our sellers</h2></div><p className="max-w-md text-right text-xs leading-5 text-slate-500">Paid placements are reviewed by Tamanna&apos;s Hut. Sponsorship does not change product reviews.</p></div><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{sponsored.map((item) => <ProductCard key={item.campaignId} product={item.product} campaignId={item.campaignId} onWishlist={addToWishlist}/>)}</div></div></section>}
 
