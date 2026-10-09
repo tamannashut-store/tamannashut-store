@@ -100,6 +100,50 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
+test("home spotlight slides through active products with prices and links", async ({ page }) => {
+  const second = { ...product, _id: "66aa11bb22cc33dd44ee55ad", slug: "second-live-product", name: "Second Live Product", price: 349, status: "active" };
+  const archived = { ...second, _id: "66aa11bb22cc33dd44ee55ae", name: "Archived product", status: "archived" };
+  await page.route(/\/api\/products(?:\?.*)?$/, route => route.fulfill({ json: { products: [product, second, archived] } }));
+  await page.goto("/");
+  const hero = page.getByRole("region", { name: "Product spotlight" });
+  await expect(hero.getByRole("heading", { name: product.name, exact: true })).toBeVisible();
+  await expect(hero.getByText("Archived product", { exact: true })).toHaveCount(0);
+  await hero.getByRole("button", { name: "Next slide", exact: true }).click();
+  await expect(hero.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  await expect(hero.getByText("₹349", { exact: true })).toBeVisible();
+  await expect(hero.getByRole("link", { name: "View product", exact: true }).nth(1)).toHaveAttribute("href", "/product/second-live-product");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(hero.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("recently viewed refreshes live cards and removes deleted listings", async ({ page }) => {
+  const removed = { ...product, _id: "66aa11bb22cc33dd44ee55aa", name: "Removed listing" };
+  const cached = { ...product, _id: "66aa11bb22cc33dd44ee55ab", name: "Old cached name", price: 999 };
+  const refreshed = { ...cached, name: "Current listing", price: 349 };
+  await page.addInitScript(({ removed, cached }) => localStorage.setItem("recently_viewed_products", JSON.stringify([removed, cached])), { removed, cached });
+  await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: product }));
+  await page.route(`**/api/products/${removed._id}`, route => route.fulfill({ status: 404, json: { message: "Product not found" } }));
+  await page.route(`**/api/products/${cached._id}`, route => route.fulfill({ json: refreshed }));
+  await page.goto(`/product/${product.slug}`);
+  const recent = page.locator("section").filter({ has: page.getByRole("heading", { name: "Recently viewed", exact: true }) });
+  await expect(recent.getByRole("heading", { name: "Current listing" })).toBeVisible();
+  await expect(recent.getByText("₹349", { exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(page.getByText("Removed listing", { exact: true })).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("recently_viewed_products")).map(item => item._id))).not.toContain(removed._id);
+});
+
+test("recently viewed hides unverified cards but retains history on temporary errors", async ({ page }) => {
+  const cached = { ...product, _id: "66aa11bb22cc33dd44ee55ac", name: "Unverified listing" };
+  await page.addInitScript(cached => localStorage.setItem("recently_viewed_products", JSON.stringify([cached])), cached);
+  await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: product }));
+  await page.route(`**/api/products/${cached._id}`, route => route.fulfill({ status: 503, json: { message: "Unavailable" } }));
+  await page.goto(`/product/${product.slug}`);
+  await expect(page.getByRole("heading", { name: product.name, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recently viewed", exact: true })).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("recently_viewed_products")).map(item => item._id))).toContain(cached._id);
+});
+
 test("approved ratings and review counts appear on home, shop, wishlist and recommendations", async ({ page }) => {
   const rated = { ...product, averageRating: 4.6, approvedReviewCount: 8 };
   await page.route(/\/api\/products(?:\?.*)?$/, route => route.fulfill({ json: { products: [rated], totalProducts: 1 } }));
