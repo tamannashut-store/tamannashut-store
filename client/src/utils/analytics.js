@@ -1,5 +1,5 @@
 const GA_ID = "G-8L2DBJTSTG";
-const META_PIXEL_ID = "1337958731735098";
+const META_PIXEL_ID = "1137463968714611";
 let loadingStarted = false;
 
 const prepareQueues = () => {
@@ -59,8 +59,26 @@ if (typeof window !== "undefined") scheduleAnalytics();
 
 export const trackEvent = (name, parameters = {}) => {
   if (typeof window === "undefined") return;
-  prepareQueues();
+  // Initialize the destination before a product event can enter its queue.
+  loadAnalytics();
   window.gtag("event", name, parameters);
-  if (name === "purchase") window.fbq("track", "Purchase", { value: parameters.value, currency: parameters.currency || "INR" });
-  if (name === "add_to_cart") window.fbq("track", "AddToCart", { value: parameters.value, currency: parameters.currency || "INR", content_ids: parameters.items?.map((item) => item.item_id) });
+  const metaEvents = { view_item: "ViewContent", add_to_cart: "AddToCart", begin_checkout: "InitiateCheckout", purchase: "Purchase" };
+  const metaEvent = metaEvents[name];
+  if (!metaEvent) return;
+  const items = parameters.items || [];
+  const details = {
+    value: Number(parameters.value || 0),
+    currency: parameters.currency || "INR",
+    content_type: "product",
+    content_ids: items.map((item) => item.item_id).filter(Boolean),
+    contents: items.map((item) => ({ id: item.item_id, quantity: Number(item.quantity || 1), item_price: Number(item.price || 0) })).filter((item) => item.id),
+  };
+  if (name === "purchase" && parameters.transaction_id) {
+    const key = `meta_purchase_${parameters.transaction_id}`;
+    try { if (sessionStorage.getItem(key)) return; } catch { /* Storage may be unavailable. */ }
+    window.fbq("track", metaEvent, details, { eventID: `purchase_${parameters.transaction_id}` });
+    try { sessionStorage.setItem(key, "1"); } catch { /* Do not interrupt checkout for analytics. */ }
+    return;
+  }
+  window.fbq("track", metaEvent, details);
 };
