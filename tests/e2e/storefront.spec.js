@@ -370,7 +370,7 @@ test("customer adds a single SKU product without selecting a size", async ({ pag
 
 test("storefront renders catalogue data without horizontal overflow", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "One store. More possibilities." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Discover something\s*you'll love\./ })).toBeVisible();
   await expect(page.getByRole("heading", { name: product.name }).first()).toBeVisible();
   await expect(page.locator(`a[href="/product/${product.slug}"]`).first()).toBeVisible();
   const dimensions = await page.evaluate(() => ({ scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth }));
@@ -484,7 +484,7 @@ test("corrupted browser storage is cleared without crashing the storefront", asy
     localStorage.setItem("guest_cart", "{broken-cart");
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "One store. More possibilities." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Discover something\s*you'll love\./ })).toBeVisible();
   await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("guest_cart") || "[]"))).toEqual([]);
@@ -497,7 +497,7 @@ test("an expired saved session does not block the public storefront", async ({ p
     localStorage.setItem("user", JSON.stringify({ token, user: { id: "expired-user", email: "expired@example.com", isAdmin: false } }));
   });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "One store. More possibilities." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Discover something\s*you'll love\./ })).toBeVisible();
   await expect(page.getByText("This page could not be displayed")).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => localStorage.getItem("user"))).toBeNull();
 });
