@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { CartContext } from "../context/CartContext";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
@@ -85,6 +85,12 @@ function Checkout() {
   const subtotal = cartItems.reduce((sum, item) => sum + Number(item.price) * Number(item.qty), 0);
   const discount = Number(pricing?.discount ?? subtotal * (couponPercent / 100));
   const displayedTotal = Number(pricing?.totalAmount ?? Math.max(subtotal - discount, 0));
+  const checkoutTracked = useRef(false);
+  useEffect(() => {
+    if (!user || !cartItems.length || checkoutTracked.current) return;
+    checkoutTracked.current = true;
+    trackEvent("begin_checkout", { currency: "INR", value: displayedTotal, items: cartItems.map((item) => ({ item_id: item._id, price: Number(item.price), quantity: Number(item.qty) })) });
+  }, [user, cartItems, displayedTotal]);
   const checkoutProducts = useMemo(() => cartItems.map((item) => ({
     _id: item._id,
     selectedSize: item.selectedSize,
