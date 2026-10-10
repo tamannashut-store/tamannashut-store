@@ -1,4 +1,5 @@
 import { validateListing } from "../utils/listingValidation";
+import ListingReadiness from "../components/ListingReadiness";
 import ListingValidation from "../components/ListingValidation";
 import { generalListingDefaults } from "../utils/listingDefaults";
 import GeneralListingFields from "../components/GeneralListingFields";
@@ -193,6 +194,7 @@ function Admin() {
       {showCreate && (
         <form noValidate onSubmit={createProduct} className="mt-8">
           <ListingWizardNav current={createStep} onChange={setCreateStep} />
+          <ListingReadiness form={form} variants={variants} imageCount={images.length} onEdit={setCreateStep} />
           <ListingValidation messages={showValidation ? createStep === 0 ? Object.values(validation.fields) : createStep === 1 ? validation.inventory : createStep === 2 ? validation.photos : [] : []} />
           {createStep === 0 && <div className="mx-auto max-w-4xl">
           <ListingBasics errors={showValidation ? validation.fields : {}} form={form} onChange={changeForm} />

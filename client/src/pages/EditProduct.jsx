@@ -1,5 +1,6 @@
 import { validateListing } from "../utils/listingValidation";
 import ListingValidation from "../components/ListingValidation";
+import ListingReadiness from "../components/ListingReadiness";
 import { generalListingDefaults } from "../utils/listingDefaults";
 import GeneralListingFields from "../components/GeneralListingFields";
 import ListingBasics from "../components/ListingBasics";
@@ -119,6 +120,7 @@ function EditProduct() {
       {sellerAccount && approval.status === "rejected" && <section role="status" className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-semibold">Changes requested by the administrator</h2><p className="mt-2 whitespace-pre-line break-words text-sm">{approval.note || "Review the listing details before submitting again."}</p><p className="mt-2 text-sm text-slate-600">Correct these details, then submit for approval. Save draft keeps your changes private.</p></section>}
       <form noValidate onSubmit={submit} className="mt-8">
         <ListingWizardNav current={editStep} onChange={setEditStep} />
+        <ListingReadiness form={form} variants={variants} imageCount={images.length} onEdit={setEditStep} />
           <ListingValidation messages={showValidation ? editStep === 0 ? Object.values(validation.fields) : editStep === 1 ? validation.inventory : editStep === 2 ? validation.photos : [] : []} />
         {editStep === 0 && <div className="mx-auto max-w-4xl">
           <ListingBasics errors={showValidation ? validation.fields : {}} form={form} onChange={changeForm} editing />
