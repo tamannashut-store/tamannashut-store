@@ -50,6 +50,7 @@ const completedProfile = () => ({
   registeredAddress: { line1: "10 Market Road", city: "Howrah", state: "West Bengal", pincode: "711310" },
   pickupAddress: { line1: "10 Market Road", city: "Howrah", state: "West Bengal", pincode: "711310" },
   gstinLast4: "F1Z5", panLast4: "234F", bankAccountHolder: "Example Proprietor", bankAccountLast4: "7890", ifscLast4: "3456",
+  bankProof: { digest: "test-proof", uploadedAt: new Date() },
   declarationsAcceptedAt: new Date(), verificationStatus: "verified",
   gstVerification: { status: "verified" }, bankVerification: { status: "verified" },
 });

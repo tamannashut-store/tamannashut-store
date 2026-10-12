@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { sellerApplicationCredentials, submitSellerApplication } from "../server/src/services/sellerApplicationService.js";
 
 const body = { name: "Test Seller", password: "SellerSecure42", confirmPassword: "SellerSecure42", legalBusinessName: "Example Business", tradeName: "Example Store", businessType: "proprietorship", businessPhone: "9876543210", authorizedSignatoryName: "Test Seller", gstin: "19ABCDE1234F1Z5", pan: "ABCDE1234F", registeredAddressLine1: "123 Example Road", registeredAddressCity: "Howrah", registeredAddressState: "West Bengal", registeredAddressPincode: "711310", pickupSameAsRegistered: true, bankAccountHolder: "Test Seller", bankAccountType: "savings", bankAccountNumber: "1234567890", confirmBankAccountNumber: "1234567890", ifsc: "ABCD0123456", gstDeclaration: true, bankDeclaration: true, termsAccepted: true };
+const bankProof = { encryptedPayload: "encrypted-test-document", digest: "test-digest", uploadedAt: new Date(), mimeType: "application/pdf", size: 20 };
 const customer = () => ({ _id: "customer-1", email: "customer@example.com", accountType: "customer", passwordLoginEnabled: false, emailVerifiedAt: new Date(), sessionVersion: 3, cart: [{ productId: "existing-product" }] });
 const query = (value) => ({ select() { return this; }, session: async () => value });
 
@@ -56,7 +57,7 @@ test("passwordless applicants must create a strong confirmed Seller Centre passw
 
 test("public application retains the customer ID and cart, encrypts details, and grants pending access only", async () => {
     const f = fixture();
-    const result = await submitSellerApplication({ authenticatedId: "customer-1", body }, f.deps);
+    const result = await submitSellerApplication({ authenticatedId: "customer-1", body, bankProof }, f.deps);
     assert.deepEqual(result, { userId: "customer-1", reusedCustomer: true });
     assert.equal(f.user().accountType, "seller"); assert.equal(f.user().sellerAccessStatus, "pending"); assert.equal(f.user().isAdmin, false);
     assert.equal(f.user().sessionVersion, 4); assert.deepEqual(f.user().cart, [{ productId: "existing-product" }]);
@@ -66,22 +67,22 @@ test("public application retains the customer ID and cart, encrypts details, and
 
 test("a failed profile write rolls back account conversion and invitation acceptance", async () => {
     const f = fixture({ failProfile: true, invitation: true });
-    await assert.rejects(submitSellerApplication({ authenticatedId: "customer-1", invitationToken: "test-token", body }, f.deps));
+    await assert.rejects(submitSellerApplication({ authenticatedId: "customer-1", invitationToken: "test-token", body, bankProof }, f.deps));
     assert.equal(f.user().accountType, "customer"); assert.equal(f.user().sessionVersion, 3); assert.equal(f.profiles.length, 0); assert.equal(f.accepted(), false);
 });
 
 test("an invited existing customer must sign in, and acceptance reuses the account", async () => {
     const f = fixture({ invitation: true });
-    await assert.rejects(submitSellerApplication({ invitationToken: "test-token", body }, f.deps), { status: 401 });
+    await assert.rejects(submitSellerApplication({ invitationToken: "test-token", body, bankProof }, f.deps), { status: 401 });
     assert.equal(f.user().accountType, "customer");
-    await submitSellerApplication({ authenticatedId: "customer-1", invitationToken: "test-token", body }, f.deps);
+    await submitSellerApplication({ authenticatedId: "customer-1", invitationToken: "test-token", body, bankProof }, f.deps);
     assert.equal(f.accepted(), true); assert.equal(f.user()._id, "customer-1");
 });
 
 test("expired invitations and invalid applications never convert customers", async () => {
     const f = fixture();
-    await assert.rejects(submitSellerApplication({ authenticatedId: "customer-1", invitationToken: "expired", body }, f.deps), { status: 404 });
-    await assert.rejects(submitSellerApplication({ authenticatedId: "customer-1", body: { ...body, termsAccepted: false } }, f.deps), { status: 400 });
+    await assert.rejects(submitSellerApplication({ authenticatedId: "customer-1", invitationToken: "expired", body, bankProof }, f.deps), { status: 404 });
+    await assert.rejects(submitSellerApplication({ authenticatedId: "customer-1", body: { ...body, termsAccepted: false }, bankProof }, f.deps), { status: 400 });
     assert.equal(f.user().accountType, "customer"); assert.equal(f.profiles.length, 0);
 });
 
@@ -94,7 +95,7 @@ test("new invited applicants receive a pending seller account and consume the in
         Profiles: { create: async ([row]) => { savedProfile = row; } },
         Invitations: { findOne: () => query(invitation) }, transaction: operation => operation({}),
     };
-    const result = await submitSellerApplication({ invitationToken: "new-invitation", body }, deps);
+    const result = await submitSellerApplication({ invitationToken: "new-invitation", body, bankProof }, deps);
     assert.equal(result.reusedCustomer, false); assert.equal(created.email, invitation.email);
     assert.equal(created.sellerAccessStatus, "pending"); assert.equal(created.isAdmin, false); assert.ok(created.emailVerifiedAt);
     assert.equal(savedProfile.userId, "new-seller"); assert.equal(accepted, true);

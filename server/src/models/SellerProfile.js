@@ -44,6 +44,13 @@ const sellerProfileSchema = new mongoose.Schema({
     checkedAt: { type: Date, default: null },
     beneficiaryName: { type: String, default: "", trim: true },
   },
+  bankProof: {
+    encryptedPayload: { type: String, select: false },
+    mimeType: String,
+    size: Number,
+    digest: String,
+    uploadedAt: Date,
+  },
   declarationsAcceptedAt: { type: Date, default: null },
   verificationStatus: { type: String, enum: ["pending", "verified", "rejected"], default: "pending", index: true },
   submittedAt: { type: Date, default: Date.now },
@@ -56,6 +63,6 @@ const sellerProfileSchema = new mongoose.Schema({
     completedAt: { type: Date, default: null },
     reason: { type: String, default: "", maxlength: 500 },
   },
-}, { timestamps: true });
+}, { timestamps: true, optimisticConcurrency: true });
 
 export default mongoose.models.SellerProfile || mongoose.model("SellerProfile", sellerProfileSchema);

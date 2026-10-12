@@ -4,6 +4,7 @@ import axios from "axios";
 import { FiCheckCircle, FiExternalLink, FiEye, FiEyeOff, FiLock, FiShield } from "react-icons/fi";
 import logo from "../assets/logo.png";
 import PageLoader from "../components/PageLoader";
+import { BankProofInput } from "../components/BankProof";
 
 const initialForm = {
   name: "", password: "", confirmPassword: "", legalBusinessName: "", tradeName: "", businessType: "",
@@ -21,6 +22,7 @@ function SellerRegister() {
   const [invitation, setInvitation] = useState(null);
   const [account, setAccount] = useState(null);
   const [form, setForm] = useState(initialForm);
+  const [bankProof, setBankProof] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -72,9 +74,11 @@ function SellerRegister() {
     if (!existingPassword && (form.password.length < 8 || !/[A-Za-z]/.test(form.password) || !/[0-9]/.test(form.password))) return setError("Use at least 8 characters with at least one letter and one number");
     if (!existingPassword && form.password !== form.confirmPassword) return setError("Passwords do not match");
     if (form.bankAccountNumber !== form.confirmBankAccountNumber) return setError("Bank account numbers do not match");
+    if (!bankProof) return setError("Upload bank ownership proof before submitting");
     setSubmitting(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/${token ? `seller-invitations/${token}/accept` : "seller-applications"}`, form);
+      const application = new FormData(); application.append("application", JSON.stringify(form)); application.append("bankProof", bankProof);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/${token ? `seller-invitations/${token}/accept` : "seller-applications"}`, application);
       if (account) { localStorage.removeItem("user"); delete axios.defaults.headers.common.Authorization; }
       setComplete(true);
     } catch (requestError) {
@@ -124,11 +128,12 @@ function SellerRegister() {
           <Field label="IFSC code"><input required minLength="11" maxLength="11" value={form.ifsc} onChange={(e) => change("ifsc", e.target.value.toUpperCase())} className="field-control mt-2 uppercase" placeholder="ABCD0123456"/></Field>
           <Field label="Account number"><input required inputMode="numeric" minLength="6" maxLength="20" autoComplete="off" value={form.bankAccountNumber} onChange={(e) => change("bankAccountNumber", e.target.value.replace(/\D/g, ""))} className="field-control mt-2"/></Field>
           <Field label="Confirm account number"><input required inputMode="numeric" minLength="6" maxLength="20" autoComplete="off" value={form.confirmBankAccountNumber} onChange={(e) => change("confirmBankAccountNumber", e.target.value.replace(/\D/g, ""))} className="field-control mt-2"/></Field>
+          <div className="md:col-span-2"><BankProofInput required onChange={setBankProof}/></div>
         </div></section>
 
         <section className="border-t pt-8"><h2 className="text-xl font-bold">5. Declarations</h2><div className="mt-4 space-y-3">
           <label className="flex items-start gap-3 rounded-xl border p-4 text-sm leading-6"><input required type="checkbox" checked={form.gstDeclaration} onChange={(e) => change("gstDeclaration", e.target.checked)} className="mt-1"/><span>I checked the GSTIN on the official GST Portal; it is active and its legal name, PAN and address match this application.</span></label>
-          <label className="flex items-start gap-3 rounded-xl border p-4 text-sm leading-6"><input required type="checkbox" checked={form.bankDeclaration} onChange={(e) => change("bankDeclaration", e.target.checked)} className="mt-1"/><span>The settlement bank account belongs to this business or proprietor, and I can provide proof during review.</span></label>
+          <label className="flex items-start gap-3 rounded-xl border p-4 text-sm leading-6"><input required type="checkbox" checked={form.bankDeclaration} onChange={(e) => change("bankDeclaration", e.target.checked)} className="mt-1"/><span>The settlement bank account belongs to this business or proprietor, and the uploaded bank document is genuine and matches these details.</span></label>
           <label className="flex items-start gap-3 rounded-xl border p-4 text-sm leading-6"><input required type="checkbox" checked={form.termsAccepted} onChange={(e) => change("termsAccepted", e.target.checked)} className="mt-1"/><span>I accept the seller terms and consent to secure processing of GST, PAN and bank details for verification and settlement.</span></label>
         </div></section>
         <div className="rounded-2xl bg-amber-50 p-4 text-sm leading-6 text-amber-900"><strong>Verification note:</strong> format validation cannot prove that a GST registration is active or that a bank account is owned by the applicant. Access remains pending until the platform administrator completes official/manual checks.</div>
