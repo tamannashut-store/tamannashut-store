@@ -49,6 +49,7 @@ function PrivacyPolicy() {
 
                     <h2 className="text-2xl font-semibold">Service Providers</h2>
                     <p>For cash-on-delivery refunds, you can provide an account holder name and UPI ID, or a bank account number and IFSC, through your signed-in account. We store these refund details encrypted and make them available to the store administrator to arrange your refund. They are not included in refund-request emails or ordinary order listings. We never request your UPI PIN, OTP or banking password.</p>
+                    <p>Seller applications include business, tax and settlement-bank details. For manual bank ownership review, sellers upload a cancelled cheque, passbook page or bank statement showing the account holder, account number and IFSC. Sellers may hide balances and unrelated transactions. We store bank proof encrypted and restrict downloads to the seller and the platform administrator. The document is used for seller approval and payout verification; it is not published in the catalogue.</p>
                     <p>We share only the information needed to fulfil orders or operate the store with service providers such as payment processors, delivery partners, website hosting and customer-support providers. We do not sell customer personal information.</p>
 
                     <h2 className="text-2xl font-semibold">

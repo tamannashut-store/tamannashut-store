@@ -915,7 +915,7 @@ test("verified customer can submit a public seller application using the existin
   await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-local-token", user: { id: "test-user", accountType: "customer" } })));
   await page.route("**/api/auth/seller-application/account", route => route.fulfill({ json: { id: "test-user", name: "Test Seller", email: "test@example.com", emailVerified: true, accountType: "customer", passwordLoginEnabled: false } }));
   let submitted;
-  await page.route("**/api/auth/seller-applications", async route => { submitted = route.request().postDataJSON(); expect(route.request().headers().authorization).toBe("Bearer safe-local-token"); await route.fulfill({ status: 201, json: { message: "Submitted" } }); });
+  await page.route("**/api/auth/seller-applications", async route => { submitted = route.request().postDataBuffer().toString(); expect(route.request().headers()["content-type"]).toContain("multipart/form-data"); expect(route.request().headers().authorization).toBe("Bearer safe-local-token"); await route.fulfill({ status: 201, json: { message: "Submitted" } }); });
   await page.goto("/seller/register");
   await expect(page.getByRole("heading", { name: "Apply to become a seller" })).toBeVisible();
   for (const [label, value] of [["Business phone", "9876543210"], ["Seller Centre password", "SellerSecure42"], ["Confirm password", "SellerSecure42"], ["Legal business name", "Example Business"], ["Trade / storefront name", "Example Store"], ["Authorised signatory", "Test Seller"], ["GSTIN", "19ABCDE1234F1Z5"], ["PAN", "ABCDE1234F"], ["Registered address", "123 Example Road"], ["City", "Howrah"], ["State", "West Bengal"], ["Pincode", "711310"], ["Account holder name", "Test Seller"], ["IFSC code", "ABCD0123456"], ["Account number", "1234567890"], ["Confirm account number", "1234567890"]]) await page.getByLabel(label, { exact: true }).fill(value);
@@ -924,9 +924,14 @@ test("verified customer can submit a public seller application using the existin
   await page.getByRole("checkbox", { name: /I checked the GSTIN/ }).check();
   await page.getByRole("checkbox", { name: /The settlement bank account/ }).check();
   await page.getByRole("checkbox", { name: /I accept the seller terms/ }).check();
+  await page.getByLabel("Bank ownership document", { exact: false }).setInputFiles({ name: "bank-proof.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\nprivate test bank proof\n%%EOF") });
+  await page.getByLabel("Bank ownership document", { exact: false }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "output/bank-proof-application-preview.png" });
   await page.getByRole("button", { name: "Submit seller application" }).click();
   await expect(page.getByRole("heading", { name: "Application submitted" })).toBeVisible();
-  expect(submitted.termsAccepted).toBe(true);
+  expect(submitted).toContain("\"termsAccepted\":true");
+  expect(submitted).toContain("bank-proof.pdf");
+  expect(submitted).toContain("private test bank proof");
   expect(await page.evaluate(() => localStorage.getItem("user"))).toBeNull();
 });
 
@@ -1184,4 +1189,16 @@ test('catalogue keeps the newest search result when an earlier response arrives 
   await oldResponse;
   await expect(page.getByRole('table').getByText('New result', { exact: true })).toBeVisible();
   await expect(page.getByText('Old result', { exact: true })).toHaveCount(0);
+});
+
+
+test("existing sellers see an immediate private bank-proof request", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-seller-session", user: { id: "seller-test", accountType: "seller", sellerRole: "member", sellerAccessStatus: "active" } })));
+  await page.route("**/api/auth/seller-profile/me", route => route.fulfill({ json: { profile: { legalBusinessName: "Test Seller Business", tradeName: "Test Store", verificationStatus: "verified", bankAccountHolder: "Test Seller", bankAccountLast4: "7890", bankVerification: { status: "verified" }, gstVerification: { status: "verified" } } } }));
+  await page.goto("/seller/profile");
+  await expect(page.getByText("Action required: upload bank proof now", { exact: true })).toBeVisible();
+  await expect(page.getByText("Selling and payouts are paused until the document is reviewed.", { exact: false })).toBeVisible();
+  await page.getByRole("link", { name: "Upload bank proof now", exact: true }).click();
+  await expect(page.getByLabel("Bank ownership document", { exact: false })).toBeVisible();
+  await page.screenshot({ path: "output/existing-seller-bank-proof-notice.png", fullPage: true });
 });

@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FiBarChart2, FiBox, FiCheckSquare, FiDollarSign, FiExternalLink, FiKey, FiLogOut, FiMenu, FiMessageSquare, FiPercent, FiSettings, FiShoppingBag, FiStar, FiTrendingUp, FiUsers, FiX } from "react-icons/fi";
 import logo from "../assets/logo.png";
+import SellerBankProofNotice from "./SellerBankProofNotice";
 
 const adminLinks = [
   ["/admin/dashboard", "Overview", FiBarChart2],
@@ -84,7 +85,7 @@ function AdminLayout() {
           <button type="button" onClick={logout} className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-white/50 hover:bg-white/10 hover:text-white"><FiLogOut /> Sign out</button>
         </div>
       </aside>
-      <main className="min-w-0"><Outlet /></main>
+      <main className="min-w-0">{sellerAccount && <SellerBankProofNotice/>}<Outlet /></main>
       {menuOpen && <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Seller navigation"><button type="button" aria-label="Close seller menu" onClick={() => setMenuOpen(false)} className="absolute inset-0 h-full w-full bg-slate-950/50"/><aside className="absolute right-0 top-0 flex h-full min-h-0 w-[min(88vw,340px)] flex-col overflow-hidden bg-[#123b29] p-5 text-white shadow-2xl"><div className="flex shrink-0 items-center justify-between"><img src={logo} alt="" className="h-14 w-auto rounded-xl bg-white px-2 py-1"/><button type="button" aria-label="Close seller menu" onClick={() => setMenuOpen(false)} className="grid h-11 w-11 place-items-center rounded-xl border border-white/20"><FiX size={22}/></button></div><p className="mt-7 shrink-0 break-words px-3 text-[11px] font-bold uppercase leading-5 tracking-[0.18em] text-white/50">{sellerAccount ? "Marketplace seller" : "Platform administration"}</p><nav className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">{visibleLinks.map(([to,label,Icon,notificationKey]) => <NavLink key={to} to={to} end={to === "/admin" || to === "/seller/products"} onClick={() => setMenuOpen(false)} className={({isActive}) => `flex items-center gap-3 rounded-xl px-4 py-3.5 text-sm font-semibold ${isActive ? "bg-white text-[#123b29]" : "text-white/75 hover:bg-white/10"}`}><Icon className="shrink-0"/><span className="min-w-0 flex-1 break-words leading-5">{label}</span><Badge count={notifications[notificationKey] || 0}/></NavLink>)}</nav><div className="shrink-0 border-t border-white/10 pt-4"><a href="/" className="flex items-center justify-between rounded-xl px-4 py-3 text-sm text-white/75">View storefront <FiExternalLink/></a><button type="button" onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-red-200"><FiLogOut/> Sign out</button></div></aside></div>}
     </div>
   );

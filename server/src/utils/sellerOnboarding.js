@@ -122,6 +122,7 @@ export const sellerProfileCompleteness = (profile) => {
   if (!profile?.bankAccountEncrypted && String(profile?.bankAccountLast4 || "").length !== 4) missingFields.push("Bank account number");
   if (!profile?.ifscEncrypted && String(profile?.ifscLast4 || "").length !== 4) missingFields.push("IFSC");
   if (!profile?.declarationsAcceptedAt) missingFields.push("Seller declarations");
+  if (!profile?.bankProof?.digest || !profile?.bankProof?.uploadedAt) missingFields.push("Bank ownership document");
   return { complete: missingFields.length === 0, missingFields };
 };
 

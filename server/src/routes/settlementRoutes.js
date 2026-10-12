@@ -72,8 +72,8 @@ router.patch("/:id", protect, admin, async (req, res) => {
     } else if (action === "initiate_payout" || action === "retry_payout") {
       const expectedStatus = action === "retry_payout" ? "failed" : "eligible";
       if (settlement.status !== expectedStatus) return res.status(409).json({ message: action === "retry_payout" ? "Only failed payouts can be retried" : "Only eligible settlements can enter payout processing" });
-      const sellerProfile = await SellerProfile.findOne({ userId: settlement.sellerId }).select("verificationStatus bankVerification.status closure.status").lean();
-      if (!sellerProfile || sellerProfile.verificationStatus !== "verified" || sellerProfile.bankVerification?.status !== "verified" || sellerProfile.closure?.status === "closed") return res.status(409).json({ message: "Payout is blocked until the seller and settlement bank account are verified" });
+      const sellerProfile = await SellerProfile.findOne({ userId: settlement.sellerId }).select("verificationStatus bankVerification.status closure.status bankProof.digest bankProof.uploadedAt").lean();
+      if (!sellerProfile || !sellerProfile.bankProof?.digest || !sellerProfile.bankProof?.uploadedAt || sellerProfile.verificationStatus !== "verified" || sellerProfile.bankVerification?.status !== "verified" || sellerProfile.closure?.status === "closed") return res.status(409).json({ message: "Payout is blocked until the seller and settlement bank account are verified" });
       const method = String(req.body.method || "").trim().slice(0, 80);
       if (!method) return res.status(400).json({ message: "Select the payout method" });
       settlement.status = "processing"; settlement.paymentMethod = method; settlement.paymentReference = ""; settlement.payoutFailureReason = ""; settlement.reconciliationStatus = "pending";

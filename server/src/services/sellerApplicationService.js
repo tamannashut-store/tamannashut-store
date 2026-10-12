@@ -31,11 +31,13 @@ export async function sellerApplicationCredentials(user, body, { invitedEmail, a
 
 // The account, encrypted application and invitation are committed together.
 // A failed application never deletes or replaces an existing customer's account.
-export async function submitSellerApplication({ authenticatedId, invitationToken, body }, {
+export async function submitSellerApplication({ authenticatedId, invitationToken, body, bankProof }, {
     Users = User, Profiles = SellerProfile, Invitations = SellerInvitation,
     transaction = (operation) => mongoose.connection.transaction(operation),
 } = {}) {
     const profile = encryptedSellerProfile(normalizeSellerDetails(body));
+    if (!bankProof?.encryptedPayload || !bankProof?.digest) fail(400, "Upload bank ownership proof before submitting");
+    profile.bankProof = bankProof;
     return transaction(async (session) => {
         let invitation;
         if (invitationToken) {

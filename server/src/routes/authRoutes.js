@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
@@ -24,6 +25,7 @@ import { isValidEmailAddress } from "../utils/inputSecurity.js";
 import { phoneLoginHandlers } from "../services/phoneLoginService.js";
 import { customerOtpHandlers } from "../services/customerOtpService.js";
 import { submitSellerApplication } from "../services/sellerApplicationService.js";
+import { bankProofUpload, parseSellerApplication } from "../middleware/bankProofUpload.js";
 
 const router = express.Router();
 
@@ -334,15 +336,48 @@ router.get("/seller-application/account", protect, (req, res) => {
 
 const acceptSellerApplication = async (req, res) => {
     try {
-        const result = await submitSellerApplication({ authenticatedId: req.user?._id, invitationToken: req.params.token, body: req.body });
+        const result = await submitSellerApplication({ authenticatedId: req.user?._id, invitationToken: req.params.token, body: req.body, bankProof: req.bankProof });
         await recordAudit({ user: req.user, action: "seller.applied", entityType: "seller", entityId: result.userId, summary: "Seller application submitted for administrator approval", metadata: { source: req.params.token ? "invitation" : "public", reusedCustomer: result.reusedCustomer } });
         return res.status(201).json({ message: "Seller application submitted for administrator approval. Sign in through Seller Centre to track your application" });
     } catch (error) {
         return res.status(error.status || (error?.code === 11000 ? 409 : 500)).json({ message: error.status ? error.message : error?.code === 11000 ? "An application already exists. Sign in to Seller Centre to manage it" : "Seller application could not be submitted. Please try again" });
     }
 };
-router.post("/seller-applications", protect, acceptSellerApplication);
-router.post("/seller-invitations/:token/accept", optionalProtect, acceptSellerApplication);
+router.post("/seller-applications", protect, bankProofUpload, parseSellerApplication, acceptSellerApplication);
+router.post("/seller-invitations/:token/accept", optionalProtect, bankProofUpload, parseSellerApplication, acceptSellerApplication);
+
+const downloadBankProof = async (req, res) => {
+    try {
+        const profile = await SellerProfile.findOne({ userId: req.params.userId || req.user._id }).select("+bankProof.encryptedPayload");
+        if (!profile?.bankProof?.encryptedPayload) return res.status(404).json({ message: "Bank proof has not been uploaded" });
+        const bytes = Buffer.from(decryptSellerValue(profile.bankProof.encryptedPayload), "base64");
+        const extension = { "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png" }[profile.bankProof.mimeType];
+        if (!extension) throw new Error("Unsupported stored document");
+        res.set({ "Cache-Control": "no-store", "Content-Type": profile.bankProof.mimeType,
+            "Content-Disposition": `attachment; filename="bank-proof.${extension}"`, "X-Content-Type-Options": "nosniff" });
+        return res.send(bytes);
+    } catch { return res.status(500).json({ message: "Bank proof could not be opened" }); }
+};
+router.get("/seller-profile/me/bank-proof", protect, sellerApplicant, downloadBankProof);
+router.get("/seller-team/:userId/bank-proof", protect, admin, ownerOnly, downloadBankProof);
+router.put("/seller-profile/me/bank-proof", protect, sellerApplicant, bankProofUpload, async (req, res) => {
+    try {
+        const profile = await SellerProfile.findOne({ userId: req.user._id });
+        if (!profile) return res.status(404).json({ message: "Seller profile not found" });
+        profile.bankProof = req.bankProof;
+        profile.bankVerification = { status: "pending", source: "manual_document_review", checkedAt: null, beneficiaryName: "" };
+        profile.verificationStatus = "pending"; profile.reviewedAt = null; profile.reviewedBy = null;
+        profile.reviewNote = "New bank proof submitted. Administrator review is required.";
+        await mongoose.connection.transaction(async (session) => {
+            await profile.save({ session });
+            req.user.sellerAccessStatus = "pending";
+            await req.user.save({ session });
+            await Product.updateMany({ sellerId: req.user._id }, { $set: { sellerComplianceHold: true } }, { session });
+        });
+        await recordAudit({ user: req.user, action: "seller.bank_proof_uploaded", entityType: "seller", entityId: req.user._id, summary: "Bank document submitted for manual review" });
+        return res.json({ message: "Bank proof submitted for administrator review" });
+    } catch (error) { return res.status(error.name === "VersionError" ? 409 : 500).json({ message: "Bank proof could not be saved. Refresh and try again" }); }
+});
 
 router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
     try {
@@ -372,6 +407,7 @@ router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
                 ifsc: decryptSellerValue(profile.ifscEncrypted),
                 gstVerification: profile.gstVerification,
                 bankVerification: profile.bankVerification,
+                bankProof: { digest: profile.bankProof?.digest, uploadedAt: profile.bankProof?.uploadedAt, mimeType: profile.bankProof?.mimeType },
                 verificationStatus: compliance.status,
                 recordedVerificationStatus: profile.verificationStatus,
                 completeness: compliance,
@@ -396,6 +432,7 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
         const user = await User.findOne({ _id: req.params.userId, $or: [{ accountType: "seller" }, { sellerRole: "member" }] });
         const profile = await SellerProfile.findOne({ userId: req.params.userId });
         if (!user || !profile) return res.status(404).json({ message: "Seller verification record not found" });
+        if (status === "verified" && (!profile.bankProof?.digest || req.body.bankProofDigest !== profile.bankProof.digest)) return res.status(409).json({ message: "Review the current bank document before approving. Refresh if the seller replaced it" });
         const completeness = sellerProfileCompleteness(profile);
         if (status === "verified" && !completeness.complete) {
             return res.status(409).json({ message: `Seller application is incomplete: ${completeness.missingFields.join(", ")}`, missingFields: completeness.missingFields });
@@ -409,10 +446,11 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
             profile.bankVerification = { ...(profile.bankVerification?.toObject?.() || profile.bankVerification || {}), status: "verified", source: "bank_proof_manual_review", checkedAt: new Date(), beneficiaryName: profile.bankAccountHolder };
         }
         user.sellerAccessStatus = status === "verified" ? "active" : "rejected";
-        await Promise.all([
-            profile.save(), user.save(),
-            Product.updateMany({ sellerId: user._id }, { $set: { sellerComplianceHold: status !== "verified" } }),
-        ]);
+        await mongoose.connection.transaction(async (session) => {
+            await profile.save({ session });
+            await user.save({ session });
+            await Product.updateMany({ sellerId: user._id }, { $set: { sellerComplianceHold: status !== "verified" } }, { session });
+        });
         await recordAudit({ user: req.user, action: `seller.${status}`, entityType: "seller", entityId: user._id, summary: `${status === "verified" ? "Approved" : "Rejected"} seller ${user.email}` });
         await sendEmail(user.email, status === "verified" ? "Seller Centre access approved" : "Seller verification needs attention", sellerVerificationEmailTemplate(user, status === "verified", note));
         return res.json({ message: status === "verified" ? "Seller approved" : "Seller verification rejected" });
@@ -445,6 +483,7 @@ router.get("/seller-profile/me", protect, sellerApplicant, async (req, res) => {
                 ifscLast4: profile.ifscLast4,
                 gstVerification: profile.gstVerification,
                 bankVerification: profile.bankVerification,
+                bankProof: { digest: profile.bankProof?.digest, uploadedAt: profile.bankProof?.uploadedAt, mimeType: profile.bankProof?.mimeType },
                 verificationStatus: compliance.status,
                 recordedVerificationStatus: profile.verificationStatus,
                 completeness: compliance,
