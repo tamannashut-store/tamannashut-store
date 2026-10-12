@@ -1202,3 +1202,17 @@ test("existing sellers see an immediate private bank-proof request", async ({ pa
   await expect(page.getByLabel("Bank ownership document", { exact: false })).toBeVisible();
   await page.screenshot({ path: "output/existing-seller-bank-proof-notice.png", fullPage: true });
 });
+
+
+test("seller navigation shows the storefront name instead of the account owner's name", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "safe-seller-session", user: { id: "seller-test", name: "Account Owner", accountType: "seller", sellerRole: "member", sellerAccessStatus: "active" } })));
+  await page.route("**/api/auth/seller-profile/me", route => route.fulfill({ json: { profile: { tradeName: "Example Kids", legalBusinessName: "Example Legal Business", bankProof: { digest: "proof" } } } }));
+  await page.goto("/seller/products");
+  await expect(page.locator("aside").first().getByText("Example Kids", { exact: true })).toBeVisible();
+  await expect(page.locator("aside").first().getByText("Account Owner", { exact: true })).toHaveCount(0);
+  await page.screenshot({ path: "output/store-name-sidebar-preview.png" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Open seller menu", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Seller navigation" }).getByText("Example Kids", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Seller navigation" }).getByText("Account Owner", { exact: true })).toHaveCount(0);
+});

@@ -44,7 +44,7 @@ function SellerAccount() {
 
   const [closing, setClosing] = useState(false); const [showClose, setShowClose] = useState(false); const [closeForm, setCloseForm] = useState({ password: "", confirmation: "", reason: "" });
 
-  const load = async () => { try { const { data: result } = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/seller-profile/me`); setData(result); setForm(editableFrom(result.profile)); setError(""); } catch (requestError) { setError(requestError.response?.data?.message || "Seller profile could not be loaded"); } };
+  const load = async () => { try { const { data: result } = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/seller-profile/me`); setData(result); setForm(editableFrom(result.profile)); setError(""); window.dispatchEvent(new Event("seller-profile-refresh")); } catch (requestError) { setError(requestError.response?.data?.message || "Seller profile could not be loaded"); } };
 
   useEffect(() => {
 
@@ -52,7 +52,7 @@ function SellerAccount() {
 
     axios.get(`${import.meta.env.VITE_API_URL}/api/auth/seller-profile/me`)
 
-      .then(({ data: result }) => { if (active) { setData(result); setForm(editableFrom(result.profile)); setError(""); } })
+      .then(({ data: result }) => { if (active) { setData(result); setForm(editableFrom(result.profile)); setError(""); window.dispatchEvent(new Event("seller-profile-refresh")); } })
 
       .catch((requestError) => { if (active) setError(requestError.response?.data?.message || "Seller profile could not be loaded"); });
 
