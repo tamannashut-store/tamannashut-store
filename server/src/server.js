@@ -9,6 +9,7 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import errorHandler from "./middleware/errorHandler.js";
+import storeRoutes from "./routes/storeRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -82,6 +83,7 @@ const authLimiter = rateLimit({
 });
 app.use("/api", limiter);
 app.use("/api/products", productRoutes);
+app.use("/api/stores", storeRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/auth", (req, res, next) => isRateLimitedAuthRequest(req.method, req.path) ? authLimiter(req, res, next) : next(), authRoutes);
