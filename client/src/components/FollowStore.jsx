@@ -16,7 +16,7 @@ export default function FollowStore({ store }) {
     if (!user?.token) return;
     const pending = sessionStorage.getItem("followStoreAfterLogin") === store.id;
     axios({ url: endpoint, method: pending ? "put" : "get", headers: { Authorization: `Bearer ${user.token}` } })
-      .then(({ data }) => { if (active) { setFollowing(data.following); if (pending) sessionStorage.removeItem("followStoreAfterLogin"); } })
+      .then(({ data }) => { if (active) { setFollowing(data.following); window.dispatchEvent(new CustomEvent("store-follow-changed", { detail: { id: store.id, followerCount: data.followerCount } })); if (pending) sessionStorage.removeItem("followStoreAfterLogin"); } })
       .catch((e) => { if (active) setError(e.response?.status === 401 ? "Please sign in again to follow this store." : e.response?.data?.message || "Could not load your follow status. Please try again."); })
       .finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
@@ -25,7 +25,7 @@ export default function FollowStore({ store }) {
     const user = session();
     if (!user?.token) return signIn();
     setBusy(true); setError("");
-    try { const { data } = await axios({ url: endpoint, method: following ? "delete" : "put", headers: { Authorization: `Bearer ${user.token}` } }); setFollowing(data.following); }
+    try { const { data } = await axios({ url: endpoint, method: following ? "delete" : "put", headers: { Authorization: `Bearer ${user.token}` } }); setFollowing(data.following); window.dispatchEvent(new CustomEvent("store-follow-changed", { detail: { id: store.id, followerCount: data.followerCount } })); }
     catch (e) { if (e.response?.status === 401) return signIn(); setError(e.response?.data?.message || "Could not update your follow. Please try again."); }
     finally { setBusy(false); }
   };

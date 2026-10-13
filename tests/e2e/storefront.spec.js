@@ -1219,7 +1219,7 @@ test("seller navigation shows the storefront name instead of the account owner's
 
 
 test("customers can visit a seller store from its product and keep filters inside that store", async ({ page }) => {
-  const store = { id: "66aa11bb22cc33dd44ee5500", name: "SAJUNI SAHEBA", productCount: 2, path: "/store/66aa11bb22cc33dd44ee5500/sajuni-saheba" };
+  const store = { id: "66aa11bb22cc33dd44ee5500", name: "SAJUNI SAHEBA", productCount: 2, followerCount: 12, ratingCount: 3, averageRating: 4.67, path: "/store/66aa11bb22cc33dd44ee5500/sajuni-saheba" };
   const first = { ...product, name: "Sajuni Roman Silk Kurta", store, sellerId: store.id };
   const second = { ...product, _id: "66aa11bb22cc33dd44ee5511", slug: "sajuni-second-kurta", name: "Sajuni Floral Kurta", store, sellerId: store.id };
   await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: first }));
@@ -1230,6 +1230,8 @@ test("customers can visit a seller store from its product and keep filters insid
   });
   await page.goto(`/product/${product.slug}`);
   await expect(page.getByRole("region", { name: "Sold by" })).toContainText("2 products");
+  await expect(page.getByRole("region", { name: "Sold by" })).toContainText("4.7 · 3 ratings");
+  await expect(page.getByRole("region", { name: "Sold by" })).toContainText("12 followers");
   await page.getByRole("link", { name: "View SAJUNI SAHEBA shop", exact: true }).click();
   await expect(page.getByRole("heading", { name: "SAJUNI SAHEBA", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: first.name, exact: true })).toBeVisible();
@@ -1285,3 +1287,50 @@ test("navbar signup preserves the product page through registration", async ({ p
   await expect(page).toHaveURL(`/product/${product.slug}?colour=Maroon#reviews`);
 });
 
+
+
+test("mobile homepage spotlight stays readable without horizontal overflow", async ({ page }) => {
+  const longName = "SAJUNI SAHEBA Women's Roman Silk Zari Work Kurta Set with Pants & Embroidered Dupatta";
+  await page.route("**/api/products?*", route => route.fulfill({ json: { products: [{ ...product, name: longName }], totalProducts: 1 } }));
+  for (const width of [320, 375, 425]) {
+    await page.setViewportSize({ width, height: 844 }); await page.goto("/");
+    const spotlight = page.getByRole("region", { name: "Product spotlight" });
+    await expect(spotlight.getByRole("heading", { name: longName })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    const photo = await spotlight.getByRole("img", { name: longName, exact: true }).boundingBox();
+    const title = await spotlight.getByRole("heading").boundingBox();
+    expect(title.y).toBeGreaterThan(photo.y + photo.height - 1);
+  }
+  await page.getByRole("region", { name: "Product spotlight" }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "output/mobile-home-redesign.png" });
+});
+
+test("mobile admin keeps navigation available while dashboard content remains inside the screen", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "test-admin", user: { id: "admin", accountType: "platform_admin", isAdmin: true } })));
+  for (const width of [320, 375, 425]) {
+    await page.setViewportSize({ width, height: 844 }); await page.goto("/admin/dashboard");
+    await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.getByRole("heading", { name: "Recent orders", exact: true }).scrollIntoViewIfNeeded();
+    const menu = page.getByRole("button", { name: "Open seller menu", exact: true });
+    expect((await menu.boundingBox()).y).toBeLessThan(100);
+    await menu.click(); await expect(page.getByRole("dialog", { name: "Seller navigation" })).toBeVisible();
+    await page.getByRole("dialog", { name: "Seller navigation" }).getByRole("button", { name: "Close seller menu" }).last().click();
+  }
+  await page.screenshot({ path: "output/mobile-admin-sticky.png" });
+});
+
+test("seller logo picker previews the selected file and submits it without changing verification", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("user", JSON.stringify({ token: "test-seller", user: { id: "seller-test", accountType: "seller", sellerRole: "member", sellerAccessStatus: "active" } })));
+  let saved = false;
+  await page.route("**/api/auth/seller-profile/me", route => route.fulfill({ json: { profile: { tradeName: "Example Kids", verificationStatus: "verified", storeLogoUrl: saved ? image : "", bankProof: { digest: "proof" } } } }));
+  await page.route("**/api/auth/seller-profile/me/logo", async route => { expect(route.request().postData()).toContain('name="logo"'); saved = true; await route.fulfill({ json: { logoUrl: image, message: "Store logo updated" } }); });
+  await page.setViewportSize({ width: 375, height: 844 }); await page.goto("/seller/profile");
+  await page.getByLabel("Upload store logo", { exact: true }).setInputFiles({ name: "my-store-logo.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jz1sAAAAASUVORK5CYII=", "base64") });
+  await expect(page.getByRole("img", { name: "Selected logo preview" })).toBeVisible();
+  await page.getByRole("button", { name: "Save logo", exact: true }).click();
+  await expect(page.getByRole("img", { name: "Current store logo" })).toBeVisible();
+  expect(saved).toBe(true); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  await page.getByRole("heading", { name: "Store logo", exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "output/store-logo-picker-mobile.png" });
+});

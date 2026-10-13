@@ -1,3 +1,4 @@
+import { publicStoreStats } from "../utils/storeStats.js";
 import express from "express";
 import { buildSearchRegex, escapeRegex } from "../utils/search.js";
 import Product from "../models/Product.js";
@@ -148,9 +149,10 @@ router.get("/", async (req, res) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 48);
     const filter = storefrontProductFilter();
     const storeId = typeof req.query.store === "string" ? req.query.store : "";
-    const store = storeId ? await publicSellerStore(storeId) : null;
+    const identity = storeId ? await publicSellerStore(storeId) : null;
+    const store = identity ? await publicStoreStats(identity) : null;
     if (req.query.store !== undefined && !store) return res.status(404).json({ message: "This store is unavailable" });
-    if (store) { filter.sellerId = store.id; store.productCount = await Product.countDocuments(storefrontProductFilter({ sellerId: store.id })); }
+    if (store) filter.sellerId = store.id;
 
     const search = String(req.query.search || "").trim().slice(0, 100);
     if (search) {
@@ -437,7 +439,7 @@ router.get("/:id", async (req, res) => {
 
     product.reviews = approvedReviews(product.reviews);
     product.store = await publicSellerStore(product.sellerId);
-    if (product.store) product.store.productCount = await Product.countDocuments(storefrontProductFilter({ sellerId: product.store.id }));
+    if (product.store) product.store = await publicStoreStats(product.store);
     product.approvedReviewCount = product.reviews.length;
     res.json(product);
   } catch (error) {

@@ -31,12 +31,12 @@ test("unverified, held, closed and invalid stores are unavailable", async () => 
 });
 
 test("public store catalogue keeps seller scope and listing visibility in all filters", async () => {
-  const originals = { findUser: User.findById, profile: SellerProfile.findOne, find: Product.find, count: Product.countDocuments, distinct: Product.distinct, aggregate: Product.aggregate };
+  const originals = { findUser: User.findById, userCount: User.countDocuments, profile: SellerProfile.findOne, find: Product.find, count: Product.countDocuments, distinct: Product.distinct, aggregate: Product.aggregate };
   const queries = [];
   const rows = [{ _id: "one", sellerId: id, status: "active", approvalStatus: "approved" }, { _id: "two", sellerId: id, status: "active", approvalStatus: "approved" },
     { _id: "draft", sellerId: id, status: "draft", approvalStatus: "pending" }, { _id: "held", sellerId: id, status: "active", approvalStatus: "approved", sellerComplianceHold: true }, { _id: "other", sellerId: otherId, status: "active", approvalStatus: "approved" }];
-  const matches = (filter) => { queries.push(filter); return rows.filter((row) => row.sellerId === filter.sellerId && row.status === filter.status && filter.approvalStatus.$in.includes(row.approvalStatus) && row.sellerComplianceHold !== true); };
-  User.findById = () => userQuery(user); SellerProfile.findOne = () => userQuery(profile);
+  const matches = (filter) => { queries.push(filter); return rows.filter((row) => row.sellerId === String(filter.sellerId) && row.status === filter.status && filter.approvalStatus.$in.includes(row.approvalStatus) && row.sellerComplianceHold !== true); };
+  User.countDocuments = async () => 0; User.findById = () => userQuery(user); SellerProfile.findOne = () => userQuery(profile);
   Product.find = (filter) => ({ sort() { return this; }, skip() { return this; }, limit() { return this; }, lean: async () => matches(filter) });
   Product.countDocuments = async (filter) => matches(filter).length;
   Product.distinct = async (_field, filter) => { matches(filter); return []; };
@@ -46,12 +46,12 @@ test("public store catalogue keeps seller scope and listing visibility in all fi
   try {
     const response = await fetch(`${base}?store=${id}&search=kurta&sort=price-asc`); assert.equal(response.status, 200);
     const data = await response.json(); assert.equal(data.store.name, "SAJUNI SAHEBA"); assert.deepEqual(data.products.map((row) => row._id), ["one", "two"]);
-    assert.ok(queries.every((query) => query.sellerId === id && query.sellerComplianceHold.$ne === true));
+    assert.ok(queries.every((query) => String(query.sellerId) === id && query.sellerComplianceHold.$ne === true));
     assert.equal((await fetch(`${base}?store=invalid`)).status, 404);
     User.findById = () => userQuery({ ...user, sellerAccessStatus: "suspended" });
     assert.equal((await fetch(`${base}?store=${id}`)).status, 404);
   } finally {
-    User.findById = originals.findUser; SellerProfile.findOne = originals.profile; Product.find = originals.find; Product.countDocuments = originals.count; Product.distinct = originals.distinct; Product.aggregate = originals.aggregate;
+    User.countDocuments = originals.userCount; User.findById = originals.findUser; SellerProfile.findOne = originals.profile; Product.find = originals.find; Product.countDocuments = originals.count; Product.distinct = originals.distinct; Product.aggregate = originals.aggregate;
     await new Promise((resolve) => server.close(resolve));
   }
 });
