@@ -16,6 +16,7 @@ const login = async () => {
   const response = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(20_000),
     body: JSON.stringify({ email: process.env.SHIPROCKET_EMAIL, password: process.env.SHIPROCKET_PASSWORD }),
   });
   const data = await response.json().catch(() => ({}));
@@ -30,6 +31,7 @@ const request = async (path, { method = "GET", body, retry = true } = {}) => {
   const response = await fetch(`${API_BASE}${path}`, {
     method,
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(20_000),
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   if (response.status === 401 && retry) {
@@ -173,3 +175,5 @@ export const assignShiprocketAwb = (shipmentId, courierId, isReturn = false) => 
 export const scheduleShiprocketPickup = (shipmentId) => request("/courier/generate/pickup", { method: "POST", body: { shipment_id: [Number(shipmentId)] } });
 export const generateShiprocketLabel = (shipmentId) => request("/courier/generate/label", { method: "POST", body: { shipment_id: [Number(shipmentId)] } });
 export const cancelShiprocketShipment = (awb) => request("/orders/cancel/shipment/awbs", { method: "POST", body: { awbs: [String(awb)] } });
+
+export const trackShiprocketAwb = (awb) => request(`/courier/track/awb/${encodeURIComponent(String(awb))}`);

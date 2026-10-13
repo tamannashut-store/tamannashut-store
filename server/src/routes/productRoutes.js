@@ -150,7 +150,7 @@ router.get("/", async (req, res) => {
     const storeId = typeof req.query.store === "string" ? req.query.store : "";
     const store = storeId ? await publicSellerStore(storeId) : null;
     if (req.query.store !== undefined && !store) return res.status(404).json({ message: "This store is unavailable" });
-    if (store) filter.sellerId = store.id;
+    if (store) { filter.sellerId = store.id; store.productCount = await Product.countDocuments(storefrontProductFilter({ sellerId: store.id })); }
 
     const search = String(req.query.search || "").trim().slice(0, 100);
     if (search) {
@@ -437,6 +437,7 @@ router.get("/:id", async (req, res) => {
 
     product.reviews = approvedReviews(product.reviews);
     product.store = await publicSellerStore(product.sellerId);
+    if (product.store) product.store.productCount = await Product.countDocuments(storefrontProductFilter({ sellerId: product.store.id }));
     product.approvedReviewCount = product.reviews.length;
     res.json(product);
   } catch (error) {

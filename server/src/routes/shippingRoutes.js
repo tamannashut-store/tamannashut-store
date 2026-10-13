@@ -1,4 +1,6 @@
 import crypto from "crypto";
+import { applyCourierProgress, syncShipmentTracking } from "../services/shipmentTrackingService.js";
+import { courierStatus } from "../utils/courierLifecycle.js";
 import express from "express";
 import * as Sentry from "@sentry/node";
 import Order from "../models/Order.js";
@@ -65,7 +67,11 @@ router.post("/events", async (req, res) => {
     if (!order) return res.status(200).json({ received: true });
     const code = Number(payload.current_status_id ?? payload.shipment_status_id ?? payload.status_id);
     const isReverse = (shipmentId && shipmentId === String(order.returnRequest?.reverseShipmentId || "")) || (awb && awb === String(order.returnRequest?.reverseAwb || ""));
-    const mapped = isReverse ? ({ 6: "Return Picked Up", 7: "Returned", 42: "Return Picked Up" })[code] : ({ 6: "Shipped", 7: "Delivered", 8: "Cancelled", 9: "RTO Initiated", 10: "RTO Delivered", 19: "Shipped" })[code];
+    const mapped = courierStatus(code, isReverse);
+    if (!isReverse && ["Shipped", "Delivered"].includes(mapped)) {
+      await applyCourierProgress(order, payload);
+      return res.status(200).json({ received: true });
+    }
     let transitioned = false;
     order.shipping.externalStatus = String(payload.current_status || payload.shipment_status || payload.status || code || "").slice(0, 120);
     order.shipping.lastEventAt = new Date();
@@ -92,6 +98,7 @@ router.post("/events", async (req, res) => {
 
 router.get("/postcode/:pincode", protect, async (req, res) => { try { return res.json(await verifyShiprocketDeliveryPostcode(req.params.pincode, req.query.cod === "1")); } catch (error) { return fail(res, error); } });
 router.use(protect, admin);
+router.post("/orders/:id/sync", async (req, res) => { try { const order = await loadOrder(req.params.id); return res.json({ order: await syncShipmentTracking(order) }); } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/couriers", async (req, res) => { try { const order = await loadOrder(req.params.id); requireOpenFulfilment(order); const parcel = parcelFrom(req.body, order.shipping); const data = await getShiprocketCouriers(order, parcel); return res.json({ couriers: data.data?.available_courier_companies || [] }); } catch (error) { return fail(res, error); } });
 router.post("/orders/:id/create", async (req, res) => { try {
   const order = await loadOrder(req.params.id); requireOpenFulfilment(order); if (order.shipping?.externalOrderId) return res.json({ order, existing: true });

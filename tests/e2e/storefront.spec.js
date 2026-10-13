@@ -1219,7 +1219,7 @@ test("seller navigation shows the storefront name instead of the account owner's
 
 
 test("customers can visit a seller store from its product and keep filters inside that store", async ({ page }) => {
-  const store = { id: "66aa11bb22cc33dd44ee5500", name: "SAJUNI SAHEBA", path: "/store/66aa11bb22cc33dd44ee5500/sajuni-saheba" };
+  const store = { id: "66aa11bb22cc33dd44ee5500", name: "SAJUNI SAHEBA", productCount: 2, path: "/store/66aa11bb22cc33dd44ee5500/sajuni-saheba" };
   const first = { ...product, name: "Sajuni Roman Silk Kurta", store, sellerId: store.id };
   const second = { ...product, _id: "66aa11bb22cc33dd44ee5511", slug: "sajuni-second-kurta", name: "Sajuni Floral Kurta", store, sellerId: store.id };
   await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: first }));
@@ -1229,10 +1229,12 @@ test("customers can visit a seller store from its product and keep filters insid
     return route.fulfill({ json: { store, products: filtered, totalProducts: filtered.length, totalPages: 1, filterOptions: { categories: ["girls"], colors: [], fabrics: [], ageGroups: [], price: { min: 299, max: 299 } } } });
   });
   await page.goto(`/product/${product.slug}`);
-  await page.getByRole("link", { name: "Visit the SAJUNI SAHEBA store", exact: false }).click();
+  await expect(page.getByRole("region", { name: "Sold by" })).toContainText("2 products");
+  await page.getByRole("link", { name: "View SAJUNI SAHEBA shop", exact: true }).click();
   await expect(page.getByRole("heading", { name: "SAJUNI SAHEBA", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: first.name, exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  await page.getByRole("heading", { name: "SAJUNI SAHEBA", exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "output/seller-store-preview.png" });
   await page.getByPlaceholder("Search this store").fill("floral");
   await page.getByPlaceholder("Search this store").press("Enter");

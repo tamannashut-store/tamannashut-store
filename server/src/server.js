@@ -9,6 +9,7 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import errorHandler from "./middleware/errorHandler.js";
+import { startShipmentTracking } from "./services/shipmentTrackingService.js";
 import storeRoutes from "./routes/storeRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
@@ -113,6 +114,7 @@ Sentry.setupExpressErrorHandler(app);
 app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 let server;
+let stopShipmentTracking;
 const start = async () => {
   if (!process.env.MONGO_URI || !process.env.JWT_SECRET) throw new Error("Required server configuration is missing");
   await mongoose.connect(process.env.MONGO_URI);
@@ -128,9 +130,11 @@ const start = async () => {
   const migratedSlugs = await backfillProductSlugs(Product);
   if (migratedSlugs) console.log(`Product URLs prepared: ${migratedSlugs}`);
   server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  stopShipmentTracking = startShipmentTracking();
 };
 const shutdown = async (signal) => {
   console.log(`${signal} received; shutting down`);
+  if (stopShipmentTracking) stopShipmentTracking();
   if (server) await new Promise((resolve) => server.close(resolve));
   await mongoose.connection.close();
   process.exit(0);
