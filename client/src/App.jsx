@@ -33,6 +33,7 @@ const SellerSettlements = lazy(() => import("./pages/SellerSettlements"));
 const AdminSettlements = lazy(() => import("./pages/AdminSettlements"));
 const AdminAds = lazy(() => import("./pages/AdminAds"));
 const SellerAds = lazy(() => import("./pages/SellerAds"));
+const SellerStore = lazy(() => import("./pages/SellerStore"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 
@@ -53,6 +54,7 @@ function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
           <Route path="/shop" element={<Shop />} />
+          <Route path="/store/:storeId/:storeSlug?" element={<SellerStore />} />
           <Route path="/success" element={<Success />} />
           <Route path="/my-orders" element={<PrivateRoute><MyOrders /></PrivateRoute>} />
           <Route path="/wishlist" element={<Wishlist />} />

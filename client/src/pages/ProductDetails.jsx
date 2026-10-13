@@ -263,6 +263,7 @@ function ProductDetails() {
                 <span className={`rounded-full px-3 py-1 text-xs font-medium ${totalStock > 0 ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>{totalStock > 0 ? "In stock" : "Out of stock"}</span>
               </div>
               <h1 className="mt-4 text-3xl font-bold leading-tight md:text-4xl">{product.name}</h1>
+              {product.store?.path && <Link to={product.store.path} className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary underline underline-offset-4">Visit the {product.store.name} store <span aria-hidden="true">→</span></Link>}
               <a href="#reviews" className="mt-4 block w-fit hover:underline"><ProductRating product={product} /></a>
               <div className="mt-6 flex flex-wrap items-end gap-3"><p className="text-4xl font-bold text-brand-primary">₹{selectedPrice.toLocaleString("en-IN")}</p>{Number(product.mrp) > selectedPrice && <><p className="pb-1 text-lg text-gray-400 line-through">₹{Number(product.mrp).toLocaleString("en-IN")}</p><span className="mb-1 rounded-full bg-green-50 px-2.5 py-1 text-sm font-semibold text-green-700">{Math.round((1 - selectedPrice / Number(product.mrp)) * 100)}% off</span></>}</div>
               <p className="mt-2 text-sm text-gray-500">Inclusive of all taxes</p>

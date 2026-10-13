@@ -1,7 +1,7 @@
 import ProductRating from "../components/ProductRating";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import ProductImageSlider from "../components/ProductImageSlider";
 import SkeletonProduct from "../components/SkeletonProduct";
@@ -13,6 +13,9 @@ import { getProducts } from "../api/productApi";
 import { useReloadOnPageResume } from "../utils/useReloadOnPageResume";
 
 function Shop() {
+  const { storeId } = useParams();
+  const [store, setStore] = useState(null);
+  const [storeUnavailable, setStoreUnavailable] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -49,9 +52,10 @@ function Shop() {
       try {
         const params = Object.fromEntries(new URLSearchParams(queryString).entries());
         const { data } = await getProducts(
-          { ...params, limit: 12 },
+          { ...params, limit: 12, ...(storeId ? { store: storeId } : {}) },
           { signal: controller.signal, onRetry: () => setLoadPhase("waking") }
         );
+        setStore(data.store || null); setStoreUnavailable(false);
         setProducts(data.products || []);
         setTotalProducts(data.totalProducts ?? data.products?.length ?? 0);
         setTotalPages(Math.max(data.totalPages || 1, 1));
@@ -63,6 +67,7 @@ function Shop() {
         if (params.search) trackEvent("view_search_results", { search_term: params.search, result_count: data.totalProducts ?? data.products?.length ?? 0 });
       } catch (requestError) {
         if (!isCanceledRequest(requestError)) {
+          if (storeId && requestError.response?.status === 404) { setStoreUnavailable(true); setStore(null); setProducts([]); setTotalProducts(0); }
           console.error(requestError);
           setError(navigator.onLine
             ? "The store is taking longer than expected to respond. Please try again."
@@ -78,11 +83,11 @@ function Shop() {
 
     fetchProducts();
     return () => controller.abort();
-  }, [queryString, reloadKey]);
+  }, [queryString, reloadKey, storeId]);
 
   useReloadOnPageResume(setReloadKey);
 
-  useEffect(() => { let active = true; axios.get(`${apiBase}/api/ads/placements/shop`, { timeout: 12000 }).then(({ data }) => { if (active) setSponsored(data.campaigns || []); }).catch(() => {}); return () => { active = false; }; }, [apiBase]);
+  useEffect(() => { if (storeId) return undefined; let active = true; axios.get(`${apiBase}/api/ads/placements/shop`, { timeout: 12000 }).then(({ data }) => { if (active) setSponsored(data.campaigns || []); }).catch(() => {}); return () => { active = false; }; }, [apiBase, storeId]);
 
   useEffect(() => { if (!filtersOpen) return undefined; const previous = document.body.style.overflow; document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = previous; }; }, [filtersOpen]);
 
@@ -122,16 +127,18 @@ function Shop() {
   return (
     <>
       <Helmet>
-        <title>Shop All Products | Tamanna&apos;s Hut</title>
-        <meta name="description" content="Explore products across every published category in our growing catalogue." />
-        <link rel="canonical" href="https://www.tamannashut.com/shop" />
+        <title>{storeId ? `${store?.name || "Store"} | Tamanna's Hut` : "Shop All Products | Tamanna's Hut"}</title>
+        <meta name="description" content={store ? `Shop all available products from ${store.name} on Tamanna's Hut.` : "Explore products across every published category in our growing catalogue."} />
+        <link rel="canonical" href={`https://www.tamannashut.com${store?.path || (storeId ? `/store/${storeId}` : "/shop")}`} />
       </Helmet>
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
+        {storeId && <Link to="/shop" className="mb-6 inline-block text-sm font-semibold text-brand-primary">← Browse all stores’ products</Link>}
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">Tamanna&apos;s Hut collection</p>
-            <h1 className="mt-2 text-3xl font-bold sm:text-4xl md:text-5xl">Find their perfect outfit</h1>
+            <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">{storeId ? "Brand store" : "Tamanna's Hut collection"}</p>
+            <h1 className="mt-2 text-3xl font-bold sm:text-4xl md:text-5xl">{storeId ? storeUnavailable ? "Store unavailable" : store?.name || "Loading store…" : "Find their perfect outfit"}</h1>
+            {store && <p className="mt-3 max-w-xl text-gray-600">Explore the collection from {store.name}. Browse its available products, choose your favourites and shop in one place.</p>}
             <p className="mt-3 text-gray-500">{loading ? (loadPhase === "waking" ? "Waking up the store…" : "Finding products…") : `${totalProducts} products found`}</p>
             {!loading && searchMode === "fuzzy" && searchParams.get("search") && <p className="mt-2 text-sm font-medium text-amber-700">Showing close matches for “{searchParams.get("search")}”.</p>}
           </div>
@@ -141,7 +148,7 @@ function Shop() {
               name="search"
               type="search"
               defaultValue={searchParams.get("search") || ""}
-              placeholder="Search dresses, sets and more"
+              placeholder={storeId ? "Search this store" : "Search dresses, sets and more"}
               className="min-w-0 flex-1 rounded-xl border bg-white px-4 py-3 outline-none focus:border-brand-primary"
             />
             <button className="rounded-xl bg-brand-primary px-5 py-3 font-medium text-white">Search</button>
@@ -217,7 +224,8 @@ function Shop() {
               </label>
             </div>
 
-            {error && <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-red-50 p-4 text-red-700"><span>{error}</span><button type="button" onClick={() => setReloadKey((value) => value + 1)} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold">Try again</button></div>}
+            {storeUnavailable && <div role="alert" className="mb-6 rounded-2xl border bg-white p-6"><p>This store is not currently available. Browse the rest of the catalogue while its listings are being updated.</p><Link to="/shop" className="btn-primary mt-4">Shop all products</Link></div>}
+            {error && !storeUnavailable && <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-red-50 p-4 text-red-700"><span>{error}</span><button type="button" onClick={() => setReloadKey((value) => value + 1)} className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold">Try again</button></div>}
 
             {loading && loadPhase === "waking" && <div role="status" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">The store is waking up</p><p className="mt-1">This can take about a minute after a quiet period. We will reconnect automatically—there is no need to reload the page.</p></div>}
 
@@ -225,7 +233,7 @@ function Shop() {
               {loading
                 ? Array.from({ length: 6 }).map((_, index) => <SkeletonProduct key={index} />)
                 : products.map((product) => {
-                    const stock = product.sizeStock?.reduce((total, item) => total + Number(item.stock || 0), 0) || 0;
+                    const stock = product.variants?.length ? product.variants.filter((item) => item.active !== false).reduce((total, item) => total + Number(item.stock || 0), 0) : product.sizeStock?.length ? product.sizeStock.reduce((total, item) => total + Number(item.stock || 0), 0) : Number(product.stock || 0);
                     return (
                       <article key={product._id} className="group overflow-hidden rounded-3xl border bg-white transition hover:shadow-xl">
                         <ProductImageSlider product={product} className="h-80" />
@@ -246,7 +254,7 @@ function Shop() {
                   })}
             </div>
 
-            {!loading && products.length === 0 && (
+            {!loading && products.length === 0 && !storeUnavailable && (
               <div className="rounded-3xl border bg-white px-6 py-16 text-center">
                 <h2 className="text-2xl font-semibold">No matching products</h2>
                 <p className="mt-2 text-gray-500">Try removing a filter or searching for something else.</p>

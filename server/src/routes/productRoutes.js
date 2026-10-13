@@ -11,6 +11,7 @@ import { recordAudit } from "../utils/recordAudit.js";
 import { createUniqueProductSlug, productIdentifierFilter } from "../utils/productSlug.js";
 import { isMarketplaceSeller, scopeSellerOwned } from "../utils/accountRoles.js";
 import { storefrontProductFilter } from "../utils/productVisibility.js";
+import { publicSellerStore } from "../utils/sellerStore.js";
 
 import { parseProductFields, assertPublishable } from "../utils/productFields.js";
 
@@ -146,6 +147,10 @@ router.get("/", async (req, res) => {
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 48);
     const filter = storefrontProductFilter();
+    const storeId = typeof req.query.store === "string" ? req.query.store : "";
+    const store = storeId ? await publicSellerStore(storeId) : null;
+    if (req.query.store !== undefined && !store) return res.status(404).json({ message: "This store is unavailable" });
+    if (store) filter.sellerId = store.id;
 
     const search = String(req.query.search || "").trim().slice(0, 100);
     if (search) {
@@ -216,7 +221,7 @@ router.get("/", async (req, res) => {
 
     const skip = (page - 1) * limit;
 
-    const activeFilter = storefrontProductFilter();
+    const activeFilter = storefrontProductFilter(store ? { sellerId: store.id } : {});
     const [products, total, variantSizes, legacySizes, colors, variantColors, fabrics, ageGroups, priceRange, categories] = await Promise.all([
       Product.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       Product.countDocuments(filter),
@@ -232,7 +237,7 @@ router.get("/", async (req, res) => {
 
     res.set(
       "Cache-Control",
-      "public, max-age=30, s-maxage=300, stale-while-revalidate=86400"
+      store ? "public, max-age=0, s-maxage=30, must-revalidate" : "public, max-age=30, s-maxage=300, stale-while-revalidate=86400"
     );
 
     const publicProducts = products.map(({ reviews: _reviews, ...product }) => ({
@@ -241,6 +246,7 @@ router.get("/", async (req, res) => {
     }));
 
     res.json({
+      ...(store ? { store } : {}),
       products: publicProducts,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
@@ -430,6 +436,7 @@ router.get("/:id", async (req, res) => {
     }
 
     product.reviews = approvedReviews(product.reviews);
+    product.store = await publicSellerStore(product.sellerId);
     product.approvedReviewCount = product.reviews.length;
     res.json(product);
   } catch (error) {
