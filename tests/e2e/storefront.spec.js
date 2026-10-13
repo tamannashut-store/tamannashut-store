@@ -1216,3 +1216,36 @@ test("seller navigation shows the storefront name instead of the account owner's
   await expect(page.getByRole("dialog", { name: "Seller navigation" }).getByText("Example Kids", { exact: true })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Seller navigation" }).getByText("Account Owner", { exact: true })).toHaveCount(0);
 });
+
+
+test("customers can visit a seller store from its product and keep filters inside that store", async ({ page }) => {
+  const store = { id: "66aa11bb22cc33dd44ee5500", name: "SAJUNI SAHEBA", path: "/store/66aa11bb22cc33dd44ee5500/sajuni-saheba" };
+  const first = { ...product, name: "Sajuni Roman Silk Kurta", store, sellerId: store.id };
+  const second = { ...product, _id: "66aa11bb22cc33dd44ee5511", slug: "sajuni-second-kurta", name: "Sajuni Floral Kurta", store, sellerId: store.id };
+  await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: first }));
+  await page.route("**/api/products?*", route => {
+    const url = new URL(route.request().url()); expect(url.searchParams.get("store")).toBe(store.id);
+    const filtered = url.searchParams.get("search") ? [second] : [first, second];
+    return route.fulfill({ json: { store, products: filtered, totalProducts: filtered.length, totalPages: 1, filterOptions: { categories: ["girls"], colors: [], fabrics: [], ageGroups: [], price: { min: 299, max: 299 } } } });
+  });
+  await page.goto(`/product/${product.slug}`);
+  await page.getByRole("link", { name: "Visit the SAJUNI SAHEBA store", exact: false }).click();
+  await expect(page.getByRole("heading", { name: "SAJUNI SAHEBA", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: first.name, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  await page.screenshot({ path: "output/seller-store-preview.png" });
+  await page.getByPlaceholder("Search this store").fill("floral");
+  await page.getByPlaceholder("Search this store").press("Enter");
+  await expect(page.getByRole("heading", { name: first.name, exact: true })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: second.name, exact: true })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe(store.path);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("button", { name: "Filters & sorting" })).toBeVisible();
+});
+
+test("an unavailable seller store shows no old catalogue or unrelated products", async ({ page }) => {
+  await page.route("**/api/products?*", route => route.fulfill({ status: 404, json: { message: "This store is unavailable" } }));
+  await page.goto("/store/66aa11bb22cc33dd44ee5500/sajuni-saheba");
+  await expect(page.getByRole("heading", { name: "Store unavailable", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "View product", exact: true })).toHaveCount(0);
+});
