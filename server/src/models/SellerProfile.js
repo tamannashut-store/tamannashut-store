@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 const sellerProfileSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
   legalBusinessName: { type: String, required: true, trim: true, maxlength: 120 },
+  storeLogo: { url: { type: String, default: "" }, publicId: { type: String, default: "" } },
   tradeName: { type: String, default: "", trim: true, maxlength: 120 },
   businessType: { type: String, enum: ["proprietorship", "partnership", "llp", "private_limited", "public_limited", "trust", "society", "other"], default: "proprietorship" },
   businessPhone: { type: String, default: "", trim: true },

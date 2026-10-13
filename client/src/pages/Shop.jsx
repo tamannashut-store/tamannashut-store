@@ -1,3 +1,4 @@
+import StoreIdentity from "../components/StoreIdentity";
 import FollowStore from "../components/FollowStore";
 import ProductRating from "../components/ProductRating";
 import { useEffect, useState } from "react";
@@ -134,13 +135,12 @@ function Shop() {
       </Helmet>
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-16">
-        {storeId && <Link to="/shop" className="mb-6 inline-block text-sm font-semibold text-brand-primary">← Browse all stores’ products</Link>}
+        {storeId && <nav aria-label="Store navigation" className="mb-6 flex items-center gap-2 text-sm text-slate-500"><Link to="/" className="hover:text-brand-primary">Home</Link><span aria-hidden="true">/</span><Link to="/shop" className="hover:text-brand-primary">Shop all</Link><span aria-hidden="true">/</span><span className="font-medium text-slate-700">{store?.name || "Store"}</span></nav>}
+        {store && <section aria-label="Store profile" className="mb-8 rounded-3xl border border-slate-200 bg-white p-6 sm:p-8"><div className="flex flex-wrap items-center gap-5"><StoreIdentity store={store} large /><div className="min-w-0 flex-1"><p className="text-xs font-semibold uppercase tracking-[2px] text-brand-primary">Brand store</p><h1 className="mt-2 text-2xl font-bold text-slate-900 sm:text-4xl">{store.name}</h1><p className="mt-2 text-sm text-slate-500">{store.productCount ?? totalProducts} products · Explore the collection</p></div><FollowStore key={store.id} store={store} /></div><div className="mt-6 flex gap-6 border-t border-slate-100 pt-4 text-sm"><span className="border-b-2 border-brand-primary pb-2 font-semibold text-brand-primary">All products</span><Link to="/shop" className="pb-2 text-slate-500 hover:text-brand-primary">Browse marketplace</Link></div></section>}
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
-            <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">{storeId ? "Brand store" : "Tamanna's Hut collection"}</p>
-            <h1 className="mt-2 text-3xl font-bold sm:text-4xl md:text-5xl">{storeId ? storeUnavailable ? "Store unavailable" : store?.name || "Loading store…" : "Find their perfect outfit"}</h1>
-            {store && <FollowStore key={store.id} store={store} />}
-            {store && <p className="mt-3 max-w-xl text-gray-600">Explore the collection from {store.name}. Browse its available products, choose your favourites and shop in one place.</p>}
+            {!storeId && <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">Tamanna's Hut collection</p>}
+            {!store && <h1 className="mt-2 text-3xl font-bold sm:text-4xl md:text-5xl">{storeId ? storeUnavailable ? "Store unavailable" : "Loading store…" : "Find their perfect outfit"}</h1>}
             <p className="mt-3 text-gray-500">{loading ? (loadPhase === "waking" ? "Waking up the store…" : "Finding products…") : `${totalProducts} products found`}</p>
             {!loading && searchMode === "fuzzy" && searchParams.get("search") && <p className="mt-2 text-sm font-medium text-amber-700">Showing close matches for “{searchParams.get("search")}”.</p>}
           </div>

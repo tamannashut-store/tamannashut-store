@@ -144,6 +144,7 @@ const orderSchema = new mongoose.Schema(
         height: { type: Number, default: 5 },
       },
       lastEventAt: Date,
+      lastCheckedAt: Date,
     },
     sellerFulfillments: [{
       sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

@@ -1,4 +1,7 @@
 import express from "express";
+import imageUpload, { validateUploadedImages } from "../middleware/upload.js";
+import cloudinary from "../config/cloudinary.js";
+import streamifier from "streamifier";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
@@ -394,6 +397,7 @@ router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
             return { ...user, profile: profile ? {
                 legalBusinessName: profile.legalBusinessName,
                 tradeName: profile.tradeName,
+                storeLogoUrl: profile.storeLogo?.url || "",
                 businessType: profile.businessType,
                 businessPhone: profile.businessPhone,
                 authorizedSignatoryName: profile.authorizedSignatoryName,
@@ -459,6 +463,22 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
     }
 });
 
+router.put("/seller-profile/me/logo", protect, sellerApplicant, imageUpload.single("logo"), validateUploadedImages, async (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: "Choose a JPG, PNG or WebP logo" });
+        if (!["image/jpeg", "image/png", "image/webp"].includes(req.file.mimetype)) return res.status(400).json({ message: "Choose a JPG, PNG or WebP logo" });
+        const profile = await SellerProfile.findOne({ userId: req.user._id });
+        if (!profile) return res.status(404).json({ message: "Seller profile not found" });
+        const image = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream({ folder: "tamannas-hut-store-logos", transformation: [{ width: 512, height: 512, crop: "fit" }], resource_type: "image" }, (error, result) => error ? reject(error) : resolve(result));
+            streamifier.createReadStream(req.file.buffer).pipe(stream);
+        });
+        profile.storeLogo = { url: image.secure_url, publicId: image.public_id };
+        await profile.save();
+        return res.json({ message: "Store logo updated", logoUrl: image.secure_url });
+    } catch { return res.status(500).json({ message: "Store logo could not be uploaded. Please try again." }); }
+});
+
 router.get("/seller-profile/me", protect, sellerApplicant, async (req, res) => {
     try {
         res.set("Cache-Control", "no-store");
@@ -470,6 +490,7 @@ router.get("/seller-profile/me", protect, sellerApplicant, async (req, res) => {
             profile: {
                 legalBusinessName: profile.legalBusinessName,
                 tradeName: profile.tradeName,
+                storeLogoUrl: profile.storeLogo?.url || "",
                 businessType: profile.businessType,
                 businessPhone: profile.businessPhone,
                 authorizedSignatoryName: profile.authorizedSignatoryName,
