@@ -1,3 +1,4 @@
+import FollowStore from "../components/FollowStore";
 import ProductRating from "../components/ProductRating";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -138,6 +139,7 @@ function Shop() {
           <div>
             <p className="text-sm font-medium uppercase tracking-[3px] text-brand-primary">{storeId ? "Brand store" : "Tamanna's Hut collection"}</p>
             <h1 className="mt-2 text-3xl font-bold sm:text-4xl md:text-5xl">{storeId ? storeUnavailable ? "Store unavailable" : store?.name || "Loading store…" : "Find their perfect outfit"}</h1>
+            {store && <FollowStore key={store.id} store={store} />}
             {store && <p className="mt-3 max-w-xl text-gray-600">Explore the collection from {store.name}. Browse its available products, choose your favourites and shop in one place.</p>}
             <p className="mt-3 text-gray-500">{loading ? (loadPhase === "waking" ? "Waking up the store…" : "Finding products…") : `${totalProducts} products found`}</p>
             {!loading && searchMode === "fuzzy" && searchParams.get("search") && <p className="mt-2 text-sm font-medium text-amber-700">Showing close matches for “{searchParams.get("search")}”.</p>}

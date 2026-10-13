@@ -1,4 +1,5 @@
 import axios from "axios";
+import { consumeAuthReturn } from "./authReturn";
 import toast from "react-hot-toast";
 
 export async function startCustomerSession(data) {
@@ -14,7 +15,5 @@ export async function startCustomerSession(data) {
   }
   if (synced) { localStorage.removeItem("guest_cart"); sessionStorage.removeItem("pending_guest_cart"); }
   window.dispatchEvent(new Event("cartUpdated"));
-  const destination = sessionStorage.getItem("redirectAfterLogin") || "/";
-  sessionStorage.removeItem("redirectAfterLogin");
-  return destination.startsWith("/") && !destination.startsWith("//") ? destination : "/";
+  return consumeAuthReturn();
 }

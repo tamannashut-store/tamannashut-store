@@ -76,6 +76,7 @@ const userSchema = new mongoose.Schema(
     },
     sellerRole: { type: String, enum: ["", "owner", "member"], default: "" },
     sellerAccessStatus: { type: String, enum: ["active", "pending", "rejected", "suspended", "closed"], default: "active" },
+    followedStores: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     marketingConsent: { type: Boolean, default: false },
     cartUpdatedAt: { type: Date, default: null, index: true },
     cartRecovery: {

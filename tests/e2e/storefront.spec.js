@@ -1249,3 +1249,37 @@ test("an unavailable seller store shows no old catalogue or unrelated products",
   await expect(page.getByRole("heading", { name: "Store unavailable", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "View product", exact: true })).toHaveCount(0);
 });
+
+test("guest store follow returns after login and persists with unfollow", async ({ page }) => {
+  const store = { id: "66aa11bb22cc33dd44ee5500", name: "Sajuni Saheba", path: "/store/66aa11bb22cc33dd44ee5500/sajuni-saheba" };
+  await page.route("**/api/products?*", route => route.fulfill({ json: { store, products: [product], totalProducts: 1 } }));
+  let following = false;
+  await page.route("**/api/stores/*/follow", route => { const method=route.request().method(); if(method==="PUT") following=true; if(method==="DELETE") following=false; return route.fulfill({json:{following}}); });
+  await page.goto(`${store.path}?sort=newest#collection`);
+  await page.getByRole("button", { name: "Follow store", exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await page.getByRole("button", { name: "Password", exact: true }).click();
+  await page.getByLabel("Email address", {exact:true}).fill("test@example.com");
+  await page.getByLabel("Password", {exact:true}).fill("test-password");
+  await page.getByRole("button", {name:"Sign in securely"}).click();
+  await expect(page).toHaveURL(`${store.path}?sort=newest#collection`);
+  await expect(page.getByRole("button", {name:"Following · Unfollow"})).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", {name:"Following · Unfollow"}).click();
+  await expect(page.getByRole("button", {name:"Follow store",exact:true})).toBeVisible();
+});
+
+test("navbar signup preserves the product page through registration", async ({ page }) => {
+  await page.route("**/api/auth/customer-otp/send", route=>route.fulfill({json:{challengeToken:"test",message:"Code sent"}}));
+  await page.route("**/api/auth/customer-otp/check", route=>route.fulfill({json:{token:"safe-local-token",user:{id:"test-user",accountType:"customer"}}}));
+  await page.goto(`/product/${product.slug}?colour=Maroon#reviews`);
+  await page.getByRole("link",{name:"Register",exact:true}).click();
+  await page.getByLabel("Name (optional)",{exact:true}).fill("Test Customer");
+  await page.getByLabel("Mobile number",{exact:true}).fill("9876543210");
+  await page.getByRole("checkbox").first().check();
+  await page.getByRole("button",{name:/Send verification code/}).click();
+  await page.getByLabel("One-time code",{exact:true}).fill("123456");
+  await page.getByRole("button",{name:/Verify & create account/}).click();
+  await expect(page).toHaveURL(`/product/${product.slug}?colour=Maroon#reviews`);
+});
+

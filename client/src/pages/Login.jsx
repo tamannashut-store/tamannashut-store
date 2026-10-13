@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiShoppingBag } from "react-icons/fi";
 import toast from "react-hot-toast";
 import AuthShell from "../components/AuthShell";
+import { consumeAuthReturn } from "../utils/authReturn";
 
 const readCart = (key) => {
   try {
@@ -76,8 +77,7 @@ function Login() {
         sessionStorage.removeItem("pending_guest_cart");
       }
       window.dispatchEvent(new Event("cartUpdated"));
-      const destination = sessionStorage.getItem("redirectAfterLogin") || "/";
-      sessionStorage.removeItem("redirectAfterLogin");
+      const destination = consumeAuthReturn();
       toast.success("Welcome back");
       navigate(destination, { replace: true });
     } catch (requestError) {
