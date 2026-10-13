@@ -1,20 +1,10 @@
+import FileUpload from "./FileUpload";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useState } from "react";
 
 export function BankProofInput({ onChange, required = false }) {
-  const [error, setError] = useState("");
-  return <label className="field-label block">Bank ownership document
-    <input required={required} type="file" accept="application/pdf,image/jpeg,image/png" className="field-control mt-2" onChange={(event) => {
-      const file = event.target.files?.[0];
-      if (file && (file.size > 3 * 1024 * 1024 || !["application/pdf", "image/jpeg", "image/png"].includes(file.type))) {
-        setError("Choose a PDF, JPG or PNG up to 3 MB"); event.target.value = ""; onChange(null); return;
-      }
-      setError(""); onChange(file || null);
-    }}/>
-    <span className="mt-2 block text-xs font-normal leading-5 text-slate-500">Upload a cancelled cheque, passbook page or bank statement showing the account holder, account number and IFSC. Hide balances and unrelated transactions. PDF, JPG or PNG, up to 3 MB. Visible only to you and the owner administrator.</span>
-    {error && <span role="alert" className="mt-2 block text-sm text-red-700">{error}</span>}
-  </label>;
+  return <FileUpload label="Bank ownership document" required={required} accept="application/pdf,image/jpeg,image/png" maxSizeMB={3} onChange={onChange} hint="Upload a cancelled cheque, passbook page or bank statement showing the account holder, account number and IFSC. Hide balances and unrelated transactions. PDF, JPG or PNG, up to 3 MB. Visible only to you and the owner administrator." />;
 }
 
 export function BankProofDownload({ path, onOpened }) {

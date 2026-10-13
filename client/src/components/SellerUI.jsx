@@ -1,5 +1,5 @@
 export function SellerPage({ children }) {
-  return <div className="mx-auto w-full max-w-[1500px] p-5 md:p-8 lg:p-10">{children}</div>;
+  return <div className="seller-page mx-auto min-w-0 w-full max-w-[1500px] p-4 sm:p-5 md:p-8 lg:p-10">{children}</div>;
 }
 
 export function SellerHeader({ eyebrow = "Seller centre", title, description, action }) {

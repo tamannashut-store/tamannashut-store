@@ -116,6 +116,7 @@ const userSchema = new mongoose.Schema(
     },
   }
 );
+userSchema.index({ followedStores: 1, accountType: 1 });
 userSchema.index({ email: 1 }, { unique: true, name: "user_email_unique", partialFilterExpression: { email: { $type: "string" } } });
 userSchema.index(
   { phoneNormalized: 1 },

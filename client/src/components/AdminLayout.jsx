@@ -79,8 +79,8 @@ function AdminLayout() {
   }, [location.pathname, sellerAccount]);
 
   return (
-    <div className="min-h-screen bg-[#f6f7f5] text-slate-900 lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="z-20 border-b bg-[#123b29] px-4 py-3 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:min-h-0 lg:flex-col lg:overflow-hidden lg:border-0 lg:px-5 lg:py-7">
+    <div className="admin-layout min-h-screen bg-[#f6f7f5] text-slate-900 lg:grid lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="sticky top-0 z-30 border-b bg-[#123b29] px-4 py-3 text-white shadow-sm lg:flex lg:h-screen lg:min-h-0 lg:flex-col lg:overflow-hidden lg:border-0 lg:px-5 lg:py-7">
         <div className="flex shrink-0 items-center justify-between">
           <img src={logo} alt="Tamanna's Hut seller centre" className="h-14 w-auto rounded-xl bg-white px-2 py-1" />
           <button type="button" onClick={() => setMenuOpen(true)} aria-label="Open seller menu" className="grid h-11 w-11 place-items-center rounded-xl border border-white/15 text-white lg:hidden"><FiMenu size={22}/></button>

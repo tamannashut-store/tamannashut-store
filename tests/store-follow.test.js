@@ -11,19 +11,20 @@ test('authentication returns allow local pages including query and hash but reje
 });
 test('store follows require a customer session and persist idempotently without exposing followers', async () => {
  const customer='66aa11bb22cc33dd44ee5501', seller='66aa11bb22cc33dd44ee5500';
- const original={find:User.findById,update:User.updateOne,secret:process.env.JWT_SECRET};
+ const original={find:User.findById,update:User.updateOne,count:User.countDocuments,secret:process.env.JWT_SECRET};
  process.env.JWT_SECRET='test-store-follow-secret'; const follows=new Set(); let role='customer';
  User.findById=(id)=>({select(){return this;},lean:async()=>({_id:seller,accountType:'platform_admin'}),then(resolve){return Promise.resolve({_id:customer,accountType:role,sessionVersion:0,followedStores:[...follows]}).then(resolve);}});
  User.updateOne=async (filter,update)=>{assert.equal(filter._id,customer); if(update.$addToSet) follows.add(update.$addToSet.followedStores); else follows.delete(update.$pull.followedStores); return {modifiedCount:1};};
+ User.countDocuments=async filter=>{assert.equal(filter.accountType,"customer");return follows.size;};
  const app=express(); app.use('/stores',storeRoutes); const server=app.listen(0,'127.0.0.1'); await new Promise(resolve=>server.once('listening',resolve));
  const url=`http://127.0.0.1:${server.address().port}/stores/${seller}/follow`;
  const headers={Authorization:`Bearer ${jwt.sign({id:customer,sessionVersion:0},process.env.JWT_SECRET)}`};
  try {
  assert.equal((await fetch(url,{method:'PUT'})).status,401);
  role='seller'; assert.equal((await fetch(url,{method:'PUT',headers})).status,403); role='customer';
- for(let i=0;i<2;i++) assert.deepEqual(await (await fetch(url,{method:'PUT',headers})).json(),{following:true}); assert.equal(follows.size,1);
- const response=await fetch(url,{headers}); assert.equal(response.headers.get('cache-control'),'private, no-store'); assert.deepEqual(await response.json(),{following:true});
- assert.deepEqual(await (await fetch(url,{method:'DELETE',headers})).json(),{following:false}); assert.equal(follows.size,0);
+ for(let i=0;i<2;i++) assert.deepEqual(await (await fetch(url,{method:'PUT',headers})).json(),{following:true,followerCount:1}); assert.equal(follows.size,1);
+ const response=await fetch(url,{headers}); assert.equal(response.headers.get('cache-control'),'private, no-store'); assert.deepEqual(await response.json(),{following:true,followerCount:1});
+ assert.deepEqual(await (await fetch(url,{method:'DELETE',headers})).json(),{following:false,followerCount:0}); assert.equal(follows.size,0);
  assert.equal((await fetch(url.replace(seller,'invalid'),{method:'PUT',headers})).status,404);
- }finally{User.findById=original.find;User.updateOne=original.update;if(original.secret===undefined) delete process.env.JWT_SECRET;else process.env.JWT_SECRET=original.secret;await new Promise(resolve=>server.close(resolve));}
+ }finally{User.findById=original.find;User.updateOne=original.update;User.countDocuments=original.count;if(original.secret===undefined) delete process.env.JWT_SECRET;else process.env.JWT_SECRET=original.secret;await new Promise(resolve=>server.close(resolve));}
 });
