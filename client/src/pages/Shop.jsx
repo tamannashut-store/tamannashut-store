@@ -239,7 +239,7 @@ function Shop() {
                     const stock = product.variants?.length ? product.variants.filter((item) => item.active !== false).reduce((total, item) => total + Number(item.stock || 0), 0) : product.sizeStock?.length ? product.sizeStock.reduce((total, item) => total + Number(item.stock || 0), 0) : Number(product.stock || 0);
                     return (
                       <article key={product._id} className="group overflow-hidden rounded-3xl border bg-white transition hover:shadow-xl">
-                        <ProductImageSlider product={product} className="h-80" />
+                        <ProductImageSlider product={product} className="aspect-[2/3]" />
                         <div className="p-5">
                           <div className="flex items-center justify-between gap-3 text-sm">
                             <p className="font-medium capitalize text-brand-primary">{product.category?.replace(/-/g, " ")}</p>

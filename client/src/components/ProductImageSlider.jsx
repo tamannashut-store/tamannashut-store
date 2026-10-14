@@ -6,7 +6,7 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import { imageSrcSet, optimizedImage } from "../utils/image";
 
-function ProductImageSlider({ product, className = "h-72" }) {
+function ProductImageSlider({ product, className = "aspect-[2/3]" }) {
   const images = product.images?.length
     ? product.images
     : [{ url: "/placeholder.png", public_id: "placeholder" }];
