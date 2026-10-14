@@ -1303,12 +1303,26 @@ test("mobile homepage spotlight stays readable without horizontal overflow", asy
     await expect(spotlight.getByRole("heading", { name: longName })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     const photo = await spotlight.getByRole("img", { name: longName, exact: true }).boundingBox();
+    const frame = await spotlight.boundingBox();
+    if (width < 640) expect(Math.abs(photo.width - (frame.width - 2))).toBeLessThan(2);
     const title = await spotlight.getByRole("heading").boundingBox();
     if (width < 640) expect(title.y).toBeGreaterThan(photo.y + photo.height - 1);
     expect(await spotlight.getByRole("img", { name: longName, exact: true }).evaluate(img => getComputedStyle(img).objectFit)).toBe('cover');
   }
   await page.getByRole("region", { name: "Product spotlight" }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "output/mobile-home-redesign.png" });
+});
+
+test("mobile shop photos use full-width portrait frames instead of fixed-height crops", async ({ page }) => {
+  for (const width of [320, 390, 425]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/shop');
+    const photo = page.getByRole('img', { name: `${product.name} view 1`, exact: true }).first();
+    await expect(photo).toBeVisible();
+    const bounds = await photo.boundingBox();
+    expect(bounds.height / bounds.width).toBeCloseTo(1.5, 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  }
 });
 
 test("mobile admin keeps navigation available while dashboard content remains inside the screen", async ({ page }) => {
