@@ -171,6 +171,10 @@ function Checkout() {
     const locality = await resolvePincode();
     if (!locality) return;
 
+    const checkoutAnalytics = { currency: "INR", value: displayedTotal, items: cartItems.map((item) => ({ item_id: item._id, price: Number(item.price), quantity: Number(item.qty) })) };
+    trackEvent("add_shipping_info", { ...checkoutAnalytics, shipping_tier: "Standard" });
+    trackEvent("add_payment_info", { ...checkoutAnalytics, payment_type: paymentMethod === "cod" ? "COD" : "Online" });
+
     setLoading(true);
     const idempotencyKey = getCheckoutKey();
     const customer = { ...formData, city: locality.city, state: locality.state, pincode: locality.pincode, phone: formData.phone.replace(/\s/g, "") };

@@ -27,7 +27,7 @@ export default function HomeProductHero({ products, loading, search, setSearch, 
               <SwiperSlide key={product._id}>
                 <article className="grid min-w-0 grid-cols-1 sm:grid-cols-2">
                   <Link to={productPath(product)} aria-label={`Explore ${product.name}`} className="block aspect-[4/5] max-h-[420px] overflow-hidden bg-[#eeede6] sm:aspect-[3/4] sm:max-h-none">
-                    <img src={optimizedImage(product.images?.[0]?.url || "/placeholder.png", 800)} alt={product.name} loading={index === 0 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} className="h-full w-full object-contain sm:object-cover" />
+                    <img src={optimizedImage(product.images?.[0]?.url || "/placeholder.png", 800)} alt={product.name} loading={index === 0 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} className="h-full w-full object-cover object-center" />
                   </Link>
                   <div className="flex min-w-0 flex-col justify-center px-5 pb-10 pt-5 sm:px-6 sm:py-7">
                     <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-brand-primary">In the spotlight</p>
