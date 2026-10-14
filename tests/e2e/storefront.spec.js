@@ -872,6 +872,7 @@ test('email code login supports passwordless customers',async({page})=>{
   await page.getByRole('button',{name:'Send login code'}).click();await page.getByLabel('One-time code').fill('123456');await page.getByRole('button',{name:'Sign in securely'}).click();await expect(page).toHaveURL(/\/$/);
 });
 test('mobile-only checkout submits COD order without email',async({page})=>{
+  await page.addInitScript(() => { window.analyticsCalls = []; window.gtag = (...args) => window.analyticsCalls.push(args); });
   await page.addInitScript(()=>localStorage.setItem('user',JSON.stringify({token:'safe-mobile-session',user:{id:'mobile-test',name:'Test Parent',phone:'+919876543210',passwordLoginEnabled:false}})));
   await page.route('**/api/cart',route=>route.fulfill({json:{items:[{...product,selectedSize:'0-3M',selectedSku:'TEST-MAR-03',qty:1}]}}));
   await page.route('**/api/auth/profile/mobile-test',route=>route.fulfill({json:{name:'Test Parent',phone:'+919876543210',phoneVerifiedAt:'2026-10-06',address:'12 Sample Street',pincode:'711310',city:'Howrah',state:'West Bengal'}}));
@@ -880,6 +881,10 @@ test('mobile-only checkout submits COD order without email',async({page})=>{
   await page.route('**/api/orders',async route=>{submitted=route.request().postDataJSON();await route.fulfill({json:{order:{...codOrder,email:''}}});});
   await page.goto('/checkout');await expect(page.getByLabel('Email (optional)',{exact:true})).toBeVisible();await expect(page.getByLabel('Email (optional)',{exact:true})).not.toHaveAttribute('required','');
   await page.getByRole('radio',{name:/Cash on delivery/}).check();await page.getByRole('button',{name:'Place COD order'}).click();await expect(page).toHaveURL(/\/success$/);expect(submitted.customer.email).toBe('');
+  const events = await page.evaluate(() => window.analyticsCalls.filter(call => call[0] === 'event'));
+  expect(events.map(call => call[1])).toEqual(expect.arrayContaining(['begin_checkout', 'add_shipping_info', 'add_payment_info', 'purchase']));
+  expect(events.find(call => call[1] === 'add_payment_info')[2].payment_type).toBe('COD');
+  expect(JSON.stringify(events)).not.toContain('9876543210');
 });
 test('mobile-only support can send a message without email',async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('user',JSON.stringify({token:'safe-mobile-session',user:{id:'mobile-test',name:'Test Parent',phone:'+919876543210'}})));
@@ -1292,14 +1297,15 @@ test("navbar signup preserves the product page through registration", async ({ p
 test("mobile homepage spotlight stays readable without horizontal overflow", async ({ page }) => {
   const longName = "SAJUNI SAHEBA Women's Roman Silk Zari Work Kurta Set with Pants & Embroidered Dupatta";
   await page.route("**/api/products?*", route => route.fulfill({ json: { products: [{ ...product, name: longName }], totalProducts: 1 } }));
-  for (const width of [320, 375, 425]) {
+  for (const width of [320, 375, 425, 1440]) {
     await page.setViewportSize({ width, height: 844 }); await page.goto("/");
     const spotlight = page.getByRole("region", { name: "Product spotlight" });
     await expect(spotlight.getByRole("heading", { name: longName })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     const photo = await spotlight.getByRole("img", { name: longName, exact: true }).boundingBox();
     const title = await spotlight.getByRole("heading").boundingBox();
-    expect(title.y).toBeGreaterThan(photo.y + photo.height - 1);
+    if (width < 640) expect(title.y).toBeGreaterThan(photo.y + photo.height - 1);
+    expect(await spotlight.getByRole("img", { name: longName, exact: true }).evaluate(img => getComputedStyle(img).objectFit)).toBe('cover');
   }
   await page.getByRole("region", { name: "Product spotlight" }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "output/mobile-home-redesign.png" });

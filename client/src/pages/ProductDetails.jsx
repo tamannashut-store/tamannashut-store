@@ -214,6 +214,7 @@ function ProductDetails() {
 
   const buySelectedNow = () => {
     if (!addSelectedToCart()) return;
+    trackEvent("checkout_click", { currency: "INR", value: selectedPrice, checkout_entry: "buy_now", items: [{ item_id: product._id, price: selectedPrice, quantity: 1 }] });
     sessionStorage.setItem("redirectAfterLogin", "/checkout");
     let user;
     try { user = JSON.parse(localStorage.getItem("user")); } catch { /* Invalid cached session is treated as signed out. */ }

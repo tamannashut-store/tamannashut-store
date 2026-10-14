@@ -3,6 +3,7 @@ import { CartContext } from "../context/CartContext";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { productPath } from "../utils/productUrl";
+import { trackEvent } from "../utils/analytics";
 
 const itemKey = (item) => `${item._id}-${item.selectedSku || item.selectedSize}`;
 const itemImage = (item) => item.image || item.images?.[0]?.url || "/placeholder.png";
@@ -113,7 +114,7 @@ function Cart() {
             {hasInvalidItems ? (
               <div className="mt-6 rounded-xl bg-red-50 p-4 text-sm text-red-700">Remove or reduce unavailable items before checkout.</div>
             ) : (
-              <Link to="/checkout" className={`mt-6 block rounded-xl py-4 text-center font-semibold text-white ${checking ? "pointer-events-none bg-gray-400" : "bg-brand-primary hover:bg-[#2d4d33]"}`}>
+              <Link to="/checkout" onClick={() => { if (!checking) trackEvent("checkout_click", { currency: "INR", value: subtotal, checkout_entry: "bag", items: cartItems.map((item) => ({ item_id: item._id, price: Number(item.price), quantity: Number(item.qty) })) }); }} className={`mt-6 block rounded-xl py-4 text-center font-semibold text-white ${checking ? "pointer-events-none bg-gray-400" : "bg-brand-primary hover:bg-[#2d4d33]"}`}>
                 {checking ? "Checking availability…" : "Proceed to checkout"}
               </Link>
             )}

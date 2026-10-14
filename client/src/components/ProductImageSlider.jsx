@@ -20,7 +20,7 @@ function ProductImageSlider({ product, className = "h-72" }) {
       <Swiper
         modules={[Navigation, Pagination]}
         navigation={hasGallery}
-        pagination={hasGallery ? { clickable: true } : false}
+        pagination={hasGallery ? { clickable: true, dynamicBullets: true } : false}
         loop={hasGallery}
         nested
         className={`commerce-slider product-card-slider w-full ${className}`}
@@ -36,7 +36,7 @@ function ProductImageSlider({ product, className = "h-72" }) {
               decoding="async"
               width="520"
               height="650"
-              className="h-full w-full bg-[#f7f8fa] object-contain"
+              className="h-full w-full bg-[#f7f8fa] object-cover object-center"
             />
           </SwiperSlide>
         ))}
