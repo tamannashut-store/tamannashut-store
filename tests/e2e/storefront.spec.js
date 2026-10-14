@@ -290,15 +290,15 @@ test("home categories come from the full published catalogue", async ({ page }) 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
 });
 
-test("marketplace home keeps product photos fully visible and offers direct search", async ({ page }) => {
+test("marketplace home fills product photo frames and offers direct search", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
   const photo = page.getByRole("region", { name: "Featured products" }).getByRole("img", { name: `${product.name} view 1`, exact: true }).first();
   await expect(photo).toBeVisible();
   const framing = await photo.evaluate((element) => ({ fit: getComputedStyle(element).objectFit, padding: getComputedStyle(element).padding, height: element.getBoundingClientRect().height, width: element.getBoundingClientRect().width }));
-  expect(framing.fit).toBe("contain");
+  expect(framing.fit).toBe("cover");
   expect(framing.padding).toBe("0px");
-  // Portrait media should use the card width without cropping the outfit.
+  // Card frames stay consistent even when source photo proportions differ.
   expect(framing.height / framing.width).toBeCloseTo(1.5, 1);
   await expect(page.getByText("Home & kitchen", { exact: true })).toBeVisible();
   await page.getByRole("search", { name: "Find products" }).getByLabel("Search products, brands and categories").fill("steel bottle");
