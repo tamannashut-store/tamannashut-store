@@ -18,6 +18,7 @@ import { productStructuredData } from "../utils/productStructuredData";
 import SoldByStore from "../components/SoldByStore";
 import ProductRating from "../components/ProductRating";
 import DeliveryInformation from "../components/DeliveryInformation";
+import { imageSrcSet, optimizedImage } from "../utils/image";
 
 function DiscoveryCard({ item }) {
   return (
@@ -248,7 +249,7 @@ function ProductDetails() {
                 <div className="order-2 flex gap-3 overflow-x-auto sm:order-1 sm:flex-col sm:overflow-visible">
                   {images.map((image, index) => (
                     <button key={image.public_id || index} type="button" onClick={() => setSelectedImageIndex(index)} aria-label={`View photo ${index + 1}`} className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 bg-white p-1 transition ${selectedImageIndex === index ? "border-brand-primary" : "border-transparent hover:border-gray-300"}`}>
-                      <img src={image.url} alt="" className="h-full w-full rounded-lg object-contain" />
+                      <img src={optimizedImage(image.url, 160)} srcSet={imageSrcSet(image.url, [80, 160])} sizes="80px" loading="lazy" decoding="async" width="80" height="80" alt="" className="h-full w-full rounded-lg object-contain" />
                     </button>
                   ))}
                 </div>
@@ -269,7 +270,7 @@ function ProductDetails() {
               <div className="mt-6 flex flex-wrap items-end gap-3"><p className="text-4xl font-bold text-brand-primary">₹{selectedPrice.toLocaleString("en-IN")}</p>{Number(product.mrp) > selectedPrice && <><p className="pb-1 text-lg text-gray-400 line-through">₹{Number(product.mrp).toLocaleString("en-IN")}</p><span className="mb-1 rounded-full bg-green-50 px-2.5 py-1 text-sm font-semibold text-green-700">{Math.round((1 - selectedPrice / Number(product.mrp)) * 100)}% off</span></>}</div>
               <p className="mt-2 text-sm text-gray-500">Inclusive of all taxes</p>
 
-              {colorOptions.length > 0 && <div className="mt-8 border-t pt-7"><div className="flex items-center justify-between"><h2 className="font-semibold">Choose colour</h2><span className="text-sm text-gray-500">{selectedColor}</span></div><div className="mt-4 flex flex-wrap gap-3">{colorOptions.map((color) => { const preview = allImages.find((image) => image.color?.toLowerCase() === color.toLowerCase()) || allImages[0]; return <button key={color} type="button" onClick={() => { setSelectedColor(color); setSelectedSize(""); setSelectedImageIndex(0); }} className={`w-24 overflow-hidden rounded-xl border-2 bg-white text-left transition ${selectedColor === color ? "border-brand-primary shadow-md" : "border-gray-200 hover:border-brand-primary"}`}><img src={preview.url} alt={`${product.name} in ${color}`} className="h-24 w-full object-contain"/><span className="block truncate px-2 py-2 text-center text-xs font-semibold">{color}</span></button>; })}</div></div>}
+              {colorOptions.length > 0 && <div className="mt-8 border-t pt-7"><div className="flex items-center justify-between"><h2 className="font-semibold">Choose colour</h2><span className="text-sm text-gray-500">{selectedColor}</span></div><div className="mt-4 flex flex-wrap gap-3">{colorOptions.map((color) => { const preview = allImages.find((image) => image.color?.toLowerCase() === color.toLowerCase()) || allImages[0]; return <button key={color} type="button" onClick={() => { setSelectedColor(color); setSelectedSize(""); setSelectedImageIndex(0); }} className={`w-24 overflow-hidden rounded-xl border-2 bg-white text-left transition ${selectedColor === color ? "border-brand-primary shadow-md" : "border-gray-200 hover:border-brand-primary"}`}><img src={optimizedImage(preview.url, 192)} srcSet={imageSrcSet(preview.url, [96, 192])} sizes="96px" loading="lazy" decoding="async" width="96" height="96" alt={`${product.name} in ${color}`} className="h-24 w-full object-contain"/><span className="block truncate px-2 py-2 text-center text-xs font-semibold">{color}</span></button>; })}</div></div>}
 
               {product.productType !== "simple" && <div className="mt-8 border-t pt-7">
                 <div className="flex items-center justify-between">
