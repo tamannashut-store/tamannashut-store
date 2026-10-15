@@ -5,9 +5,7 @@ import { FiExternalLink } from "react-icons/fi";
 const external = [
   ["Facebook", "https://www.facebook.com/tamannashut", FaFacebookF],
   ["Instagram", "https://www.instagram.com/tamannashut", FaInstagram],
-  ["Meesho", "https://www.meesho.com/TamannasHut", FiExternalLink],
   ["Amazon", "https://www.amazon.in/gp/product/B0H8WN1LYN?th=1&psc=1", FaAmazon],
-  ["Flipkart", "https://www.flipkart.com/product/p/itme?pid=KPBHZH2RGAHZGAKX", FiExternalLink],
 ];
 
 function Footer() {
