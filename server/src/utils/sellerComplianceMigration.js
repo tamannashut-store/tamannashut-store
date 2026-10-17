@@ -1,12 +1,13 @@
 import { effectiveSellerVerification } from "./sellerOnboarding.js";
 import { isPlatformAdmin } from "./accountRoles.js";
+import { enrolmentTradingApproved } from "./enrolmentSeller.js";
 
 export async function reconcileSellerCompliance({ User, SellerProfile, Product }) {
   const sellers = await User.find({ $or: [{ accountType: "seller" }, { sellerRole: "member" }] })
     .select("_id sellerAccessStatus accountType sellerRole isAdmin")
     .lean();
   if (!sellers.length) return { sellersChecked: 0, listingsChanged: 0 };
-  const profiles = await SellerProfile.find({ userId: { $in: sellers.map((seller) => seller._id) } }).lean();
+  const profiles = await SellerProfile.find({ userId: { $in: sellers.map((seller) => seller._id) } }).select("+enrolment.numberEncrypted").lean();
   const profileBySeller = new Map(profiles.map((profile) => [String(profile.userId), profile]));
   let listingsChanged = 0;
   for (const seller of sellers) {
@@ -16,7 +17,7 @@ export async function reconcileSellerCompliance({ User, SellerProfile, Product }
       await User.updateOne({ _id: seller._id, sellerAccessStatus: "active" }, { $set: { sellerAccessStatus: "pending" } });
       seller.sellerAccessStatus = "pending";
     }
-    const compliant = seller.sellerAccessStatus === "active" && profile && effectiveSellerVerification(profile).status === "verified";
+    const compliant = seller.sellerAccessStatus === "active" && profile && (effectiveSellerVerification(profile).status === "verified" || enrolmentTradingApproved(profile));
     const result = await Product.updateMany(
       { sellerId: seller._id, sellerComplianceHold: { $ne: !compliant } },
       { $set: { sellerComplianceHold: !compliant } },

@@ -3,6 +3,7 @@ import SellerProfile from "../models/SellerProfile.js";
 import { isMarketplaceSeller, isPlatformAdmin } from "./accountRoles.js";
 import { effectiveSellerVerification } from "./sellerOnboarding.js";
 import { slugifyProductName } from "./productSlug.js";
+import { enrolmentTradingApproved } from "./enrolmentSeller.js";
 
 export const publicSellerStore = async (identifier, { Users = User, Profiles = SellerProfile } = {}) => {
   const id = String(identifier?._id || identifier || "");
@@ -13,8 +14,8 @@ export const publicSellerStore = async (identifier, { Users = User, Profiles = S
   let logoUrl = "";
   if (isPlatformAdmin(user)) name = "Tamanna's Hut";
   else if (isMarketplaceSeller(user) && user.sellerAccessStatus === "active") {
-    const profile = await Profiles.findOne({ userId: id }).lean();
-    if (!profile || effectiveSellerVerification(profile).status !== "verified") return null;
+    const profile = await Profiles.findOne({ userId: id }).select("+enrolment.numberEncrypted").lean();
+    if (!profile || (effectiveSellerVerification(profile).status !== "verified" && !enrolmentTradingApproved(profile))) return null;
     name = String(profile.tradeName || "").trim();
     logoUrl = profile.storeLogo?.url || "";
   }

@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ENROLMENT_SELLER_ID } from "../utils/enrolmentSeller.js";
 
 const sellerProfileSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true, index: true },
@@ -22,8 +23,18 @@ const sellerProfileSchema = new mongoose.Schema({
     state: { type: String, default: "", trim: true, maxlength: 100 },
     pincode: { type: String, default: "", trim: true },
   },
-  gstinEncrypted: { type: String, required: true, select: false },
-  gstinLast4: { type: String, required: true },
+  gstinEncrypted: { type: String, required() { return !(this.enrolment?.enabled && String(this.userId) === ENROLMENT_SELLER_ID); }, select: false },
+  gstinLast4: { type: String, required() { return !(this.enrolment?.enabled && String(this.userId) === ENROLMENT_SELLER_ID); } },
+  enrolment: {
+    enabled: { type: Boolean, default: false },
+    numberEncrypted: { type: String, select: false },
+    numberLast4: String,
+    state: String,
+    eligibilityConfirmed: { type: Boolean, default: false },
+    reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    reviewedAt: Date,
+    note: { type: String, maxlength: 500 },
+  },
   panEncrypted: { type: String, required: true, select: false },
   panLast4: { type: String, required: true },
   bankAccountHolder: { type: String, required: true, trim: true, maxlength: 120 },

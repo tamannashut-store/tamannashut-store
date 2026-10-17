@@ -43,6 +43,7 @@ const orderSchema = new mongoose.Schema(
     idempotencyKey: String,
 
     invoiceNumber: { type: String, trim: true },
+    enrolmentSupplier: { name: String, legalName: String, address: String },
 
     inventoryRestored: { type: Boolean, default: false },
 

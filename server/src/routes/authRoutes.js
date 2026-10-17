@@ -29,6 +29,8 @@ import { phoneLoginHandlers } from "../services/phoneLoginService.js";
 import { customerOtpHandlers } from "../services/customerOtpService.js";
 import { submitSellerApplication } from "../services/sellerApplicationService.js";
 import { bankProofUpload, parseSellerApplication } from "../middleware/bankProofUpload.js";
+import { ENROLMENT_SELLER_ID } from "../utils/enrolmentSeller.js";
+import { encryptSellerValue } from "../utils/sellerOnboarding.js";
 
 const router = express.Router();
 
@@ -426,6 +428,32 @@ router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
     }
 });
 
+router.post("/seller-team/enrolment", protect, admin, ownerOnly, bankProofUpload, parseSellerApplication, async (req, res) => {
+    try {
+        if (String(req.body.userId) !== ENROLMENT_SELLER_ID || req.body.eligibilityConfirmed !== true) return res.status(400).json({ message: "This owner exception is restricted to the approved account and requires eligibility confirmation" });
+        const number = String(req.body.enrolmentNumber || "").trim().toUpperCase();
+        if (!/^[A-Z0-9]{15}$/.test(number)) return res.status(400).json({ message: "Enter the GST Portal enrolment number" });
+        const details = normalizeSellerDetails({ ...req.body, gstin: "" }, { enrolmentOnly: true });
+        if (details.registeredAddress.state !== "West Bengal" || details.pickupAddress.state !== "West Bengal") return res.status(400).json({ message: "The approved enrolment is restricted to West Bengal" });
+        const user = await User.findById(ENROLMENT_SELLER_ID);
+        if (!user || accountTypeFor(user) !== "customer" || !user.emailVerifiedAt || !user.termsAcceptedAt) return res.status(409).json({ message: "An existing verified customer account is required" });
+        if (await SellerProfile.exists({ userId: user._id })) return res.status(409).json({ message: "A seller profile already exists; no changes made" });
+        const now = new Date();
+        const profile = new SellerProfile({ ...encryptedSellerProfile(details), userId: user._id, bankProof: req.bankProof,
+            verificationStatus: "pending", gstVerification: { status: "pending", source: "gst_not_provided" },
+            bankVerification: { status: "verified", source: "owner_document_review", checkedAt: now, beneficiaryName: details.bankAccountHolder },
+            enrolment: { enabled: true, numberEncrypted: encryptSellerValue(number), numberLast4: number.slice(-4), state: "West Bengal", eligibilityConfirmed: true, reviewedBy: req.user._id, reviewedAt: now, note: "Owner-approved enrolment selling; payouts held pending GST verification" } });
+        await mongoose.connection.transaction(async (session) => {
+            await profile.save({ session });
+            user.accountType = "seller"; user.sellerRole = "member"; user.isAdmin = false; user.sellerAccessStatus = "active";
+            user.sessionVersion = Number(user.sessionVersion || 0) + 1;
+            await user.save({ session });
+        });
+        await recordAudit({ user: req.user, action: "seller.enrolment_approved", entityType: "seller", entityId: user._id, summary: "Owner approved West Bengal-only enrolment selling with GST payout hold" });
+        return res.json({ message: "Restricted seller enabled: West Bengal sales only; payouts held pending GST" });
+    } catch (error) { return res.status(error.status || 500).json({ message: error.status ? error.message : "Restricted seller setup failed" }); }
+});
+
 router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, async (req, res) => {
     try {
         const status = String(req.body.status || "").toLowerCase();
@@ -446,6 +474,8 @@ router.patch("/seller-team/:userId/verification", protect, admin, ownerOnly, asy
         profile.reviewedBy = req.user._id;
         profile.reviewNote = note;
         if (status === "verified") {
+            // Release the enrolment hold only after the normal GST/PAN and bank checks.
+            if (profile.enrolment?.enabled) profile.enrolment.enabled = false;
             profile.gstVerification = { ...(profile.gstVerification?.toObject?.() || profile.gstVerification || {}), status: "verified", source: "official_portal_manual_review", checkedAt: new Date(), legalName: profile.legalBusinessName, registrationStatus: "Active" };
             profile.bankVerification = { ...(profile.bankVerification?.toObject?.() || profile.bankVerification || {}), status: "verified", source: "bank_proof_manual_review", checkedAt: new Date(), beneficiaryName: profile.bankAccountHolder };
         }
@@ -547,6 +577,7 @@ router.put("/seller-profile/me/business-details", protect, sellerApplicant, asyn
         profile.reviewedAt = null;
         profile.reviewedBy = null;
         profile.reviewNote = "Business details updated by seller. GST and bank checks require administrator review.";
+        if (profile.enrolment?.enabled) profile.enrolment.eligibilityConfirmed = false;
         profile.submittedAt = new Date();
         await Promise.all([
             profile.save(),

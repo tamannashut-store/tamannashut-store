@@ -16,7 +16,7 @@ test("rollout pauses missing-proof sellers, preserves suspended status and exclu
     { _id: "owner", accountType: "platform_admin", sellerRole: "member", sellerAccessStatus: "active" }];
   await reconcileSellerCompliance({
     User: { find: () => ({ select: () => ({ lean: async () => sellers }) }), updateOne: async (filter, update) => access.push({ filter, update }) },
-    SellerProfile: { find: () => ({ lean: async () => [{ userId: "existing", verificationStatus: "verified" }] }) },
+    SellerProfile: { find: () => ({ select: () => ({ lean: async () => [{ userId: "existing", verificationStatus: "verified" }] }) }) },
     Product: { updateMany: async (filter, update) => { holds.push({ filter, update }); return { modifiedCount: 1 }; } },
   });
   assert.deepEqual(access, [{ filter: { _id: "existing", sellerAccessStatus: "active" }, update: { $set: { sellerAccessStatus: "pending" } } }]);

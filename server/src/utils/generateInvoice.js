@@ -12,6 +12,8 @@ const currency = (value) => `Rs. ${Number(value || 0).toLocaleString("en-IN", { 
 const safe = (value, fallback = "-") => String(value ?? "").trim() || fallback;
 
 export const generateInvoice = (order, res) => {
+  const unregistered = Boolean(order.enrolmentSupplier?.name);
+  const documentTitle = unregistered ? "ORDER RECEIPT" : "TAX INVOICE";
   const doc = new PDFDocument({ size: "A4", margin: 40, bufferPages: true, info: { Title: `Tamanna's Hut invoice ${order._id}`, Author: "Tamanna's Hut" } });
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename=invoice-${String(order._id)}.pdf`);
@@ -25,7 +27,7 @@ export const generateInvoice = (order, res) => {
     doc.rect(0, 0, 595.28, 92).fill(green);
     doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(24).text("Tamanna's Hut", 40, 28);
     doc.fillColor("#c9d8ce").font("Helvetica").fontSize(8).text("HUT OF PURITY  |  PREMIUM KIDSWEAR", 40, 59, { characterSpacing: 1.2 });
-    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(14).text(continued ? "TAX INVOICE · CONTINUED" : "TAX INVOICE", 335, 31, { width: 220, align: "right" });
+    doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(14).text(continued ? `${documentTitle} · CONTINUED` : documentTitle, 335, 31, { width: 220, align: "right" });
     doc.fillColor("#c9d8ce").font("Helvetica").fontSize(8).text(invoiceNo, 335, 56, { width: 220, align: "right" });
   };
 
@@ -47,6 +49,13 @@ export const generateInvoice = (order, res) => {
     .text(`Order reference: #${orderShort}`, 40, 170);
 
   doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text("SUPPLIER", 340, 118);
+  if (unregistered) {
+    doc.fillColor(muted).font("Helvetica").fontSize(9)
+      .text(order.enrolmentSupplier.name, 340, 138, { width: 215 })
+      .text(order.enrolmentSupplier.legalName, 340, 154, { width: 215 })
+      .text(order.enrolmentSupplier.address, 340, 170, { width: 215 })
+      .text("Unregistered supplier · GST not charged", 340, 218, { width: 215 });
+  } else {
   doc.fillColor(muted).font("Helvetica").fontSize(9)
     .text("Tamanna Enterprise", 340, 138)
     .text("House No. N0072, Ground Floor", 340, 154)
@@ -54,6 +63,7 @@ export const generateInvoice = (order, res) => {
     .text("Howrah, West Bengal 711310", 340, 186)
     .text("GSTIN: 19BKDPB6636D1ZE | State code: 19", 340, 202)
     .text("support@tamannashut.com", 340, 218);
+  }
 
   doc.roundedRect(40, 240, 515, 95, 10).fill(cream);
   doc.fillColor(ink).font("Helvetica-Bold").fontSize(10).text("BILL TO", 55, 257);
@@ -92,8 +102,10 @@ export const generateInvoice = (order, res) => {
   };
   totalRow("Item subtotal", currency(totals.itemSubtotal));
   if (totals.discount) totalRow("Discount", `- ${currency(totals.discount)}`, { color: mutedGreen });
-  totalRow("Taxable value", currency(totals.taxable));
-  if (totals.intraState) {
+  if (!unregistered) totalRow("Taxable value", currency(totals.taxable));
+  if (unregistered) {
+    totalRow("GST", "Not charged");
+  } else if (totals.intraState) {
     totalRow("CGST", currency(totals.cgst));
     totalRow("SGST", currency(totals.sgst));
   } else {
@@ -114,7 +126,7 @@ export const generateInvoice = (order, res) => {
     doc.switchToPage(index);
     doc.moveTo(40, 774).lineTo(555, 774).strokeColor(line).lineWidth(0.5).stroke();
     doc.fillColor(muted).font("Helvetica").fontSize(7.5)
-      .text("This is a computer-generated GST invoice and does not require a signature.", 40, 783, { width: 420, lineBreak: false })
+      .text(unregistered ? "Computer-generated order receipt. GST has not been charged." : "This is a computer-generated GST invoice and does not require a signature.", 40, 783, { width: 420, lineBreak: false })
       .text(`Page ${index - range.start + 1} of ${range.count}`, 465, 783, { width: 90, align: "right", lineBreak: false });
   }
   doc.end();
