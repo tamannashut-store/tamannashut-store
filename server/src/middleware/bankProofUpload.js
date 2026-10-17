@@ -15,7 +15,10 @@ export const encodeBankProof = (file) => {
     digest: crypto.createHash("sha256").update(file.buffer).digest("hex"), uploadedAt: new Date() };
 };
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: BANK_PROOF_MAX_BYTES, files: 1, fields: 1, fieldSize: 32 * 1024, parts: 2 },
+// Busboy emits partsLimit when the count reaches the limit, including a valid
+// application field plus document. Keep file/field limits strict, with headroom
+// for the terminating multipart boundary.
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: BANK_PROOF_MAX_BYTES, files: 1, fields: 1, fieldSize: 32 * 1024, parts: 3 },
   fileFilter: (_req, file, callback) => callback(allowed.has(file.mimetype) ? null : Object.assign(new Error("Choose a PDF, JPG or PNG bank document"), { status: 400 }), allowed.has(file.mimetype)) });
 export const bankProofUpload = (req, res, next) => upload.single("bankProof")(req, res, (error) => {
   if (error) return res.status(400).json({ message: "Choose one PDF, JPG or PNG bank document up to 3 MB" });

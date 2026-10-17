@@ -41,6 +41,13 @@ test("multipart bank uploads enforce one supported document and reject absent fi
   try {
     const valid = new FormData(); valid.append("bankProof", new Blob([pdf], { type: "application/pdf" }), "proof.pdf");
     assert.equal((await fetch(url, { method: "POST", body: valid })).status, 200);
+    // Registration includes both the application JSON and the proof file.
+    for (const [name, type, bytes] of [["proof.jpeg", "image/jpeg", Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])], ["proof.jpg", "image/jpeg", Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0])], ["proof.pdf", "application/pdf", pdf]]) {
+      const registration = new FormData();
+      registration.append("application", JSON.stringify({ tradeName: "Test store" }));
+      registration.append("bankProof", new Blob([bytes], { type }), name);
+      assert.equal((await fetch(url, { method: "POST", body: registration })).status, 200, name);
+    }
     assert.equal((await fetch(url, { method: "POST", body: new FormData() })).status, 400);
     const duplicate = new FormData(); duplicate.append("bankProof", new Blob([pdf], { type: "application/pdf" }), "proof.pdf"); duplicate.append("bankProof", new Blob([pdf], { type: "application/pdf" }), "second.pdf");
     assert.equal((await fetch(url, { method: "POST", body: duplicate })).status, 400);
@@ -72,3 +79,4 @@ test("private downloads reject guests and other sellers; own documents download 
     assert.deepEqual(lookups[1], { userId: "bob" });
   } finally { User.findById = originalUser; SellerProfile.findOne = originalProfile; await new Promise((resolve) => server.close(resolve)); }
 });
+
