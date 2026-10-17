@@ -49,6 +49,8 @@ app.use(
       "https://www.tamannashut.com",
       "https://tamannashut.com",
       "http://localhost:5173",
+      "https://localhost", // Packaged Android app
+      "capacitor://localhost", // Packaged iOS app
     ],
     credentials: true,
   })
