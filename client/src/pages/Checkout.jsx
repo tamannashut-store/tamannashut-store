@@ -338,7 +338,7 @@ function Checkout() {
           </div>
 
           <div className="mt-6 border-t pt-5">
-            {!phoneVerified && <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><strong className="block">Get 10% off your first order</strong>Verify your mobile number in <Link to="/profile" className="font-semibold underline">your profile</Link>. This prevents the offer being claimed repeatedly with different email addresses.</div>}
+            {!phoneVerified && <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900"><strong className="block">Get 10% off your first order</strong>Verify your mobile number in <Link to="/profile?from=checkout" className="font-semibold underline">your profile</Link>, then return here. Eligible first orders receive the discount automatically. You can also continue without the offer.</div>}
             <label className="text-sm font-medium">Coupon code</label>
             <div className="mt-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
               <input value={coupon} onChange={(event) => { setCoupon(event.target.value.toUpperCase()); setCouponPercent(0); setPricing(null); }} placeholder="Enter code" className="min-w-0 flex-1 rounded-xl border px-3 py-2.5 uppercase" />

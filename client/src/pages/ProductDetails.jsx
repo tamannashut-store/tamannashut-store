@@ -169,6 +169,9 @@ function ProductDetails() {
   const images = colorImages.length ? colorImages : allImages;
   const availableVariants = (product.variants || []).filter((item) => item.active !== false && (!selectedColor || !item.color || item.color.toLowerCase() === selectedColor.toLowerCase()));
   const sizeOptions = product.variants?.length ? availableVariants : product.sizeStock || [];
+  const specifications = String(product.specifications || "");
+  const sizeChartStart = specifications.search(/\bsize\s+chart\b/i);
+  const sizeChart = sizeChartStart >= 0 ? specifications.slice(sizeChartStart).trim() : "";
   const selectedVariant = availableVariants.find((item) => item.size === selectedSize);
   const selectedSizeData = selectedVariant || product.sizeStock?.find((item) => item.size === selectedSize);
   const selectedPrice = Number(selectedVariant?.price ?? product.price);
@@ -277,6 +280,11 @@ function ProductDetails() {
                   <h2 className="font-semibold">Select {product.optionLabel || "size"}</h2>
                   <span className="text-sm text-gray-500">Product option</span>
                 </div>
+                {sizeChart && <details key={product._id} className="mt-4 rounded-xl border border-brand-primary/20 bg-green-50/50 p-4">
+                  <summary className="cursor-pointer text-sm font-semibold text-brand-primary focus-visible:outline-2 focus-visible:outline-offset-4">View size chart &amp; measurements</summary>
+                  <p className="mt-3 text-sm text-gray-600">Compare garment measurements before choosing your size. Age ranges are a guide.</p>
+                  <p className="mt-3 whitespace-pre-line break-words text-sm leading-7 text-gray-700">{sizeChart}</p>
+                </details>}
                 <div className="mt-4 flex flex-wrap gap-3">
                   {sizeOptions.map((item) => (
                     <button key={`${item.sku || "size"}-${item.size}`} type="button" disabled={item.stock <= 0} onClick={() => setSelectedSize(item.size)} className={`min-w-20 rounded-xl border-2 px-4 py-3 text-sm font-medium transition ${selectedSize === item.size ? "border-brand-primary bg-brand-primary text-white" : "border-gray-200 hover:border-brand-primary"} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`}>
