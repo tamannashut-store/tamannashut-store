@@ -1,3 +1,4 @@
+import { stagingSandboxEnabled, stagingDelivery } from "../utils/stagingSandbox.js";
 import { shiprocketShipment } from "../utils/shiprocketResponse.js";
 
 const API_BASE = "https://apiv2.shiprocket.in/v1/external";
@@ -27,6 +28,7 @@ const login = async () => {
 };
 
 const request = async (path, { method = "GET", body, retry = true } = {}) => {
+  if (stagingSandboxEnabled()) throw Object.assign(new Error("Real shipping operations are disabled in the checkout sandbox."), { status: 403 });
   const token = cachedToken && tokenExpiresAt > Date.now() ? cachedToken : await login();
   const response = await fetch(`${API_BASE}${path}`, {
     method,
@@ -108,6 +110,8 @@ export const getShiprocketCouriers = (order, parcel) => {
 };
 
 export const resolveShiprocketPostcode = async (postcode) => {
+  const fixture = stagingDelivery(postcode);
+  if (fixture) return fixture;
   const pin = String(postcode || "").trim();
   if (!/^\d{6}$/.test(pin)) throw Object.assign(new Error("Enter a valid 6-digit pincode"), { status: 400 });
   const data = await request(`/open/postcode/details?postcode=${encodeURIComponent(pin)}`);
@@ -120,6 +124,8 @@ export const resolveShiprocketPostcode = async (postcode) => {
 };
 
 export const verifyShiprocketDeliveryPostcode = async (postcode, cod = false) => {
+  const fixture = stagingDelivery(postcode);
+  if (fixture) return fixture;
   const locality = await resolveShiprocketPostcode(postcode);
   const params = new URLSearchParams({ pickup_postcode: String(process.env.SHIPROCKET_PICKUP_POSTCODE), delivery_postcode: locality.pincode, cod: cod ? "1" : "0", weight: "0.5", declared_value: "100", is_return: "0" });
   const data = await request(`/courier/serviceability/?${params}`);

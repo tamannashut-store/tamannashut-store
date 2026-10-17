@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import express from "express";
+import bcrypt from "bcryptjs";
+import { stagingSandboxEnabled, seedStagingSandbox } from "./utils/stagingSandbox.js";
 import mongoose from "mongoose";
 import cors from "cors";
 import compression from "compression";
@@ -119,10 +121,12 @@ let server;
 let stopShipmentTracking;
 const start = async () => {
   if (!process.env.MONGO_URI || !process.env.JWT_SECRET) throw new Error("Required server configuration is missing");
+  stagingSandboxEnabled();
   await mongoose.connect(process.env.MONGO_URI);
   console.log("MongoDB connected");
   await prepareCustomerEmailIndex(User.collection);
   await CustomerAuthChallenge.init();
+  if (await seedStagingSandbox({ Product, User, hashPassword: bcrypt.hash })) console.log("Staging checkout fixtures ready");
   const marketplaceMigration = await migrateMarketplaceOwnership({ User, Product });
   if (marketplaceMigration.sellersSeparated || marketplaceMigration.productsAssigned) console.log("Marketplace ownership prepared", marketplaceMigration);
   const complianceMigration = await reconcileSellerCompliance({ User, SellerProfile, Product });
