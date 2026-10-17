@@ -32,6 +32,14 @@ test("seller onboarding requires complete business, address and settlement detai
   assert.equal(result.bankAccountType, "current");
 });
 
+test("public onboarding cannot request the internal GST exception", () => {
+  const application = { ...validApplication(), gstin: "", enrolmentOnly: true, enrolment: { enabled: true } };
+  assert.throws(() => normalizeSellerDetails(application), /GSTIN/);
+  assert.doesNotThrow(() => normalizeSellerDetails(application, { enrolmentOnly: true }));
+  application.pan = "invalid";
+  assert.throws(() => normalizeSellerDetails(application, { enrolmentOnly: true }), /PAN/);
+});
+
 test("seller onboarding rejects mismatched bank account confirmation", () => {
   const application = validApplication();
   application.confirmBankAccountNumber = "1234567891";
