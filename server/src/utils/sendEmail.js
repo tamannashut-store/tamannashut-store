@@ -1,6 +1,8 @@
+import { stagingSandboxEnabled } from "./stagingSandbox.js";
 import { Resend } from "resend";
 
 export const sendEmail = async (to, subject, html) => {
+  if (stagingSandboxEnabled()) return { sent: false, skipped: true };
   if (!to) return { sent: false, skipped: true };
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
