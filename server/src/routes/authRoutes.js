@@ -405,7 +405,7 @@ router.get("/seller-team", protect, admin, ownerOnly, async (_req, res) => {
                 authorizedSignatoryName: profile.authorizedSignatoryName,
                 registeredAddress: profile.registeredAddress,
                 pickupAddress: profile.pickupAddress,
-                gstin: decryptSellerValue(profile.gstinEncrypted),
+                gstin: profile.gstinEncrypted ? decryptSellerValue(profile.gstinEncrypted) : "",
                 pan: decryptSellerValue(profile.panEncrypted),
                 bankAccountHolder: profile.bankAccountHolder,
                 bankAccountType: profile.bankAccountType,
