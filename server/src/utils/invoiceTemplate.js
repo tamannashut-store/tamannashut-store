@@ -7,6 +7,10 @@ export const calculateInvoiceTotals = calculateApparelGst;
 
 export const invoiceTemplate = (order) => {
   const totals = calculateInvoiceTotals(order);
+  if (order.enrolmentSupplier?.name) {
+    const supplier = order.enrolmentSupplier;
+    return emailLayout({ eyebrow: "ORDER RECEIPT", title: "Your order receipt", preheader: "GST has not been charged", body: `${detailBox(`<strong>${escapeHtml(supplier.name)}</strong><br>${escapeHtml(supplier.legalName)}<br>${escapeHtml(supplier.address)}<br>Unregistered supplier. GST has not been charged.`)}${totals.lines.map((item) => `<p>${escapeHtml(item.name)} · ${escapeHtml(item.selectedSize || "")} · Qty ${Number(item.qty || 0)} — ${money(item.inclusiveValue)}</p>`).join("")}<p><strong>Total: ${money(totals.total)}</strong></p>${emailButton("Open your orders", `${process.env.CLIENT_URL || "https://www.tamannashut.com"}/my-orders`)}` });
+  }
   const invoiceNo = order.invoiceNumber || `TH-${new Date(order.createdAt).getFullYear()}-${String(order._id).slice(-6).toUpperCase()}`;
   const rows = totals.lines.map((item) => `<tr><td style="padding:12px 0;border-bottom:1px solid #e5e7eb"><strong>${escapeHtml(item.name || "Product")}</strong><br><span style="color:#64748b;font-size:12px">${item.selectedColor ? `${escapeHtml(item.selectedColor)} · ` : ""}${escapeHtml(item.selectedSize || "-")} · Qty ${Number(item.qty || 0)} · GST ${item.rate}%${item.hsnCode ? ` · HSN ${escapeHtml(item.hsnCode)}` : ""}</span></td><td align="right" style="padding:12px 0;border-bottom:1px solid #e5e7eb">${money(item.inclusiveValue)}</td></tr>`).join("");
   const taxRows = totals.intraState ? `<tr><td style="padding-top:7px">CGST</td><td align="right" style="padding-top:7px">${money(totals.cgst)}</td></tr><tr><td style="padding-top:7px">SGST</td><td align="right" style="padding-top:7px">${money(totals.sgst)}</td></tr>` : `<tr><td style="padding-top:7px">IGST</td><td align="right" style="padding-top:7px">${money(totals.igst)}</td></tr>`;

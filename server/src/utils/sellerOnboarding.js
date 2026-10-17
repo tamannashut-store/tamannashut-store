@@ -25,7 +25,7 @@ export const decryptSellerValue = (payload) => {
   return Buffer.concat([decipher.update(Buffer.from(encrypted, "base64url")), decipher.final()]).toString("utf8");
 };
 
-export const normalizeSellerDetails = (body) => {
+export const normalizeSellerDetails = (body, { enrolmentOnly = false } = {}) => {
   const legalBusinessName = String(body.legalBusinessName || "").trim().slice(0, 120);
   const tradeName = String(body.tradeName || "").trim().slice(0, 120);
   const businessType = String(body.businessType || "").trim();
@@ -53,9 +53,9 @@ export const normalizeSellerDetails = (body) => {
   if (!["proprietorship", "partnership", "llp", "private_limited", "public_limited", "trust", "society", "other"].includes(businessType)) throw Object.assign(new Error("Select the legal business type"), { status: 400 });
   if (!/^\+?[0-9]{10,13}$/.test(businessPhone)) throw Object.assign(new Error("Enter a valid business phone number"), { status: 400 });
   if (authorizedSignatoryName.length < 2) throw Object.assign(new Error("Enter the authorised signatory name"), { status: 400 });
-  if (!gstinPattern.test(gstin)) throw Object.assign(new Error("Enter a valid 15-character GSTIN"), { status: 400 });
+  if (!enrolmentOnly && !gstinPattern.test(gstin)) throw Object.assign(new Error("Enter a valid 15-character GSTIN"), { status: 400 });
   if (!panPattern.test(pan)) throw Object.assign(new Error("Enter a valid PAN"), { status: 400 });
-  if (gstin.slice(2, 12) !== pan) throw Object.assign(new Error("The PAN must match the PAN embedded in the GSTIN"), { status: 400 });
+  if (!enrolmentOnly && gstin.slice(2, 12) !== pan) throw Object.assign(new Error("The PAN must match the PAN embedded in the GSTIN"), { status: 400 });
   if (bankAccountHolder.length < 2) throw Object.assign(new Error("Enter the bank account holder name"), { status: 400 });
   if (!/^[0-9]{6,20}$/.test(bankAccountNumber)) throw Object.assign(new Error("Enter a valid bank account number"), { status: 400 });
   if (String(body.confirmBankAccountNumber || "").replace(/\s/g, "") !== bankAccountNumber) throw Object.assign(new Error("Bank account numbers do not match"), { status: 400 });
@@ -66,7 +66,7 @@ export const normalizeSellerDetails = (body) => {
       throw Object.assign(new Error(`Enter a complete ${label} business address`), { status: 400 });
     }
   }
-  if (body.gstDeclaration !== true) throw Object.assign(new Error("Confirm that the GST registration is active and the business details match the GST certificate"), { status: 400 });
+  if (!enrolmentOnly && body.gstDeclaration !== true) throw Object.assign(new Error("Confirm that the GST registration is active and the business details match the GST certificate"), { status: 400 });
   if (body.bankDeclaration !== true) throw Object.assign(new Error("Confirm that the settlement account belongs to this business or proprietor"), { status: 400 });
   if (body.termsAccepted !== true) throw Object.assign(new Error("Accept the seller terms and data-processing consent"), { status: 400 });
   return { legalBusinessName, tradeName, businessType, businessPhone, authorizedSignatoryName, registeredAddress, pickupAddress, gstin, pan, bankAccountHolder, bankAccountNumber, bankAccountType, ifsc };
@@ -80,8 +80,7 @@ export const encryptedSellerProfile = (details) => ({
   authorizedSignatoryName: details.authorizedSignatoryName,
   registeredAddress: details.registeredAddress,
   pickupAddress: details.pickupAddress,
-  gstinEncrypted: encryptSellerValue(details.gstin),
-  gstinLast4: details.gstin.slice(-4),
+  ...(details.gstin ? { gstinEncrypted: encryptSellerValue(details.gstin), gstinLast4: details.gstin.slice(-4) } : {}),
   panEncrypted: encryptSellerValue(details.pan),
   panLast4: details.pan.slice(-4),
   bankAccountHolder: details.bankAccountHolder,

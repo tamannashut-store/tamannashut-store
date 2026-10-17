@@ -5,6 +5,7 @@ import { FiCheck, FiClock, FiExternalLink, FiMail, FiShield, FiUserPlus, FiX } f
 import { SellerEmpty, SellerHeader, SellerPage, StatusBadge } from "../components/SellerUI";
 
 import { BankProofDownload } from "../components/BankProof";
+import RestrictedSellerSetup from "../components/RestrictedSellerSetup";
 
 const businessTypeLabel = (value = "") => value
   .split("_")
@@ -71,6 +72,7 @@ function AdminTeam() {
           </div> : <div className="mt-5 flex items-center gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800"><FiShield/> Platform administrator and catalogue owner</div>}
         </article>)}</div>}</section>
     <p className="mt-5 flex items-start gap-2 text-xs leading-5 text-slate-500"><FiClock className="mt-0.5 shrink-0"/>Format checks do not prove registration or bank ownership. Approve only after comparing official GST registration and bank proof. Bank data is encrypted at rest and shown only on this owner page.</p>
+    <RestrictedSellerSetup onSaved={load}/>
   </SellerPage>;
 }
 

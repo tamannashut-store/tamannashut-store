@@ -15,6 +15,20 @@ import crypto from "crypto";
 import { accountTypeFor } from "../utils/accountRoles.js";
 import { normalizeIndianPhone, phoneLookupValues } from "../utils/phone.js";
 import { welcomePromotionDecision } from "../utils/welcomePromotion.js";
+import { ENROLMENT_SELLER_ID, isEnrolmentSeller, assertEnrolmentDestination } from "../utils/enrolmentSeller.js";
+import { verifyShiprocketDeliveryPostcode } from "./shiprocketService.js";
+
+const restrictedCartProfile = async (lines, customer) => {
+  if (!lines.some((line) => String(line.sellerId || "") === ENROLMENT_SELLER_ID)) return null;
+  const profile = await SellerProfile.findOne({ userId: ENROLMENT_SELLER_ID }).select("+enrolment.numberEncrypted").lean();
+  if (!profile) throw Object.assign(new Error("Seller verification record is unavailable"), { status: 409 });
+  if (!isEnrolmentSeller(profile)) return null;
+  if (lines.some((line) => String(line.sellerId || "") !== ENROLMENT_SELLER_ID)) throw Object.assign(new Error("Please order Kismat Collection items separately from other stores"), { status: 400 });
+  // Verify the pincode on the server; a caller cannot spoof a state field.
+  const locality = await verifyShiprocketDeliveryPostcode(customer?.pincode, false);
+  assertEnrolmentDestination(profile, locality.state);
+  return profile;
+};
 
 const money = (value) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 
@@ -105,6 +119,7 @@ export const calculateCart = async (items, couponCode = "", context = {}) => {
     };
   });
 
+  const enrolmentProfile = await restrictedCartProfile(lines, context.customer);
   const subtotal = money(lines.reduce((sum, item) => sum + item.lineTotal, 0));
   let coupon = null;
   let discount = 0;
@@ -137,7 +152,7 @@ export const calculateCart = async (items, couponCode = "", context = {}) => {
   }
   const discountRatio = subtotal > 0 ? discount / subtotal : 0;
   lines.forEach((line) => {
-    line.gstRate = gstRateForProduct(productById.get(String(line._id)), line.price * (1 - discountRatio));
+    line.gstRate = enrolmentProfile && String(line.sellerId) === ENROLMENT_SELLER_ID ? 0 : gstRateForProduct(productById.get(String(line._id)), line.price * (1 - discountRatio));
   });
 
   return {
@@ -183,6 +198,9 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
   if (!validPayment) throw Object.assign(new Error("Order payment could not be verified"), { status: 400 });
 
   const cleanCustomer = normalizeCustomer(customer);
+  // Recheck at order creation, including previously-created online attempts.
+  const enrolmentProfile = await restrictedCartProfile(cart.products, cleanCustomer);
+  if (enrolmentProfile) for (const line of cart.products) if (String(line.sellerId) === ENROLMENT_SELLER_ID) line.gstRate = 0;
 
   const reservedItems = [];
   try {
@@ -210,6 +228,7 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
     const sellerGroups = groupSellerLines({ products: cart.products });
     const candidateSellerIds = [...sellerGroups.keys()];
     const profiles = candidateSellerIds.length ? await SellerProfile.find({ userId: { $in: candidateSellerIds }, verificationStatus: "verified" }).select("userId pickupAddress").lean() : [];
+    if (enrolmentProfile && !profiles.some((profile) => String(profile.userId) === ENROLMENT_SELLER_ID)) profiles.push(enrolmentProfile);
     const sellerIds = profiles.map((profile) => String(profile.userId));
     const profileBySeller = new Map(profiles.map((profile) => [String(profile.userId), profile]));
     const sellerFulfillments = sellerIds.map((sellerId) => ({
@@ -220,6 +239,7 @@ export const createOrderWithReservedStock = async ({ user, customer, cart, payme
       provider: "platform_managed",
     }));
     const order = await Order.create({
+      ...(enrolmentProfile ? { enrolmentSupplier: { name: enrolmentProfile.tradeName, legalName: enrolmentProfile.legalBusinessName, address: [enrolmentProfile.registeredAddress.line1, enrolmentProfile.registeredAddress.line2, enrolmentProfile.registeredAddress.city, "West Bengal", enrolmentProfile.registeredAddress.pincode].filter(Boolean).join(", ") } } : {}),
       userId: user._id,
       customerName: cleanCustomer.name,
       email: cleanCustomer.email,
