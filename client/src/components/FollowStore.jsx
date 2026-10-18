@@ -29,5 +29,5 @@ export default function FollowStore({ store }) {
     catch (e) { if (e.response?.status === 401) return signIn(); setError(e.response?.data?.message || "Could not update your follow. Please try again."); }
     finally { setBusy(false); }
   };
-  return <div className="mt-5"><button type="button" onClick={toggle} disabled={busy} aria-pressed={following} className={following ? "btn-secondary" : "btn-primary"}>{busy ? "Please wait…" : following ? "Following · Unfollow" : "Follow store"}</button>{error && <p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</div>;
+  return <div className="mt-4 flex w-full min-w-0 flex-col items-end sm:ml-auto sm:mt-0 sm:w-72 sm:shrink-0 sm:self-start"><button type="button" onClick={toggle} disabled={busy} aria-pressed={following} className={`min-w-48 justify-center whitespace-nowrap ${following ? "btn-secondary" : "btn-primary"}`}>{busy ? "Please wait…" : following ? "Following · Unfollow" : "Follow store"}</button><div className="mt-2 min-h-10 w-full text-right">{error && <p role="alert" className="break-words text-sm leading-5 text-red-700">{error}</p>}</div></div>;
 }
