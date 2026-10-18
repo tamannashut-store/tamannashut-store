@@ -21,6 +21,23 @@ import DeliveryInformation from "../components/DeliveryInformation";
 import ProductSizeChart from "../components/ProductSizeChart";
 import { imageSrcSet, optimizedImage } from "../utils/image";
 
+function ProductSpecifications({ text }) {
+  return (
+    <dl className="mt-3 divide-y divide-gray-100 text-sm leading-6">
+      {text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line, index) => {
+        const separator = line.indexOf(":");
+        const hasLabel = separator > 0 && separator < 60 && line.slice(separator + 1).trim();
+        return hasLabel ? (
+          <div key={index} className="grid gap-1 py-2.5 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
+            <dt className="font-medium text-gray-900">{line.slice(0, separator)}</dt>
+            <dd className="min-w-0 break-words text-gray-600">{line.slice(separator + 1).trim()}</dd>
+          </div>
+        ) : <div key={index} className="py-2.5"><dd className="break-words text-gray-600">{line}</dd></div>;
+      })}
+    </dl>
+  );
+}
+
 function DiscoveryCard({ item }) {
   return (
     <Link to={productPath(item)} className="group block h-full overflow-hidden rounded-2xl border bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
@@ -315,12 +332,17 @@ function ProductDetails() {
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-xl font-semibold">Product details</h2>
               <p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-600">{product.description || "Contact us if you need more information about this product."}</p>
-              {featureSpecifications && <details className="mt-4 rounded-xl border border-gray-200 px-4 py-3"><summary className="cursor-pointer text-sm font-semibold text-brand-primary">Specifications & features</summary><p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-600">{featureSpecifications}</p></details>}
-              <dl className="mt-5 grid gap-4 border-t pt-4 text-sm sm:grid-cols-3">{[["brand","Brand"],["modelNumber","Model"],["manufacturer","Manufacturer"],["countryOfOrigin","Country of origin"],["warranty","Warranty"],["packageContents","In the box"]].filter(([key]) => product[key]).map(([key,label]) => <div key={key}><dt className="text-xs uppercase tracking-wider text-gray-400">{label}</dt><dd className="mt-1 font-medium">{product[key]}</dd></div>)}{product.color && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Colour</dt><dd className="mt-1 font-medium">{product.color}</dd></div>}{product.fabric && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Fabric</dt><dd className="mt-1 font-medium">{product.fabric}</dd></div>}{product.ageGroup && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Age group</dt><dd className="mt-1 font-medium">{product.ageGroup}</dd></div>}</dl>
+              {featureSpecifications && <details className="mt-4 rounded-xl border border-gray-200 px-4 py-3"><summary className="cursor-pointer text-sm font-semibold text-brand-primary">Specifications & features</summary><ProductSpecifications text={featureSpecifications} /></details>}
+              <dl className="mt-5 grid gap-4 border-t pt-4 text-sm sm:grid-cols-3">{[["brand","Brand"],["modelNumber","Model"],["manufacturer","Manufacturer"],["countryOfOrigin","Country of origin"],["warranty","Warranty"],["packageContents","In the box"]].filter(([key]) => product[key]).map(([key,label]) => <div key={key}><dt className="text-xs uppercase tracking-wider text-gray-400">{label}</dt><dd className="mt-1 font-medium">{product[key]}</dd></div>)}{(selectedColor || product.color) && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Selected colour</dt><dd className="mt-1 font-medium">{selectedColor || product.color}</dd></div>}{product.fabric && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Fabric</dt><dd className="mt-1 font-medium">{product.fabric}</dd></div>}{product.ageGroup && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Age group</dt><dd className="mt-1 font-medium">{product.ageGroup}</dd></div>}</dl>
             </div>
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
               <h2 className="text-lg font-semibold">Before you order</h2>
-              <ul className="mt-3 space-y-3 text-sm leading-6 text-gray-600"><li>Check the selected option, price and product specifications.</li><li>The final payable amount is shown before you place your order.</li><li>For online orders, approved refunds go to the original payment method. For collected COD orders, provide UPI or bank details through your account when requested.</li></ul>
+                            <ul className="mt-3 space-y-4 text-sm leading-6 text-gray-600">
+                {sizeChart && <li><strong className="block font-medium text-gray-900">Find the right fit</strong>Compare measurements in the size guide beside the size options before ordering. Age ranges are a guide.</li>}
+                <li><strong className="block font-medium text-gray-900">Check what’s included</strong>Review “In the box” and your selected colour and size. Styling accessories may be excluded.</li>
+                <li><strong className="block font-medium text-gray-900">Delivery & returns</strong>Check your pincode above for availability. <Link to="/return-policy" className="font-medium text-brand-primary underline underline-offset-2">Read the return conditions</Link> before ordering.</li>
+                <li><strong className="block font-medium text-gray-900">Final total</strong>The payable amount is shown at checkout before you place your order.</li>
+              </ul>
             </div>
           </section>
 
