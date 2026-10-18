@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseSizeChart } from "../client/src/utils/sizeChart.js";
+import { measurementInCm, parseSizeChart } from "../client/src/utils/sizeChart.js";
+
+test("centimetres preserve missing measurements and convert decimal values and ranges", () => {
+  assert.equal(measurementInCm("10"), "25.4");
+  assert.equal(measurementInCm("15.5"), "39.4");
+  assert.equal(measurementInCm("16–20"), "40.6–50.8");
+  for (const value of ["—", "Not supplied", "22 approx", ""]) assert.equal(measurementInCm(value), value);
+});
 
 test("existing dungaree text retains decimal measurements and readable headings", () => {
   const chart = parseSizeChart("Size chart in inches (age / top length / chest / shorts length / waist):\n0–3 Months: 10 / 16 / 8 / 15.5\n3–6 Months: 10.5 / 17 / 8.5 / 16\nAge ranges are a guide.");
