@@ -181,6 +181,7 @@ function ProductDetails() {
   const specifications = String(product.specifications || "");
   const sizeChartStart = specifications.search(/\bsize\s+chart\b/i);
   const sizeChart = sizeChartStart >= 0 ? specifications.slice(sizeChartStart).trim() : "";
+  const featureSpecifications = sizeChartStart >= 0 ? specifications.slice(0, sizeChartStart).trim() : specifications;
   const selectedVariant = availableVariants.find((item) => item.size === selectedSize);
   const selectedSizeData = selectedVariant || product.sizeStock?.find((item) => item.size === selectedSize);
   const selectedPrice = Number(selectedVariant?.price ?? product.price);
@@ -310,16 +311,16 @@ function ProductDetails() {
             </section>
           </div>
 
-          <section className="mt-12 grid gap-8 lg:grid-cols-[1fr_380px]">
+          <section className="mt-8 grid items-start gap-5 lg:grid-cols-[1fr_340px]">
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
-              <h2 className="text-2xl font-semibold">Product details</h2>
-              <p className="mt-5 whitespace-pre-line leading-8 text-gray-600">{product.description || "Contact us if you need more information about this product."}</p>
-              {product.specifications && <section className="mt-6"><h2 className="font-semibold">Specifications & features</h2><p className="mt-2 whitespace-pre-line text-sm leading-7 text-gray-600">{product.specifications}</p></section>}
-              <dl className="mt-7 grid gap-4 border-t pt-6 sm:grid-cols-3">{[["brand","Brand"],["modelNumber","Model"],["manufacturer","Manufacturer"],["countryOfOrigin","Country of origin"],["warranty","Warranty"],["packageContents","In the box"]].filter(([key]) => product[key]).map(([key,label]) => <div key={key}><dt className="text-xs uppercase tracking-wider text-gray-400">{label}</dt><dd className="mt-1 font-medium">{product[key]}</dd></div>)}{product.color && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Colour</dt><dd className="mt-1 font-medium">{product.color}</dd></div>}{product.fabric && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Fabric</dt><dd className="mt-1 font-medium">{product.fabric}</dd></div>}{product.ageGroup && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Age group</dt><dd className="mt-1 font-medium">{product.ageGroup}</dd></div>}</dl>
+              <h2 className="text-xl font-semibold">Product details</h2>
+              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-600">{product.description || "Contact us if you need more information about this product."}</p>
+              {featureSpecifications && <details className="mt-4 rounded-xl border border-gray-200 px-4 py-3"><summary className="cursor-pointer text-sm font-semibold text-brand-primary">Specifications & features</summary><p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-600">{featureSpecifications}</p></details>}
+              <dl className="mt-5 grid gap-4 border-t pt-4 text-sm sm:grid-cols-3">{[["brand","Brand"],["modelNumber","Model"],["manufacturer","Manufacturer"],["countryOfOrigin","Country of origin"],["warranty","Warranty"],["packageContents","In the box"]].filter(([key]) => product[key]).map(([key,label]) => <div key={key}><dt className="text-xs uppercase tracking-wider text-gray-400">{label}</dt><dd className="mt-1 font-medium">{product[key]}</dd></div>)}{product.color && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Colour</dt><dd className="mt-1 font-medium">{product.color}</dd></div>}{product.fabric && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Fabric</dt><dd className="mt-1 font-medium">{product.fabric}</dd></div>}{product.ageGroup && <div><dt className="text-xs uppercase tracking-wider text-gray-400">Age group</dt><dd className="mt-1 font-medium">{product.ageGroup}</dd></div>}</dl>
             </div>
             <div className="rounded-3xl border bg-white p-6 shadow-sm md:p-8">
-              <h2 className="text-2xl font-semibold">Before you order</h2>
-              <ul className="mt-5 space-y-3 text-sm text-gray-600"><li>Check the selected option, price and product specifications.</li><li>The final payable amount is shown before you place your order.</li><li>For online orders, approved refunds go to the original payment method. For collected COD orders, provide UPI or bank details through your account when requested.</li></ul>
+              <h2 className="text-lg font-semibold">Before you order</h2>
+              <ul className="mt-3 space-y-3 text-sm leading-6 text-gray-600"><li>Check the selected option, price and product specifications.</li><li>The final payable amount is shown before you place your order.</li><li>For online orders, approved refunds go to the original payment method. For collected COD orders, provide UPI or bank details through your account when requested.</li></ul>
             </div>
           </section>
 
