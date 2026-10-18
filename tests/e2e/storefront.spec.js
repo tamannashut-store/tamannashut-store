@@ -1354,3 +1354,13 @@ test("seller logo picker previews the selected file and submits it without chang
   await page.getByRole("heading", { name: "Store logo", exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: "output/store-logo-picker-mobile.png" });
 });
+
+test("review deep links scroll after product loading and preserve variant and legacy URL hash", async ({ page }) => {
+  await page.route(`**/api/products/${product._id}`, route => route.fulfill({ json: product }));
+  await page.route(`**/api/products/${product.slug}`, route => route.fulfill({ json: product }));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`/product/${product._id}?color=Maroon&size=0-3M#reviews`);
+  await expect(page.getByRole("heading", { name: "Customer reviews", exact: true })).toBeInViewport();
+  await expect(page).toHaveURL(new RegExp(`/product/${product.slug}\\?color=Maroon&size=0-3M#reviews$`));
+  await expect(page.getByRole("button", { name: "0-3M", exact: true })).toHaveClass(/bg-brand-primary/);
+});
