@@ -1,5 +1,12 @@
 const ageRow = /^(\d+\s*[–—-]\s*\d+\s*(?:Months?|Years?))\s*[:|]\s*(.+)$/i;
 
+export function measurementInCm(value) {
+  const text = String(value);
+  // Only convert known numeric measurements; retain unavailable or annotated cells.
+  if (!/^\d+(?:\.\d+)?(?:\s*[–—-]\s*\d+(?:\.\d+)?)?$/.test(text)) return text;
+  return text.replace(/\d+(?:\.\d+)?/g, (number) => String(Math.round(Number(number) * 25.4) / 10));
+}
+
 // Parse supplier text without calculating or filling missing measurements.
 export function parseSizeChart(text) {
   const sections = [];
