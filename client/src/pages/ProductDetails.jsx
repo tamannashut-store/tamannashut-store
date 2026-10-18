@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { CartContext } from "../context/CartContext";
 import toast from "react-hot-toast";
@@ -58,9 +58,17 @@ function DiscoveryProducts({ title, products }) {
 function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hash } = useLocation();
   const { cartItems, addToCart } = useContext(CartContext);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (loading || !product || hash !== "#reviews") return;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById("reviews")?.scrollIntoView({ block: "start" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [hash, loading, product]);
   const [loadError, setLoadError] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -87,7 +95,7 @@ function ProductDetails() {
       if (!data || typeof data !== "object" || !data._id || !data.name || !Number.isFinite(Number(data.price))) throw new Error("Invalid product response");
       const requested = new URLSearchParams(window.location.search);
       setProduct(data);
-      if (data.slug && id !== data.slug) window.history.replaceState(window.history.state, "", `${productPath(data)}${window.location.search}`);
+      if (data.slug && id !== data.slug) window.history.replaceState(window.history.state, "", `${productPath(data)}${window.location.search}${window.location.hash}`);
       trackEvent("view_item", { currency: "INR", value: Number(data.price || 0), items: [{ item_id: data._id, item_name: data.name, item_category: data.category, price: Number(data.price || 0) }] });
       const requestedColor = String(requested.get("color") || "").trim();
       const requestedSize = String(requested.get("size") || "").trim();
@@ -318,7 +326,7 @@ function ProductDetails() {
             </div>
           </section>
 
-          <section id="reviews" className="mt-8 rounded-3xl border bg-white p-6 shadow-sm md:p-8">
+          <section id="reviews" className="mt-8 scroll-mt-28 rounded-3xl border bg-white p-6 shadow-sm md:p-8">
             <div className="grid gap-10 lg:grid-cols-[1fr_380px]">
               <div>
                 <h2 className="text-2xl font-semibold">Customer reviews</h2>
