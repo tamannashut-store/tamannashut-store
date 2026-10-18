@@ -12,15 +12,17 @@ export const publicSellerStore = async (identifier, { Users = User, Profiles = S
   if (!user || ["closed", "suspended"].includes(user.sellerAccessStatus)) return null;
   let name;
   let logoUrl = "";
+  let deliveryStates;
   if (isPlatformAdmin(user)) name = "Tamanna's Hut";
   else if (isMarketplaceSeller(user) && user.sellerAccessStatus === "active") {
     const profile = await Profiles.findOne({ userId: id }).select("+enrolment.numberEncrypted").lean();
     if (!profile || (effectiveSellerVerification(profile).status !== "verified" && !enrolmentTradingApproved(profile))) return null;
     name = String(profile.tradeName || "").trim();
     logoUrl = profile.storeLogo?.url || "";
+    if (enrolmentTradingApproved(profile)) deliveryStates = ["West Bengal"];
   }
   if (!name) return null;
   const slug = slugifyProductName(name);
   // Publish only storefront identity, never legal, contact or bank details.
-  return { id, name, slug, path: `/store/${id}/${slug}`, ...(logoUrl ? { logoUrl } : {}) };
+  return { id, name, slug, path: `/store/${id}/${slug}`, ...(logoUrl ? { logoUrl } : {}), ...(deliveryStates ? { deliveryStates } : {}) };
 };

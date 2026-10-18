@@ -6,6 +6,7 @@ import User from "../server/src/models/User.js";
 import SellerProfile from "../server/src/models/SellerProfile.js";
 import Product from "../server/src/models/Product.js";
 import productRoutes from "../server/src/routes/productRoutes.js";
+import { ENROLMENT_SELLER_ID } from "../server/src/utils/enrolmentSeller.js";
 
 const id = "66aa11bb22cc33dd44ee5500";
 const otherId = "66aa11bb22cc33dd44ee5501";
@@ -20,6 +21,14 @@ test("store identity uses trade name and never exposes legal, contact or bank de
   const result = await publicSellerStore(id, { Users: { findById: () => userQuery(user) }, Profiles: { findOne: () => userQuery(profile) } });
   assert.deepEqual(result, { id, name: "SAJUNI SAHEBA", slug: "sajuni-saheba", path: `/store/${id}/sajuni-saheba` });
   for (const privateText of ["Private Owner", "private@example.com", "7890", "Private address"]) assert.equal(JSON.stringify(result).includes(privateText), false);
+});
+
+test("approved restricted store publishes delivery state without exposing enrolment data", async () => {
+  const restricted = { ...profile, userId: ENROLMENT_SELLER_ID, gstinLast4: undefined, verificationStatus: "pending", enrolment: { enabled: true, numberEncrypted: "secret-enrolment", reviewedBy: "owner", reviewedAt: new Date(), eligibilityConfirmed: true, state: "West Bengal" } };
+  const result = await publicSellerStore(ENROLMENT_SELLER_ID, { Users: { findById: () => userQuery(user) }, Profiles: { findOne: () => userQuery(restricted) } });
+  assert.deepEqual(result.deliveryStates, ["West Bengal"]);
+  assert.equal(JSON.stringify(result).includes("secret-enrolment"), false);
+  assert.equal(JSON.stringify(result).includes("Private address"), false);
 });
 
 test("unverified, held, closed and invalid stores are unavailable", async () => {
