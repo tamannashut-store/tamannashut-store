@@ -1,5 +1,8 @@
 import { publicStoreStats } from "../utils/storeStats.js";
 import express from "express";
+import rateLimit from "express-rate-limit";
+import ProductPresence from "../models/ProductPresence.js";
+import { recordProductPresence, validPresenceVisitor } from "../utils/productPresence.js";
 import { buildSearchRegex, escapeRegex } from "../utils/search.js";
 import Product from "../models/Product.js";
 import upload, { validateUploadedImages } from "../middleware/upload.js";
@@ -17,6 +20,20 @@ import { publicSellerStore } from "../utils/sellerStore.js";
 import { parseProductFields, assertPublishable } from "../utils/productFields.js";
 
 const router = express.Router();
+const presenceLimiter = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: "draft-8", legacyHeaders: false });
+router.post("/:id/presence", presenceLimiter, async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!/^[a-f0-9]{24}$/i.test(req.params.id) || !validPresenceVisitor(req.body?.visitorId)) return res.status(400).json({ message: "Invalid presence request" });
+  try {
+    const product = await Product.exists(storefrontProductFilter({ _id: req.params.id }));
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    const otherViewers = await recordProductPresence(ProductPresence, product._id, req.body.visitorId.toLowerCase());
+    return res.json({ otherViewers });
+  } catch {
+    // Optional activity must never block shopping or leak internal errors.
+    return res.status(503).json({ message: "Activity temporarily unavailable" });
+  }
+});
 const sellerProductFilter = (req, filter = {}) => scopeSellerOwned(req.user, filter);
 const approvedReviews = (reviews = []) => reviews.filter((review) => !review.status || review.status === "approved");
 const refreshReviewSummary = (product) => {
