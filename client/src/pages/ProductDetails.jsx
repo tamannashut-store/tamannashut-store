@@ -328,7 +328,7 @@ function ProductDetails() {
               </div>
 
               {product.store?.path && <SoldByStore store={product.store} />}
-              <DeliveryInformation />
+              <DeliveryInformation key={product._id} deliveryStates={product.store?.deliveryStates} />
             </section>
           </div>
 

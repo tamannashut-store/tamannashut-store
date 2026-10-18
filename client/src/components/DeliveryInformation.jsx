@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { readSession } from "../utils/storage";
+import { deliveryStateMessage, matchesDeliveryState } from "../utils/deliveryStates";
 
-export default function DeliveryInformation() {
+export default function DeliveryInformation({ deliveryStates = [] }) {
   const [pincode, setPincode] = useState("");
   const [cod, setCod] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -18,12 +19,14 @@ export default function DeliveryInformation() {
     try {
       const { data } = await axios.get(`${import.meta.env.VITE_API_URL}/api/logistics/postcode/${pincode}`, { params: { cod: cod ? 1 : 0 } });
       if (!data.serviceable) throw new Error("Delivery availability could not be confirmed. Please try again.");
+      if (!matchesDeliveryState(deliveryStates, data.state)) throw new Error(`${deliveryStateMessage(deliveryStates)} for this product. Choose an eligible delivery address.`);
       setResult(data);
     } catch (requestError) { setError(requestError.response?.data?.message || requestError.message || "Delivery could not be checked. Please try again."); }
     finally { setBusy(false); }
   };
   return <section aria-label="Delivery and returns" className="mt-7 rounded-2xl border bg-slate-50 p-4 sm:p-5">
     <h2 className="font-semibold">Delivery and returns</h2>
+    {deliveryStates.length > 0 && <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900">{deliveryStateMessage(deliveryStates)}</p>}
     <p className="mt-2 text-sm leading-6 text-slate-600">Usually dispatched within 1 business day. Delivery generally takes 3–7 business days after dispatch, depending on your location and courier availability.</p>
     {signedIn ? <form onSubmit={check} className="mt-4 space-y-3">
       <label htmlFor="delivery-pincode" className="block text-sm font-semibold">Check delivery to your pincode</label>
