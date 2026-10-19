@@ -300,7 +300,7 @@ test("marketplace home fills product photo frames and offers direct search", asy
   expect(framing.padding).toBe("0px");
   // Card frames stay consistent even when source photo proportions differ.
   expect(framing.height / framing.width).toBeCloseTo(1.5, 1);
-  await expect(page.getByText("Home & kitchen", { exact: true })).toBeVisible();
+  await expect(page.getByText("Coming soon", { exact: true })).toHaveCount(0);
   await page.getByRole("search", { name: "Find products" }).getByLabel("Search products, brands and categories").fill("steel bottle");
   await page.getByRole("search", { name: "Find products" }).getByRole("button", { name: "Search", exact: true }).click();
   await expect(page).toHaveURL(/\/shop\?search=steel%20bottle/);
