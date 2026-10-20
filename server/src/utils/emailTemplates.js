@@ -2,6 +2,12 @@ import { escapeHtml } from "./html.js";
 import { paymentMethodLabel, paymentStatusLabel } from "./paymentPresentation.js";
 import { detailBox, emailButton, emailLayout, money } from "./emailLayout.js";
 
+export const passkeyCodeEmailTemplate = (user, code, action) => emailLayout({
+  preheader: 'Confirm a change to your seller sign-in methods', eyebrow: 'ACCOUNT SECURITY',
+  title: action === 'add' ? 'Confirm adding a seller passkey' : 'Confirm removing a seller passkey',
+  body: `<p>Hello <strong>${escapeHtml(user.name || 'Seller')}</strong>,</p><p>Use this code only to ${action === 'add' ? 'add' : 'remove'} a passkey in your signed-in Seller Centre:</p>${detailBox(`<div style="font-size:30px;letter-spacing:8px;text-align:center;font-weight:800">${escapeHtml(code)}</div>`)}<p>This code expires in 5 minutes and can be used once. Never share it. If you did not request this change, change your password and contact support.</p>`,
+});
+
 export const refundDetailsRequestEmailTemplate = (order) => emailLayout({
   preheader: "Provide UPI or bank details securely in your account to receive your COD refund",
   eyebrow: "ACTION REQUIRED", title: "Choose where to receive your refund",

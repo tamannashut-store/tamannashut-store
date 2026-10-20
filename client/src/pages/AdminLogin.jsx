@@ -5,6 +5,7 @@ import { FiArrowLeft, FiEye, FiEyeOff, FiLock, FiShield } from "react-icons/fi";
 import logo from "../assets/logo.png";
 import { readSession } from "../utils/storage";
 import { accountTypeFromUser, homeForAccount } from "../utils/accountSession";
+import { supportsPasskeys, authenticatePasskey, passkeyError } from '../utils/passkeys';
 
 function AdminLogin() {
   const navigate = useNavigate();
@@ -16,6 +17,30 @@ function AdminLogin() {
   const [error, setError] = useState("");
   const [challenge, setChallenge] = useState(null);
   const [code, setCode] = useState("");
+  const [passkeyOptions, setPasskeyOptions] = useState(null);
+
+  const finishSignIn = data => {
+    localStorage.setItem('user', JSON.stringify(data));
+    axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+    const requested = sessionStorage.getItem('redirectAfterSellerLogin');
+    sessionStorage.removeItem('redirectAfterSellerLogin');
+    const prefix = accountTypeFromUser(data.user) === 'seller' ? '/seller/' : '/admin/';
+    navigate(requested?.startsWith(prefix) ? requested : homeForAccount(data.user), { replace: true });
+  };
+  const signInWithPasskey = async () => {
+    setError(''); setLoading(true);
+    try {
+      if (!passkeyOptions) {
+        const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/seller-passkeys/options`);
+        setPasskeyOptions(data);
+        return;
+      }
+      const credential = await authenticatePasskey(passkeyOptions.options);
+      const { data } = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/seller-passkeys/authenticate`, { credential, challengeToken: passkeyOptions.challengeToken });
+      finishSignIn(data);
+    } catch (e) { setError(passkeyError(e)); setPasskeyOptions(null); }
+    finally { setLoading(false); }
+  };
 
   useEffect(() => {
     if (customerSession && accountTypeFromUser(customerSession.user) !== "customer") navigate(homeForAccount(customerSession.user), { replace: true });
@@ -33,11 +58,7 @@ function AdminLogin() {
         setChallenge(data); setPassword(""); setCode("");
         return;
       }
-      localStorage.setItem("user", JSON.stringify(data));
-      axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
-      const requested = sessionStorage.getItem("redirectAfterSellerLogin");
-      sessionStorage.removeItem("redirectAfterSellerLogin");
-      navigate(requested || homeForAccount(data.user), { replace: true });
+      finishSignIn(data);
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Seller sign-in failed. Check the email and password.");
     } finally {
@@ -66,7 +87,8 @@ function AdminLogin() {
         <div className="mb-7 flex items-center justify-between lg:hidden"><img src={logo} alt="Tamanna's Hut" className="h-14 rounded-xl bg-white px-2 py-1 shadow-sm"/><Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-primary"><FiArrowLeft/> Store</Link></div>
         <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(20,45,32,.12)] sm:p-10">
           <div className="flex items-center gap-3"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#eef5f0] text-xl text-brand-primary"><FiLock/></span><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#397153]">Secure access</p><h2 className="mt-1 text-3xl font-bold tracking-tight">Seller sign in</h2></div></div>
-          <p className="mt-5 text-sm leading-6 text-slate-500">{challenge ? `Enter the six-digit code sent to ${challenge.maskedEmail}. It expires in 10 minutes.` : "Use your platform-administrator or marketplace-seller credentials. A one-time email code protects every Seller Centre sign in."}</p>
+          <p className="mt-5 text-sm leading-6 text-slate-500">{challenge ? `Enter the six-digit code sent to ${challenge.maskedEmail}. It expires in 10 minutes.` : "Use your password and email code, or sign in with a passkey you have already added to your seller account."}</p>
+          {!challenge && supportsPasskeys() && <div className="mt-5 rounded-2xl border border-green-200 bg-green-50/50 p-4"><button type="button" disabled={loading} onClick={signInWithPasskey} className="btn-secondary w-full">{loading ? 'Please wait…' : passkeyOptions ? 'Continue with device unlock' : 'Seller sign in with passkey'}</button><p className="mt-2 text-xs leading-5 text-slate-500">{passkeyOptions ? 'Continue to choose your saved passkey. Your device will ask for fingerprint, face or PIN.' : 'For sellers who added a passkey in My seller profile → Sign-in methods. Administrator access continues to use the email code.'}</p></div>}
 
           {customerSession?.user && !customerSession.user.isAdmin && customerSession.user.accountType !== "seller" && <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"><p className="font-semibold">Currently shopping as {customerSession.user.name || customerSession.user.email}</p><p className="mt-1 text-blue-700">Signing in here with a Seller Centre account will switch this browser. Your customer account is not being deleted.</p></div>}
           {error && <div role="alert" className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700">{error}</div>}

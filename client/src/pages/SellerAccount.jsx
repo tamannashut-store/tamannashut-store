@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import StoreLogoUpload from "../components/StoreLogoUpload";
+import SellerPasskeys from "../components/SellerPasskeys";
 
 import { useNavigate } from "react-router-dom";
 
@@ -86,6 +87,7 @@ function SellerAccount() {
     {profile?.completeness && !profile.completeness.complete && <section className="mb-5 rounded-2xl border border-amber-300 bg-amber-50 p-5"><div className="flex items-start gap-3"><FiAlertTriangle className="mt-1 shrink-0 text-amber-700"/><div><h2 className="font-bold text-amber-950">Seller verification needs an update</h2><p className="mt-1 text-sm leading-6 text-amber-900">The previous approval is not considered complete until these details are supplied and reviewed: <strong>{profile.completeness.missingFields.join(", ")}</strong>.</p><button type="button" onClick={() => setEditing(true)} className="mt-3 text-sm font-bold text-amber-950 underline">Complete business details</button></div></div></section>}
 
     {profile && <StoreLogoUpload logoUrl={profile.storeLogoUrl} onSaved={load} />}
+    {profile && data.account?.sellerAccessStatus === 'active' && <SellerPasskeys/>}
     {editing && <BusinessDetails form={form} change={change} save={save} saving={saving}/>}
 
     {profile && <div className="grid gap-5 lg:grid-cols-2"><section className="rounded-2xl border bg-white p-6 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">Business identity</h2><StatusBadge value={profile.verificationStatus}/></div><dl className="mt-6 grid gap-5 text-sm sm:grid-cols-2"><Field label="Legal name" value={profile.legalBusinessName}/><Field label="Trade name" value={profile.tradeName}/><Field label="Business type" value={String(profile.businessType || "").replaceAll("_", " ")}/><Field label="GSTIN / PAN" value={`••••${profile.gstinLast4 || "—"} / ••••${profile.panLast4 || "—"}`} mono/><div className="sm:col-span-2"><dt className="text-slate-500">Registered address</dt><dd className="mt-1 leading-6"><Address value={profile.registeredAddress}/></dd></div><div className="sm:col-span-2"><dt className="text-slate-500">Pickup address</dt><dd className="mt-1 leading-6"><Address value={profile.pickupAddress}/></dd></div></dl></section>
