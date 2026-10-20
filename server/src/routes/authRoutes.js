@@ -29,6 +29,7 @@ import { phoneLoginHandlers } from "../services/phoneLoginService.js";
 import { customerOtpHandlers } from "../services/customerOtpService.js";
 import { submitSellerApplication } from "../services/sellerApplicationService.js";
 import { bankProofUpload, parseSellerApplication } from "../middleware/bankProofUpload.js";
+import { sellerPasskeyHandlers } from "../services/sellerPasskeyService.js";
 import { ENROLMENT_SELLER_ID } from "../utils/enrolmentSeller.js";
 import { encryptSellerValue } from "../utils/sellerOnboarding.js";
 
@@ -38,6 +39,14 @@ const sessionPayload = (user) => ({
     token: jwt.sign({ id: user._id, sessionVersion: user.sessionVersion || 0 }, process.env.JWT_SECRET, { expiresIn: "7d" }),
     user: publicAccount(user),
 });
+
+const passkeys = sellerPasskeyHandlers({ sessionPayload });
+router.get('/seller-passkeys', protect, passkeys.list);
+router.post('/seller-passkeys/manage', protect, passkeys.beginManagement);
+router.post('/seller-passkeys/confirm', protect, passkeys.confirmManagement);
+router.post('/seller-passkeys/register', protect, passkeys.register);
+router.post('/seller-passkeys/options', passkeys.beginAuthentication);
+router.post('/seller-passkeys/authenticate', passkeys.authenticate);
 
 const customerOtp = customerOtpHandlers({ sessionPayload });
 const customerOtpOnly = (req, res, next) => {
