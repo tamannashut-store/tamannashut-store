@@ -18,8 +18,12 @@ import { storefrontProductFilter } from "../utils/productVisibility.js";
 import { publicSellerStore } from "../utils/sellerStore.js";
 
 import { parseProductFields, assertPublishable } from "../utils/productFields.js";
+import { adminSellerListingService } from '../services/adminSellerListingService.js';
 
 const router = express.Router();
+const sellerListings = adminSellerListingService();
+router.get('/admin/seller-choices', protect, admin, sellerListings.list);
+router.patch('/admin/:id/seller', protect, admin, sellerListings.assignDraft);
 const presenceLimiter = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: "draft-8", legacyHeaders: false });
 router.post("/:id/presence", presenceLimiter, async (req, res) => {
   res.set("Cache-Control", "no-store");
@@ -110,6 +114,7 @@ router.post("/", protect, sellerCentre, upload.array("images", 30), validateUplo
     const imageColors = imageMetadata(req.body.imageColors, "image colours");
     const imageSizes = imageMetadata(req.body.imageSizes, "image options");
     const fields = parseProductFields(req.body);
+    const assignedStore = req.body.sellerId ? await sellerListings.targetSeller(req.user, req.body.sellerId) : null;
 
     if (req.files && req.files.length > 0) {
 
@@ -139,20 +144,20 @@ router.post("/", protect, sellerCentre, upload.array("images", 30), validateUplo
     }
 
     if (fields.status !== "draft") assertPublishable({ ...fields, images });
-    const sellerSubmission = isMarketplaceSeller(req.user);
+    const sellerSubmission = isMarketplaceSeller(req.user) || Boolean(assignedStore);
     const product = new Product({
       ...fields,
       images,
-      sellerId: req.user._id,
+      sellerId: assignedStore?.id || req.user._id,
       status: sellerSubmission ? "draft" : fields.status,
       approvalStatus: sellerSubmission ? (fields.status === "draft" ? "not_required" : "pending") : "not_required",
     });
     product.slug = await createUniqueProductSlug(Product, product.name, product._id);
 
-    await product.save();
+    const savedProduct = assignedStore ? await sellerListings.saveCreated(req.user, product, assignedStore) : await product.save();
     saved = true;
 
-    return res.status(201).json(product);
+    return res.status(201).json(savedProduct);
   } catch (error) {
     if (!saved) await Promise.allSettled(images.map((image) => cloudinary.uploader.destroy(image.public_id)));
     console.log(error);
