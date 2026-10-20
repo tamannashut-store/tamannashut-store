@@ -1,5 +1,6 @@
 import express from "express";
 import Order from "../models/Order.js";
+import User from "../models/User.js";
 import { getStoreStats } from "../services/storeStats.js";
 
 const router = express.Router();
@@ -8,7 +9,7 @@ let pending;
 router.get("/", async (_req, res) => {
   try {
     if (!cache || cache.expiresAt <= Date.now()) {
-      pending ||= getStoreStats(Order).then((totals) => {
+      pending ||= getStoreStats(Order, User).then((totals) => {
         cache = { totals, expiresAt: Date.now() + 5 * 60 * 1000 };
       }).finally(() => { pending = null; });
       await pending;

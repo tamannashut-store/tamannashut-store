@@ -10,11 +10,14 @@ async function homepage(page, totals) {
 
 test("verified homepage totals fit a narrow mobile screen", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 740 });
-  await homepage(page, { deliveredOrders: 23, customersServed: 19 });
+  await homepage(page, { deliveredOrders: 23, customersServed: 19, registeredCustomers: 42, activeBags: 3 });
   const strip = page.getByRole("region", { name: "Our delivered orders" });
   await expect(strip).toContainText("23 orders delivered");
-  await expect(strip).toContainText("19 customers served");
-  await expect(strip).toContainText("Completed purchases on tamannashut.com");
+  await expect(strip).toContainText("42 registered customers");
+  await expect(strip).toContainText("3 active shopping bags");
+  await expect(strip.getByText("Website orders delivered and paid", { exact: false })).toBeHidden();
+  await strip.getByText("About these numbers", { exact: true }).click();
+  await expect(strip.getByText("Website orders delivered and paid", { exact: false })).toBeVisible();
   expect(await strip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
 });
 

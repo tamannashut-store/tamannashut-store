@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FiCheckCircle, FiUsers } from "react-icons/fi";
+import { FiCheckCircle, FiUsers, FiShoppingBag } from "react-icons/fi";
 
 export default function StoreTrustStrip() {
   const [stats, setStats] = useState(null);
@@ -8,17 +8,25 @@ export default function StoreTrustStrip() {
     fetch(`${import.meta.env.PROD ? "" : import.meta.env.VITE_API_URL}/api/store-stats`, { signal: controller.signal })
       .then((response) => response.ok ? response.json() : null)
       .then((data) => {
-        if (!controller.signal.aborted && Number.isSafeInteger(data?.deliveredOrders) && Number.isSafeInteger(data?.customersServed)
-          && data.deliveredOrders > 0 && data.customersServed > 0 && data.customersServed <= data.deliveredOrders) setStats(data);
+        if (!controller.signal.aborted && data) setStats(data);
       }).catch(() => {});
     return () => controller.abort();
   }, []);
-  if (!stats) return null;
-  return <section aria-label="Our delivered orders" className="border-y border-[#dde6d9] bg-[#edf3e9] px-5 py-5 text-[#183d2b]">
-    <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-center gap-x-10 gap-y-3 text-sm">
-      <p className="flex items-center gap-2"><FiCheckCircle aria-hidden="true" className="shrink-0 text-lg" /><span><strong className="font-bold">{stats.deliveredOrders.toLocaleString("en-IN")}</strong> {stats.deliveredOrders === 1 ? "order delivered" : "orders delivered"}</span></p>
-      <p className="flex items-center gap-2"><FiUsers aria-hidden="true" className="shrink-0 text-lg" /><span><strong className="font-bold">{stats.customersServed.toLocaleString("en-IN")}</strong> {stats.customersServed === 1 ? "customer served" : "customers served"}</span></p>
-      <p className="w-full text-center text-xs text-[#52664b]">Completed purchases on tamannashut.com · Excludes returns and refunds</p>
+  const metrics = stats ? [
+    { count: stats.deliveredOrders, label: stats.deliveredOrders === 1 ? "order delivered" : "orders delivered", Icon: FiCheckCircle },
+    { count: stats.registeredCustomers, label: stats.registeredCustomers === 1 ? "registered customer" : "registered customers", Icon: FiUsers },
+    { count: stats.activeBags, label: stats.activeBags === 1 ? "active shopping bag" : "active shopping bags", Icon: FiShoppingBag },
+  ].filter(({ count }) => Number.isSafeInteger(count) && count > 0) : [];
+  if (!metrics.length) return null;
+  return <section aria-label="Our delivered orders" className="px-5 text-[#183d2b] md:px-8">
+    <div className="mx-auto max-w-[1280px] border-b border-slate-200 py-4">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs sm:text-sm">
+        {metrics.map(({ count, label, Icon }) => <p key={label} className="flex items-center gap-2"><Icon aria-hidden="true" className="shrink-0 text-base text-brand-primary" /><span><strong className="font-semibold">{count.toLocaleString("en-IN")}</strong> {label}</span></p>)}
+        <details className="w-full text-xs text-slate-500 sm:ml-auto sm:w-auto sm:max-w-sm">
+          <summary className="w-fit cursor-pointer underline decoration-slate-300 underline-offset-4 hover:text-brand-primary">About these numbers</summary>
+          <p className="mt-2 max-w-sm leading-5">Website orders delivered and paid, excluding returns and refunds. Registered customers are customer accounts, excluding sellers and administrators. Active bags contain items and were updated in the past 24 hours; completed checkout clears the bag. Counts refresh every five minutes.</p>
+        </details>
+      </div>
     </div>
   </section>;
 }
