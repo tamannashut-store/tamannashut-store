@@ -14,6 +14,7 @@ import ListingWizardNav, { WizardActions } from "../components/ListingWizardNav"
 import ColorImageManager from "../components/ColorImageManager";
 import VariantStockList from "../components/VariantStockList";
 import { lowStockVariants, totalInventory } from "../utils/inventory";
+import ListingSeller from '../components/ListingSeller';
 
 const initialVariants = [];
 
@@ -34,6 +35,7 @@ function Admin() {
   const [approvalFilter, setApprovalFilter] = useState("");
   const [selected, setSelected] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
+  const [listingSellerId, setListingSellerId] = useState('');
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ ...generalListingDefaults, name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
   const [variants, setVariants] = useState(initialVariants);
@@ -114,6 +116,7 @@ function Admin() {
   };
 
   const resetCreate = () => {
+    setListingSellerId('');
     previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
     previewUrls.current = [];
     setForm({ ...generalListingDefaults, name: "", price: "", mrp: "", baseSku: "", hsnCode: "", category: "", color: "", fabric: "", ageGroup: "", tags: "", status: "active", lowStockThreshold: 3, description: "" });
@@ -139,6 +142,7 @@ function Admin() {
       savePending.current = true;
       setLoading(true);
       const data = new FormData();
+      if (!sellerAccount && listingSellerId) data.append('sellerId', listingSellerId);
       Object.entries(form).forEach(([key, value]) => {
         if (key !== "tags") data.append(key, value);
       });
@@ -193,6 +197,7 @@ function Admin() {
 
       {showCreate && (
         <form noValidate onSubmit={createProduct} className="mt-8">
+          {!sellerAccount && <ListingSeller value={listingSellerId} onChange={setListingSellerId}/>}
           <ListingWizardNav current={createStep} onChange={setCreateStep} />
           <ListingReadiness form={form} variants={variants} imageCount={images.length} onEdit={setCreateStep} />
           <ListingValidation messages={showValidation ? createStep === 0 ? Object.values(validation.fields) : createStep === 1 ? validation.inventory : createStep === 2 ? validation.photos : [] : []} />

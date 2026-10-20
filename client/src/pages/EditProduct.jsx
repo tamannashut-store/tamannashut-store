@@ -13,12 +13,14 @@ import ColorVariantEditor from "../components/ColorVariantEditor";
 import ListingWizardNav, { WizardActions } from "../components/ListingWizardNav";
 import ColorImageManager from "../components/ColorImageManager";
 import PageLoader from "../components/PageLoader";
+import ListingSeller from '../components/ListingSeller';
 
 function EditProduct() {
   const { id } = useParams();
   const navigate = useNavigate();
   const sellerAccount = (() => { try { const session = JSON.parse(localStorage.getItem("user")); return session?.user?.accountType === "seller" || session?.user?.sellerRole === "member"; } catch { return false; } })();
   const [approval, setApproval] = useState({ status: "", note: "" });
+  const [listingSellerId, setListingSellerId] = useState('');
   const previewUrls = useRef([]);
   const savePending = useRef(false);
   const [loadError, setLoadError] = useState(false);
@@ -47,6 +49,7 @@ function EditProduct() {
       .then(({ data }) => {
         if (!active) return;
         setApproval({ status: data.approvalStatus || "", note: data.approvalNote || "" });
+        setListingSellerId(String(data.sellerId?._id || data.sellerId || ''));
         setForm({
           ...generalListingDefaults,
           ...Object.fromEntries(Object.keys(generalListingDefaults).map((key) => [key, data[key] ?? generalListingDefaults[key]])),
@@ -118,6 +121,7 @@ function EditProduct() {
     <div className="p-5 md:p-8 xl:p-10">
       <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Catalogue editor</p><h1 className="mt-2 text-3xl font-bold">Edit listing</h1><p className="mt-2 text-sm text-slate-500">Update product information, inventory and photos, then review your changes.</p></div><button onClick={() => navigate(sellerAccount ? "/seller/products" : "/admin")} className="btn-secondary">Back to products</button></header>
       {sellerAccount && approval.status === "rejected" && <section role="status" className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-semibold">Changes requested by the administrator</h2><p className="mt-2 whitespace-pre-line break-words text-sm">{approval.note || "Review the listing details before submitting again."}</p><p className="mt-2 text-sm text-slate-600">Correct these details, then submit for approval. Save draft keeps your changes private.</p></section>}
+      {!sellerAccount && <div className="mt-6"><ListingSeller value={listingSellerId} productId={id} status={form.status} onAssigned={sellerId => { setListingSellerId(sellerId); setApproval({ status: 'pending', note: '' }); }}/></div>}
       <form noValidate onSubmit={submit} className="mt-8">
         <ListingWizardNav current={editStep} onChange={setEditStep} />
         <ListingReadiness form={form} variants={variants} imageCount={images.length} onEdit={setEditStep} />
