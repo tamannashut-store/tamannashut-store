@@ -118,8 +118,8 @@ function Home() {
       </Helmet>
 
       <main className="bg-[#f5f7fa]">
-        <StoreTrustStrip />
         <HomeProductHero products={spotlightProducts} loading={loading} search={homeSearch} setSearch={setHomeSearch} onSearch={(event) => { event.preventDefault(); navigate(homeSearch.trim() ? "/shop?search=" + encodeURIComponent(homeSearch.trim()) : "/shop"); }} />
+        <StoreTrustStrip />
         {categoryCards.length > 0 && <section id="departments" className="mx-auto max-w-[1400px] scroll-mt-24 px-5 py-12 md:px-8 lg:py-16" aria-label="Departments">
           <div className="flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-primary">Find your next favourite</p><h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Shop by department</h2><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">Browse our current collection by department.</p></div><Link to="/shop" className="hidden shrink-0 items-center gap-2 text-sm font-semibold text-brand-primary sm:inline-flex">Browse all <FiArrowRight /></Link></div>
           <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
