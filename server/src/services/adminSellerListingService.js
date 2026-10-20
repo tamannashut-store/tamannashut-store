@@ -12,10 +12,11 @@ export function adminSellerListingService({ users = User, products = Product, or
 } = {}) {
   const targetSeller = async (actor, sellerId) => {
     if (!isPlatformAdmin(actor)) fail('Only a platform administrator can select a listing seller.', 403);
-    if (!/^[a-f0-9]{24}$/i.test(String(sellerId || ''))) fail('Choose a valid seller.');
-    const user = await users.findById(sellerId);
+    if (typeof sellerId !== 'string' || !/^[a-f0-9]{24}$/i.test(sellerId)) fail('Choose a valid seller.');
+    const safeSellerId = new mongoose.Types.ObjectId(sellerId);
+    const user = await users.findById(safeSellerId);
     if (!user || !isMarketplaceSeller(user) || user.sellerAccessStatus !== 'active') fail('Choose an active marketplace seller.');
-    const store = await storeFor(sellerId);
+    const store = await storeFor(safeSellerId);
     if (!store) fail('This seller must complete the existing verification checks before receiving listings.');
     return store;
   };
@@ -53,11 +54,12 @@ export function adminSellerListingService({ users = User, products = Product, or
         const store = await targetSeller(req.user, req.body.sellerId);
         const reason = String(req.body.reason || '').trim();
         if (reason.length < 5 || reason.length > 500) fail('Enter a reason for the seller assignment (5–500 characters).');
-        if (!/^[a-f0-9]{24}$/i.test(req.params.id)) fail('Invalid product.');
+        if (typeof req.params.id !== 'string' || !/^[a-f0-9]{24}$/i.test(req.params.id)) fail('Invalid product.');
+        const productId = new mongoose.Types.ObjectId(req.params.id);
         session = await startSession();
         let assigned;
         await session.withTransaction(async () => {
-          const product = await products.findById(req.params.id).session(session);
+          const product = await products.findById(productId).session(session);
           if (!product) fail('Product not found.', 404);
           if (product.status !== 'draft') fail('Only private drafts can change seller. Published listings keep their existing ownership.', 409);
           if (String(product.sellerId || '') === store.id) fail('This draft already belongs to the selected seller.');

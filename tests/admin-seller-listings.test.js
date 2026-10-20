@@ -15,13 +15,13 @@ function fixture() {
     const before = structuredClone({ products: state.products, audits: state.audits });
     try { await fn(); } catch (e) { state.products = before.products; state.audits = before.audits; throw e; }
   }, async endSession() {} };
-  const service = adminSellerListingService({ users: { findById: async value => value === seller._id ? seller : null,
+  const service = adminSellerListingService({ users: { findById: async value => String(value) === seller._id ? seller : null,
     find: () => ({ select() { return this; }, lean: async () => [seller] }) },
     products: { create: async docs => { state.products.push(...structuredClone(docs)); return docs; }, findById: value => ({ session: async () => {
-      const found = state.products.find(p => p._id === value);
+      const found = state.products.find(p => p._id === String(value));
       if (!found) return null;
       const document = structuredClone(found);
-      document.save = async () => { const { save: _save, ...fields } = document; state.products = state.products.map(p => p._id === value ? structuredClone(fields) : p); };
+      document.save = async () => { const { save: _save, ...fields } = document; state.products = state.products.map(p => p._id === String(value) ? structuredClone(fields) : p); };
       return document;
     } }) },
     orders: { exists: () => ({ session: async () => state.orders }) },
@@ -53,6 +53,8 @@ test('active, archived, previously ordered and reviewed products cannot change o
 });
 test('unknown, malformed or unverified target sellers and missing reasons are rejected', async () => {
   const f = fixture(); assert.equal((await f.assign(admin, { sellerId: 'bad-id' })).statusCode, 400);
+  assert.equal((await f.assign(admin, { sellerId: { $ne: null } })).statusCode, 400);
+  assert.equal((await f.assign(admin, { sellerId: [seller._id] })).statusCode, 400);
   assert.equal((await f.assign(admin, { sellerId: '999999999999999999999999' })).statusCode, 400);
   assert.equal((await f.assign(admin, { reason: '' })).statusCode, 400);
   f.state.store = false; assert.equal((await f.assign()).statusCode, 400);
