@@ -189,6 +189,20 @@ test("product purchase uses active SKU stock and requires a deliberate option ch
   await expect(page.getByRole("button", { name: "Add to bag", exact: true })).toBeDisabled();
 });
 
+test("bag photo and title reopen the selected product option", async ({ page }) => {
+  await page.route(`**/api/products/${product.slug}*`, route => route.fulfill({ json: product }));
+  await page.goto(`/product/${product.slug}`);
+  await page.getByRole("button", { name: "0-3M", exact: true }).click();
+  await page.getByRole("button", { name: "Add to bag", exact: true }).click();
+  await page.goto("/cart");
+  const links = page.getByRole("main").getByRole("link", { name: product.name, exact: true });
+  await expect(links).toHaveCount(2);
+  for (const link of await links.all()) await expect(link).toHaveAttribute("href", `/product/${product.slug}?color=Maroon&size=0-3M`);
+  await links.last().click();
+  await expect(page).toHaveURL(/color=Maroon&size=0-3M/);
+  await expect(page.getByText("In stock in this option", { exact: true })).toBeVisible();
+});
+
 test("product navigation failure clears the previous product and supports retry", async ({ page }) => {
   const next = { ...product, _id: "next-product", slug: "next-product", name: "Next product" };
   let failed = true;
