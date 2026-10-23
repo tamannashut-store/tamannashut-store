@@ -19,6 +19,7 @@ import SoldByStore from "../components/SoldByStore";
 import ProductRating from "../components/ProductRating";
 import DeliveryInformation from "../components/DeliveryInformation";
 import ProductSizeChart from "../components/ProductSizeChart";
+import { splitSizeChart } from "../utils/sizeChart";
 import ProductActivity from "../components/ProductActivity";
 import ProductShare from "../components/ProductShare";
 import { imageSrcSet, optimizedImage } from "../utils/image";
@@ -198,9 +199,7 @@ function ProductDetails() {
   const availableVariants = (product.variants || []).filter((item) => item.active !== false && (!selectedColor || !item.color || item.color.toLowerCase() === selectedColor.toLowerCase()));
   const sizeOptions = product.variants?.length ? availableVariants : product.sizeStock || [];
   const specifications = String(product.specifications || "");
-  const sizeChartStart = specifications.search(/\bsize\s+chart\b/i);
-  const sizeChart = sizeChartStart >= 0 ? specifications.slice(sizeChartStart).trim() : "";
-  const featureSpecifications = sizeChartStart >= 0 ? specifications.slice(0, sizeChartStart).trim() : specifications;
+  const { chart: sizeChart, features: featureSpecifications } = splitSizeChart(specifications);
   const selectedVariant = availableVariants.find((item) => item.size === selectedSize);
   const selectedSizeData = selectedVariant || product.sizeStock?.find((item) => item.size === selectedSize);
   const selectedPrice = Number(selectedVariant?.price ?? product.price);

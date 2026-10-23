@@ -1,5 +1,14 @@
 const ageRow = /^(\d+\s*[–—-]\s*\d+\s*(?:Months?|Years?))\s*[:|]\s*(.+)$/i;
 
+// References such as “see the size chart” are product details, not headings.
+export function splitSizeChart(specifications) {
+  const text = String(specifications || "");
+  const heading = /^\s*size\s+chart\b/im.exec(text);
+  return heading
+    ? { features: text.slice(0, heading.index).trim(), chart: text.slice(heading.index).trim() }
+    : { features: text.trim(), chart: "" };
+}
+
 export function measurementInCm(value) {
   const text = String(value);
   // Only convert known numeric measurements; retain unavailable or annotated cells.
