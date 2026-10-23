@@ -1,6 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { measurementInCm, parseSizeChart } from "../client/src/utils/sizeChart.js";
+import { measurementInCm, parseSizeChart, splitSizeChart } from "../client/src/utils/sizeChart.js";
+
+test("chart references do not swallow product details or care instructions", () => {
+  const text = "Sizes: M, L, XL; use the supplied garment size chart\nXXL shoulder: 15.5 inches as shown in the size chart\nCare: Dry clean only\nCountry of origin: India";
+  assert.deepEqual(splitSizeChart(text), { features: text, chart: "" });
+});
+
+test("standalone chart headings split correctly with CRLF and indentation", () => {
+  const chart = "Size chart in inches\r\nEach row: Age | Chest\r\n4–5 Years: 24";
+  assert.deepEqual(splitSizeChart(`Fabric: cotton\r\n  ${chart}`), { features: "Fabric: cotton", chart });
+  assert.deepEqual(splitSizeChart(chart), { features: "", chart });
+});
 
 test("centimetres preserve missing measurements and convert decimal values and ranges", () => {
   assert.equal(measurementInCm("10"), "25.4");
