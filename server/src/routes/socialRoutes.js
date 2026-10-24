@@ -1,7 +1,24 @@
 import express from "express";
+import Product from "../models/Product.js";
+import { productIdentifierFilter } from "../utils/productSlug.js";
+import { storefrontProductFilter } from "../utils/productVisibility.js";
+import { productPreviewHtml } from "../utils/productPreview.js";
 
 const router = express.Router();
 let cache = { expiresAt: 0, posts: [] };
+
+// Only public, approved listings may be exposed to link-preview crawlers.
+router.get("/product-preview/:identifier", async (req, res, next) => {
+  try {
+    if (!/^[a-zA-Z0-9-]{1,160}$/.test(req.params.identifier)) return res.status(404).send("Product not found");
+    const product = await Product.findOne(storefrontProductFilter(productIdentifierFilter(req.params.identifier)))
+      .select("name slug description images").lean();
+    if (!product) return res.status(404).set("Cache-Control", "no-store").send("Product not found");
+    // The same storefront URL serves the app to shoppers and HTML to crawlers.
+    // Do not let a CDN reuse a crawler response for a normal browser.
+    return res.set("Cache-Control", "no-store").vary("User-Agent").type("html").send(productPreviewHtml(product));
+  } catch (error) { return next(error); }
+});
 
 router.get("/instagram", async (req, res) => {
   try {
