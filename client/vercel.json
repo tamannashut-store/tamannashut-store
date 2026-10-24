@@ -28,6 +28,11 @@
   ],
   "rewrites": [
     {
+      "source": "/product/:identifier",
+      "has": [{ "type": "header", "key": "user-agent", "value": ".*(facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Pinterestbot|Slackbot|Discordbot|TelegramBot).*" }],
+      "destination": "https://tamannashut-store.onrender.com/api/social/product-preview/:identifier"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://tamannashut-store.onrender.com/api/:path*"
     },
