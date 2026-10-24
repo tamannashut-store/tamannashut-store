@@ -9,7 +9,7 @@ test("product previews contain product metadata and a canonical shopping link", 
   const html = productPreviewHtml({name: "Cotton set", slug: "cotton-set", description: "Two-piece outfit", images: [{url: "https://example.com/photo.jpg"}]});
   assert.match(html, /property="og:title" content="Cotton set/);
   assert.match(html, /property="og:image" content="https:\/\/example.com\/photo.jpg"/);
-  assert.match(html, /href="https:\/\/www.tamannashut.com\/product\/cotton-set"/);
+  assert.match(html, /href="https:\/\/www\.tamannashut\.com\/product\/cotton-set"/);
   assert.match(html, /summary_large_image/);
 });
 
@@ -18,7 +18,7 @@ test("untrusted listing values cannot inject HTML or unsafe image URLs", () => {
   assert.ok(!html.includes('<script>'));
   assert.ok(!html.includes('javascript:'));
   assert.match(html, /&lt;script&gt;&quot;bad&quot;&lt;\/script&gt;/);
-  assert.match(html, /https:\/\/www.tamannashut.com\/social-preview.png/);
+  assert.match(html, /https:\/\/www\.tamannashut\.com\/social-preview\.png/);
 });
 
 test("preview route enforces storefront visibility and does not cache crawler HTML", async () => {
