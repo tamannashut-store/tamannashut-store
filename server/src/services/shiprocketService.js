@@ -1,5 +1,6 @@
 import { stagingSandboxEnabled, stagingDelivery } from "../utils/stagingSandbox.js";
 import { shiprocketShipment } from "../utils/shiprocketResponse.js";
+import { requirePlatformPickupOrder } from "../utils/shipmentPickupGuard.js";
 
 const API_BASE = "https://apiv2.shiprocket.in/v1/external";
 let cachedToken = "";
@@ -59,7 +60,9 @@ const orderReference = (order) => String(order._id).slice(-20);
 export const returnOrderReference = (order) => `R${orderReference(order)}`;
 const orderDate = (date) => new Date(date).toISOString().slice(0, 19).replace("T", " ");
 
-export const createShiprocketOrder = async (order, parcel) => request("/orders/create/adhoc", {
+export const createShiprocketOrder = async (order, parcel) => {
+  requirePlatformPickupOrder(order);
+  return request("/orders/create/adhoc", {
   method: "POST",
   body: {
     order_id: orderReference(order),
@@ -96,9 +99,11 @@ export const createShiprocketOrder = async (order, parcel) => request("/orders/c
     height: parcel.height,
     weight: parcel.weight,
   },
-});
+  });
+};
 
 export const getShiprocketCouriers = (order, parcel) => {
+  requirePlatformPickupOrder(order);
   const params = new URLSearchParams({
     pickup_postcode: String(process.env.SHIPROCKET_PICKUP_POSTCODE),
     delivery_postcode: String(order.pincode),
@@ -144,6 +149,7 @@ const getConfiguredPickupAddress = async () => {
 };
 
 export const createShiprocketReturn = async (order, parcel) => {
+  requirePlatformPickupOrder(order);
   const seller = await getConfiguredPickupAddress();
   return request("/shipments/create/return-shipment", { method: "POST", body: {
     order_id: returnOrderReference(order),
@@ -174,6 +180,7 @@ export const findShiprocketReturn = async (order) => {
 };
 
 export const getShiprocketReturnCouriers = (order, parcel) => {
+  requirePlatformPickupOrder(order);
   const params = new URLSearchParams({ pickup_postcode: String(order.pincode), delivery_postcode: String(process.env.SHIPROCKET_PICKUP_POSTCODE), cod: "0", weight: String(parcel.weight), length: String(parcel.length), breadth: String(parcel.breadth), height: String(parcel.height), declared_value: String(order.totalAmount), is_return: "1" });
   return request(`/courier/serviceability/?${params}`);
 };

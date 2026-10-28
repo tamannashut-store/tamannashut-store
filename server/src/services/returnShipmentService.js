@@ -1,11 +1,13 @@
 import Order from "../models/Order.js";
 import { createShiprocketReturn, findShiprocketReturn } from "./shiprocketService.js";
 import { shiprocketShipment } from "../utils/shiprocketResponse.js";
+import { requirePlatformPickupOrder } from "../utils/shipmentPickupGuard.js";
 
 export const createReturnShipment = async (order, parcel, {
   model = Order, findExisting = findShiprocketReturn, create = createShiprocketReturn,
 } = {}) => {
   if (order.returnRequest?.reverseShipmentId) return { order, existing: true };
+  requirePlatformPickupOrder(order);
   const previousAttempt = order.returnRequest?.reverseCreationStatus;
   const startedAt = order.returnRequest?.reverseCreationStartedAt;
   if (previousAttempt === "creating" && startedAt && Date.now() - new Date(startedAt).getTime() < 120_000) {

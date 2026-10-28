@@ -5,6 +5,7 @@ import { FiArrowRight, FiEye, FiEyeOff, FiLock, FiShoppingBag } from "react-icon
 import toast from "react-hot-toast";
 import AuthShell from "../components/AuthShell";
 import { consumeAuthReturn } from "../utils/authReturn";
+import { trackEvent } from "../utils/analytics";
 
 const readCart = (key) => {
   try {
@@ -35,6 +36,7 @@ function Login() {
       setResendAt(Date.now() + 60_000);
       toast.success(data.message);
     } catch (requestError) {
+      trackEvent("login_failed", { method: loginMode, stage: "request_code" });
       setError(requestError.response?.data?.message || "Login code could not be sent.");
     } finally { setLoading(false); }
   };
@@ -46,6 +48,7 @@ function Login() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    trackEvent("login_attempt", { method: loginMode, stage: loginMode !== "email" && !challengeToken ? "request_code" : "verify" });
     if (loginMode !== "email" && !challengeToken) { await sendCode(); return; }
     setError("");
     setLoading(true);
@@ -57,6 +60,7 @@ function Login() {
 
       localStorage.setItem("user", JSON.stringify(data));
       axios.defaults.headers.common.Authorization = `Bearer ${data.token}`;
+      trackEvent("login", { method: loginMode });
 
       const pendingCart = readCart("pending_guest_cart");
       const guestCart = pendingCart.length ? pendingCart : readCart();
@@ -78,9 +82,11 @@ function Login() {
       }
       window.dispatchEvent(new Event("cartUpdated"));
       const destination = consumeAuthReturn();
+      if (destination === "/checkout") trackEvent("checkout_login_complete", { method: loginMode, bag_synced: bagSynced });
       toast.success("Welcome back");
       navigate(destination, { replace: true });
     } catch (requestError) {
+      trackEvent("login_failed", { method: loginMode, stage: "verify" });
       setError(requestError.response?.data?.message || "Sign in failed. Check your details and try again.");
     } finally {
       setLoading(false);
